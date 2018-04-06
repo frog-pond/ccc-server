@@ -9,6 +9,6 @@ const buildingsBase = 'https://www.stolaf.edu/directory/buildings?format=json'
 export const getBuildings = () => GET(buildingsBase, {json: true})
 
 export async function buildings(ctx) {
-  let resp = await getBuildings()
-  ctx.body = resp.body
+	let resp = await getBuildings()
+	ctx.body = resp.body
 }
