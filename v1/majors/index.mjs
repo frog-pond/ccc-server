@@ -9,6 +9,6 @@ const majorsBase = 'https://www.stolaf.edu/directory/majors?format=json'
 export const getMajors = () => GET(majorsBase, {json: true})
 
 export async function majors(ctx) {
-  let resp = await getMajors()
-  ctx.body = resp.body
+	let resp = await getMajors()
+	ctx.body = resp.body
 }

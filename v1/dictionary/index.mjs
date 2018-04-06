@@ -9,6 +9,6 @@ const dictionaryBase = 'https://stodevx.github.io/AAO-React-Native/dictionary.js
 export const getDefinitions = () => GET(dictionaryBase, {json: true})
 
 export async function dictionary(ctx) {
-  let resp = await getDefinitions()
-  ctx.body = resp.body
+	let resp = await getDefinitions()
+	ctx.body = resp.body
 }
