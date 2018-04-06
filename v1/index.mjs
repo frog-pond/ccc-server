@@ -6,6 +6,7 @@ import Router from 'koa-router'
 import {menu, cafe} from './menu'
 import {dictionary} from './dictionary'
 import {jobs} from './jobs'
+import {departments} from './departments'
 
 const { graphqlKoa, graphiqlKoa } = apollo
 const api = new Router({prefix: '/v1'})
@@ -19,6 +20,9 @@ api.get('/dictionary', dictionary)
 
 // jobs
 api.get('/jobs', jobs)
+
+// departments
+api.get('/departments', departments)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({ schema }));
