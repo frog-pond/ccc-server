@@ -9,6 +9,7 @@ import {jobs} from './jobs'
 import {departments} from './departments'
 import {buildings} from './buildings'
 import {majors} from './majors'
+import {hours} from './hours'
 
 const { graphqlKoa, graphiqlKoa } = apollo
 const api = new Router({prefix: '/v1'})
@@ -28,6 +29,9 @@ api.get('/jobs', jobs)
 api.get('/directory/departments', departments)
 api.get('/directory/buildings', buildings)
 api.get('/directory/majors', majors)
+
+// hours
+api.get('/hours', hours)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({ schema }));
