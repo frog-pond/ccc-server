@@ -9,6 +9,6 @@ const hoursBase = 'https://stodevx.github.io/AAO-React-Native/building-hours.jso
 export const getHours = () => GET(hoursBase, {json: true})
 
 export async function hours(ctx) {
-  let resp = await getHours()
-  ctx.body = resp.body
+	let resp = await getHours()
+	ctx.body = resp.body
 }
