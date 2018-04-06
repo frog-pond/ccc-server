@@ -31,7 +31,7 @@ api.get('/directory/buildings', buildings)
 api.get('/directory/majors', majors)
 
 // hours
-api.get('/hours', hours)
+api.get('/spaces/hours', hours)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({ schema }));
