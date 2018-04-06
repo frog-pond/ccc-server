@@ -11,9 +11,12 @@ const menuBase = 'http://legacy.cafebonappetit.com/api/2/menus'
 const cafeBase = 'http://legacy.cafebonappetit.com/api/2/cafes'
 
 export const getPauseMenu = () => GET_DAY(pauseBase, {json: true})
-export const getCafeMenu = (cafeId) => GET_HOUR(menuBase, {json: true, query: {cafe: cafeId}})
-export const getCafeInfo = (cafeId) => GET_DAY(cafeBase, {json: true, query: {cafe: cafeId}})
-export const getCafe = (cafeId) => Promise.all([getCafeMenu(cafeId), getCafeInfo(cafeId)])
+export const getCafeMenu = cafeId =>
+	GET_HOUR(menuBase, {json: true, query: {cafe: cafeId}})
+export const getCafeInfo = cafeId =>
+	GET_DAY(cafeBase, {json: true, query: {cafe: cafeId}})
+export const getCafe = cafeId =>
+	Promise.all([getCafeMenu(cafeId), getCafeInfo(cafeId)])
 
 export async function pauseMenu(ctx) {
 	let resp = await getPauseMenu()

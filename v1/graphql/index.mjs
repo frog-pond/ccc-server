@@ -1,18 +1,18 @@
 import graphqlTools from 'graphql-tools'
 import {getCafe, getCafeMenu, getCafeInfo} from '../menu'
-const { makeExecutableSchema } = graphqlTools
+const {makeExecutableSchema} = graphqlTools
 
 // Some fake data
 const books = [
-  {
-    title: "Harry Potter and the Sorcerer's stone",
-    author: 'J.K. Rowling',
-  },
-  {
-    title: 'Jurassic Park',
-    author: 'Michael Crichton',
-  },
-];
+	{
+		title: "Harry Potter and the Sorcerer's stone",
+		author: 'J.K. Rowling',
+	},
+	{
+		title: 'Jurassic Park',
+		author: 'Michael Crichton',
+	},
+]
 
 // The GraphQL schema in string form
 const typeDefs = `
@@ -147,49 +147,50 @@ const typeDefs = `
     query: Query
     #mutation: Mutation
   }
-`;
+`
 
-const coerceCafeDays = (day) => ({
-  date: day.date,
-  status: day.status,
-  message: day.message,
-  shifts: day.dayparts.map(s => ({
-    id: s.id,
-    message: s.message,
-    label: s.label,
-    start: s.starttime,
-    end: s.endtime,
-    hide: s.hide === '1',
-  })),
+const coerceCafeDays = day => ({
+	date: day.date,
+	status: day.status,
+	message: day.message,
+	shifts: day.dayparts.map(s => ({
+		id: s.id,
+		message: s.message,
+		label: s.label,
+		start: s.starttime,
+		end: s.endtime,
+		hide: s.hide === '1',
+	})),
 })
 
-const extractCafeInfo = (cafeId) => (data) => {
-  let [cafeMenu, cafeInfo] = data
-  let cafe = cafeInfo.body.cafes[cafeId]
-  let menu = cafeMenu.body.items
-  return Object.assign({}, cafe, {
-    menuType: cafe.menu_type,
-    menuHtml: cafe.menu_html,
-    locationDetail: cafe.location_detail,
-    weeklySchedule: cafe.weekly_schedule,
-    schedule: cafe.days.map(coerceCafeDays),
-    menu: menu,
-  })
+const extractCafeInfo = cafeId => data => {
+	let [cafeMenu, cafeInfo] = data
+	let cafe = cafeInfo.body.cafes[cafeId]
+	let menu = cafeMenu.body.items
+	return Object.assign({}, cafe, {
+		menuType: cafe.menu_type,
+		menuHtml: cafe.menu_html,
+		locationDetail: cafe.location_detail,
+		weeklySchedule: cafe.weekly_schedule,
+		schedule: cafe.days.map(coerceCafeDays),
+		menu: menu,
+	})
 }
 
 // The resolvers
 const resolvers = {
-  Query: {
-    books: () => books,
-    cafe: (root, args) => getCafe(args.id).then(extractCafeInfo(args.id)),
-    cafes: (root, args) => Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
-  },
-};
+	Query: {
+		books: () => books,
+		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo(args.id)),
+		cafes: (root, args) =>
+			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
+	},
+}
 
 // Put together a schema
 const schema = makeExecutableSchema({
-  typeDefs,
-  resolvers,
-});
+	typeDefs,
+	resolvers,
+})
 
 export {schema}

@@ -9,7 +9,7 @@ import Koa from 'koa'
 
 import {v1} from './v1'
 
-const app = new Koa();
+const app = new Koa()
 
 //
 // set up the routes
@@ -19,8 +19,8 @@ const api = new Router({prefix: '/api'})
 api.use(v1.routes())
 router.use(api.routes())
 
-router.get('/', async (ctx) => {
-  ctx.body = `Hello world! Prefix: ${ctx.route.prefix}`
+router.get('/', async ctx => {
+	ctx.body = `Hello world! Prefix: ${ctx.route.prefix}`
 })
 
 // router.getRoutes().forEach(route => console.log(route.path))
@@ -28,13 +28,13 @@ router.get('/', async (ctx) => {
 //
 // attach middleware
 //
-app.use(responseTime());
-app.use(logger());
-app.use(compress());
+app.use(responseTime())
+app.use(logger())
+app.use(compress())
 // etag works together with conditional-get
-app.use(conditional());
-app.use(etag());
-app.use(health());
+app.use(conditional())
+app.use(etag())
+app.use(health())
 // hook in the router
 app.use(router.routes())
 app.use(router.allowedMethods())
@@ -42,6 +42,6 @@ app.use(router.allowedMethods())
 //
 // start the app
 //
-const PORT = process.env.NODE_PORT || '3000';
-app.listen(Number.parseInt(PORT, 10));
-console.log(`listening on port ${PORT}`);
+const PORT = process.env.NODE_PORT || '3000'
+app.listen(Number.parseInt(PORT, 10))
+console.log(`listening on port ${PORT}`)
