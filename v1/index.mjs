@@ -7,6 +7,7 @@ import {menu, cafe} from './menu'
 import {dictionary} from './dictionary'
 import {jobs} from './jobs'
 import {buildings} from './buildings'
+import {majors} from './majors'
 
 const { graphqlKoa, graphiqlKoa } = apollo
 const api = new Router({prefix: '/v1'})
@@ -23,6 +24,9 @@ api.get('/jobs', jobs)
 
 // buildings
 api.get('/directory/buildings', buildings)
+
+// majors
+api.get('/directory/majors', majors)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({ schema }));
