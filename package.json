@@ -11,7 +11,7 @@
     "semi": false
   },
   "scripts": {
-    "prettier": "prettier --write 'v1/**/*.mjs' '*.mjs' '*.js'",
+    "prettier": "prettier --write 'v1/**/*.mjs' '*.mjs'",
     "start": "node --experimental-modules ./index.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
