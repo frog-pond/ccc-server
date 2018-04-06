@@ -14,7 +14,7 @@ const { graphqlKoa, graphiqlKoa } = apollo
 const api = new Router({prefix: '/v1'})
 
 // food
-api.get('/food/menu/pause', pauseMenu)
+api.get('/food/pause/menu', pauseMenu)
 api.get('/food/menu/:cafeId', menu)
 api.get('/food/cafe/:cafeId', cafe)
 
