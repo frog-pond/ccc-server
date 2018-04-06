@@ -22,7 +22,7 @@ api.get('/dictionary', dictionary)
 api.get('/jobs', jobs)
 
 // departments
-api.get('/departments', departments)
+api.get('/directory/departments', departments)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({ schema }));
