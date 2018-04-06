@@ -10,7 +10,7 @@ import {departments} from './departments'
 import {buildings} from './buildings'
 import {majors} from './majors'
 
-const { graphqlKoa, graphiqlKoa } = apollo
+const {graphqlKoa, graphiqlKoa} = apollo
 const api = new Router({prefix: '/v1'})
 
 // food
@@ -30,8 +30,8 @@ api.get('/directory/buildings', buildings)
 api.get('/directory/majors', majors)
 
 // graphql
-api.post('/graphql', koaBody(), graphqlKoa({ schema }));
-api.get('/graphql', graphqlKoa({ schema }));
-api.get('/graphiql', graphiqlKoa({ endpointURL: '/api/v1/graphql' }));
+api.post('/graphql', koaBody(), graphqlKoa({schema}))
+api.get('/graphql', graphqlKoa({schema}))
+api.get('/graphiql', graphiqlKoa({endpointURL: '/api/v1/graphql'}))
 
 export {api as v1}
