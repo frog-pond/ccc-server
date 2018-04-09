@@ -1,6 +1,7 @@
 import graphqlTools from 'graphql-tools'
 import {getCafe, getCafeMenu, getCafeInfo} from '../menu'
 import {getDepartments} from '../departments'
+import {getDefinitions} from '../dictionary'
 const {makeExecutableSchema} = graphqlTools
 
 // Some fake data
@@ -26,6 +27,7 @@ const typeDefs = `
     cafe(id: Int): Cafe
     cafes(ids: [Int]): [Cafe]
     departments: [Department]
+    dictionary: [Term]
   }
 
   type CorIcon {
@@ -159,6 +161,14 @@ const typeDefs = `
     name: String,
   }
 
+  """
+  Term
+  """
+  type Term {
+    word: String
+    definition: String
+  }
+
   #type Mutation {}
 
   schema {
@@ -203,6 +213,7 @@ const resolvers = {
 		cafes: (root, args) =>
 			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
 		departments: () => getDepartments().then(data => data.body.results),
+		dictionary: () => getDefinitions().then(results => results.body.data),
 	},
 }
 

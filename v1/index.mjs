@@ -7,7 +7,6 @@ import {menu, pauseMenu, cafe} from './menu'
 import {dictionary} from './dictionary'
 import {jobs} from './jobs'
 import {departments} from './departments'
-import {buildings} from './buildings'
 import {majors} from './majors'
 import {hours} from './hours'
 
@@ -27,7 +26,6 @@ api.get('/jobs', jobs)
 
 // directory
 api.get('/directory/departments', departments)
-api.get('/directory/buildings', buildings)
 api.get('/directory/majors', majors)
 
 // hours
