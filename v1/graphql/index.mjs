@@ -25,7 +25,7 @@ const typeDefs = `
     books: [Book]
     cafe(id: Int): Cafe
     cafes(ids: [Int]): [Cafe]
-    dictionary: [Word]
+    dictionary: [Term]
   }
 
   type CorIcon {
@@ -144,9 +144,9 @@ const typeDefs = `
   }
 
   """
-  Word
+  Term
   """
-  type Word {
+  type Term {
     word: String
     definition: String
   }
