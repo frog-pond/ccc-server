@@ -1,5 +1,6 @@
 import graphqlTools from 'graphql-tools'
 import {getCafe, getCafeMenu, getCafeInfo} from '../menu'
+import {getMajors} from '../majors'
 const {makeExecutableSchema} = graphqlTools
 
 // Some fake data
@@ -24,6 +25,7 @@ const typeDefs = `
     books: [Book]
     cafe(id: Int): Cafe
     cafes(ids: [Int]): [Cafe]
+    majors: [Major]
   }
 
   type CorIcon {
@@ -141,6 +143,14 @@ const typeDefs = `
     author: String
   }
 
+  """
+  Major
+  """
+  type Major @cacheControl(maxAge: 86400) {
+    headcount: Int
+    name: String
+  }
+
   #type Mutation {}
 
   schema {
@@ -184,6 +194,7 @@ const resolvers = {
 		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo(args.id)),
 		cafes: (root, args) =>
 			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
+		majors: () => getMajors().then(data => data.body.results),
 	},
 }
 
