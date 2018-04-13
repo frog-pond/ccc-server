@@ -1,5 +1,6 @@
 import graphqlTools from 'graphql-tools'
 import {getCafe, getCafeMenu, getCafeInfo} from '../menu'
+import {getMajors} from '../majors'
 import {getDepartments} from '../departments'
 import {getDefinitions} from '../dictionary'
 const {makeExecutableSchema} = graphqlTools
@@ -28,6 +29,7 @@ const typeDefs = `
     cafes(ids: [Int]): [Cafe]
     departments: [Department]
     dictionary: [Term]
+    majors: [Major]
   }
 
   type CorIcon {
@@ -146,6 +148,14 @@ const typeDefs = `
   }
 
   """
+  Major
+  """
+  type Major @cacheControl(maxAge: 86400) {
+    headcount: Int
+    name: String
+  }
+
+  """
   Departments
   """
   type Department @cacheControl(maxAge: 86400) {
@@ -212,6 +222,7 @@ const resolvers = {
 		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo(args.id)),
 		cafes: (root, args) =>
 			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
+		majors: () => getMajors().then(data => data.body.results),
 		departments: () => getDepartments().then(data => data.body.results),
 		dictionary: () => getDefinitions().then(results => results.body.data),
 	},
