@@ -1,5 +1,6 @@
 import graphqlTools from 'graphql-tools'
 import {getCafe, getCafeMenu, getCafeInfo} from '../menu'
+import {getDepartments} from '../departments'
 import {getDefinitions} from '../dictionary'
 const {makeExecutableSchema} = graphqlTools
 
@@ -25,6 +26,7 @@ const typeDefs = `
     books: [Book]
     cafe(id: Int): Cafe
     cafes(ids: [Int]): [Cafe]
+    departments: [Department]
     dictionary: [Term]
   }
 
@@ -144,6 +146,22 @@ const typeDefs = `
   }
 
   """
+  Departments
+  """
+  type Department @cacheControl(maxAge: 86400) {
+    buildingroom: Int,
+    buildingabbr: String,
+    buildingname: String,
+    extension: Int,
+    text: String,
+    headcount: Int,
+    email: String,
+    fax: Int,
+    website: String,
+    name: String,
+  }
+
+  """
   Term
   """
   type Term {
@@ -194,6 +212,7 @@ const resolvers = {
 		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo(args.id)),
 		cafes: (root, args) =>
 			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
+		departments: () => getDepartments().then(data => data.body.results),
 		dictionary: () => getDefinitions().then(results => results.body.data),
 	},
 }
