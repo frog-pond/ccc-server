@@ -40,6 +40,12 @@
     "mem": "^3.0.0"
   },
   "devDependencies": {
-    "prettier": "1.11.1"
+    "babel-eslint": "^8.2.3",
+    "eslint": "^4.19.1",
+    "eslint-config-prettier": "^2.9.0",
+    "eslint-plugin-babel": "^5.1.0",
+    "eslint-plugin-flowtype": "^2.46.3",
+    "prettier": "^1.12.1",
+    "pretty-quick": "^1.4.1"
   }
 }
