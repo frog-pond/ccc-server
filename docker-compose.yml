@@ -1,0 +1,23 @@
+version: '3'
+services:
+  proxy:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./nginx:/etc/nginx/conf.d:ro
+
+  carleton:
+    build: ./
+    restart: unless-stopped
+    environment:
+      INSTITUTION: carleton-college
+
+  stolaf:
+    build: ./
+    restart: unless-stopped
+    environment:
+      INSTITUTION: stolaf-college
