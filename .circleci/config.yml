@@ -54,7 +54,7 @@ workflows:
               only: /^v.*/
       - lint:
           filters: *filters
-      - test
+      - test:
           filters: *filters
       - deploy-docker:
           requires: [lint, test]
