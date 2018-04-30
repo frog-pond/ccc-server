@@ -1,5 +1,5 @@
 import graphqlTools from 'graphql-tools'
-import {getCafe, getCafeMenu, getCafeInfo} from '../menu'
+import {getCafe} from '../menu'
 import {getMajors} from '../majors'
 import {getDepartments} from '../departments'
 import {getDefinitions} from '../dictionary'
