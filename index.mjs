@@ -8,6 +8,11 @@ import Koa from 'koa'
 
 async function main() {
 	const institution = process.env.INSTITUTION
+	if (institution === 'unknown') {
+		console.error('please add -e INSTITUTION=$place to your docker run, or set the environment variable in some way')
+		process.exit(1)
+	}
+
 	const {v1} = await import(`./institutions/${institution}/v1/index.mjs`)
 
 	const app = new Koa()

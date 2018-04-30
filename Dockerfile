@@ -15,6 +15,6 @@ ADD . /app
 
 ENV NODE_ENV=production
 ENV NODE_PORT=3001
-ENV INSTITUTION=stolaf-college
+ENV INSTITUTION=unknown
 
 CMD node --experimental-modules ./index.mjs
