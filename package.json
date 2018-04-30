@@ -2,6 +2,7 @@
   "name": "ccc-server",
   "version": "1.0.0",
   "description": "",
+  "repository": "frog-pond/ccc-server",
   "main": "index.mjs",
   "prettier": {
     "useTabs": true,
