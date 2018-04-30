@@ -31,8 +31,6 @@ async function main() {
 		ctx.body = 'pong'
 	})
 
-	// router.getRoutes().forEach(route => console.log(route.path))
-
 	//
 	// attach middleware
 	//
