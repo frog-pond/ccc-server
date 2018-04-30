@@ -19,7 +19,7 @@ async function main() {
 	router.use(v1.routes())
 
 	router.get('/', async ctx => {
-		ctx.body = `Hello world! Prefix: ${ctx.route.prefix}`
+		ctx.body = 'Hello world!'
 	})
 
 	router.get('/ping', async ctx => {
