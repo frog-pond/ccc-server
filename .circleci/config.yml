@@ -96,7 +96,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: npm install
+      - run: npm ci
       - run: npm run lint
       - run: npm run p && git diff --exit-code
 
@@ -105,7 +105,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: npm install
+      - run: npm ci
       - run: npm test
 
   # deploy the docker images to Docker Hub
