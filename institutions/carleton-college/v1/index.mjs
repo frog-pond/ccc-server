@@ -4,6 +4,7 @@ import {schema} from './graphql'
 
 import Router from 'koa-router'
 import {menu, pauseMenu, cafe} from './menu'
+import {googleCalendar, carletonCalendar, caveCalendar, stolafCalendar, northfieldCalendar} from './calendar'
 import {dictionary} from './dictionary'
 import {jobs} from './jobs'
 import {hours} from './hours'
@@ -16,6 +17,13 @@ const api = new Router({prefix: '/v1'})
 api.get('/food/pause/menu', pauseMenu)
 api.get('/food/menu/:cafeId', menu)
 api.get('/food/cafe/:cafeId', cafe)
+
+// calendar
+api.get('/calendar/google/:calendarId', googleCalendar)
+api.get('/calendar/carleton', carletonCalendar)
+api.get('/calendar/cave', caveCalendar)
+api.get('/calendar/stolaf', stolafCalendar)
+api.get('/calendar/northfield', northfieldCalendar)
 
 // dictionary
 api.get('/dictionary', dictionary)
