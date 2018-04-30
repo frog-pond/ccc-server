@@ -1,5 +1,5 @@
 import graphqlTools from 'graphql-tools'
-import {getCafe, getCafeMenu, getCafeInfo} from '../menu'
+import {getCafe} from '../menu'
 import {getDefinitions} from '../dictionary'
 const {makeExecutableSchema} = graphqlTools
 

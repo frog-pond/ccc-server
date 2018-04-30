@@ -6,21 +6,26 @@ import qs from 'querystring'
 import getUrls from 'get-urls'
 const {JSDOM} = _jsdom
 
-const GET_BASE = (url, opts) => got.get(url, Object.assign({
-	headers: {
-		'User-Agent': `ccc-server/1 (https://github.com/frog-pond/ccc-server)`
-	},
-}, opts))
+const GET_BASE = (url, opts) =>
+	got.get(
+		url,
+		Object.assign(
+			{
+				headers: {
+					'User-Agent':
+						'ccc-server/1 (https://github.com/frog-pond/ccc-server)',
+				},
+			},
+			opts,
+		),
+	)
 
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = ONE_HOUR * 24
 const ONE_WEEK = ONE_DAY * 7
-const GET = mem(GET_BASE, {maxAge: ONE_DAY})
-const GET_HOUR = mem(GET_BASE, {maxAge: ONE_HOUR})
 const GET_WEEK = mem(GET_BASE, {maxAge: ONE_WEEK})
 
-const jobsBase =
-	'https://apps.carleton.edu/campus/sfs/employment/feeds/jobs'
+const jobsBase = 'https://apps.carleton.edu/campus/sfs/employment/feeds/jobs'
 
 const BOOLEAN_KEYS = [
 	'Position available during term',
@@ -58,7 +63,10 @@ export async function fetchJob(link) {
 				.join('\n\n')
 				.trim()
 		} else {
-			value = value.map(el => el.textContent).join(' ').trim()
+			value = value
+				.map(el => el.textContent)
+				.join(' ')
+				.trim()
 		}
 
 		coll.set(key, value)
@@ -82,15 +90,17 @@ export async function fetchJob(link) {
 	}
 }
 
-async function getAllJobs(ctx) {
+async function getAllJobs() {
 	let resp = await GET_BASE(jobsBase)
 	let dom = new JSDOM(resp.body, {contentType: 'text/xml'})
-	let jobLinks = [...dom.window.document.querySelectorAll('rss channel item link')].map(link => link.textContent.trim())
+	let jobLinks = [
+		...dom.window.document.querySelectorAll('rss channel item link'),
+	].map(link => link.textContent.trim())
 	return Promise.all(jobLinks.map(fetchJob))
 }
 
 const GET_ALL_JOBS = mem(getAllJobs, {maxAge: ONE_HOUR})
 
 export async function jobs(ctx) {
-	ctx.body = await GET_ALL_JOBS(ctx)
+	ctx.body = await GET_ALL_JOBS()
 }

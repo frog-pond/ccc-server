@@ -9,7 +9,9 @@ import Koa from 'koa'
 async function main() {
 	const institution = process.env.INSTITUTION
 	if (institution === 'unknown') {
-		console.error('please add -e INSTITUTION=$place to your docker run, or set the environment variable in some way')
+		console.error(
+			'please add -e INSTITUTION=$place to your docker run, or set the environment variable in some way',
+		)
 		process.exit(1)
 	}
 
@@ -23,11 +25,11 @@ async function main() {
 	const router = new Router()
 	router.use(v1.routes())
 
-	router.get('/', async ctx => {
+	router.get('/', ctx => {
 		ctx.body = 'Hello world!'
 	})
 
-	router.get('/ping', async ctx => {
+	router.get('/ping', ctx => {
 		ctx.body = 'pong'
 	})
 
