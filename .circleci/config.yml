@@ -86,7 +86,7 @@ jobs:
           command: docker images -a
       - run:
           name: Build docker image
-          command: docker build --cache-from="$(docker images -a -q)" -t "$LOCAL_NAME:$CIRCLE_SHA1" ./server
+          command: docker build --cache-from="$(docker images -a -q)" -t "$LOCAL_NAME:$CIRCLE_SHA1" .
       - run: sudo apt install -y pigz
       - run: *cmd-docker-save
       - save_cache: *cache-save-docker
@@ -101,13 +101,12 @@ jobs:
       - run: npm run pretty-check
 
   # test the server-side js code
-  test-server:
+  test:
     <<: *defaults
     steps:
       - checkout
       - run: npm install
-      - run: cd server && npm install
-      - run: cd server && npm test
+      - run: npm test
 
   # deploy the docker images to Docker Hub
   deploy-docker:
