@@ -2,13 +2,13 @@
 version: 2
 
 x-config:
-  - &name "frog-pond/ccc-server"
+  - &name "frogpond/ccc-server"
   - &defaults
     docker:
       - image: docker.io/circleci/node:10
     environment: &default-environment
       LOCAL_NAME: *name
-      DEST_NAME: docker.io/frog-pond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
   - &caches
     - &cache-load-docker
       keys:
