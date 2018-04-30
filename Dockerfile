@@ -17,4 +17,4 @@ ENV NODE_ENV=production
 ENV NODE_PORT=3001
 ENV INSTITUTION=unknown
 
-CMD node --experimental-modules ./index.mjs
+CMD node --experimental-modules -r dotenv/config ./index.mjs
