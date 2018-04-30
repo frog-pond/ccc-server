@@ -115,27 +115,47 @@ async function getReasonCalendar(calendarUrl) {
 const GET_GOOGLE_CALENDAR = mem(getGoogleCalendar, {maxAge: ONE_HOUR})
 const GET_REASON_CALENDAR = mem(getReasonCalendar, {maxAge: ONE_HOUR})
 
-export async function googleCalendar(ctx) {
+export async function google(ctx) {
 	let {calendarId} = ctx.params
 	ctx.body = await GET_GOOGLE_CALENDAR(calendarId)
 }
 
-export async function carletonCalendar(ctx) {
+export async function carleton(ctx) {
 	let url = 'https://apps.carleton.edu/calendar/'
 	ctx.body = await GET_REASON_CALENDAR(url)
 }
 
-export async function caveCalendar(ctx) {
+export async function cave(ctx) {
 	let url = 'https://apps.carleton.edu/student/orgs/cave/calendar/'
 	ctx.body = await GET_REASON_CALENDAR(url)
 }
 
-export async function stolafCalendar(ctx) {
+export async function stolaf(ctx) {
 	let id = '5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com'
 	ctx.body = await GET_GOOGLE_CALENDAR(id)
 }
 
-export async function northfieldCalendar(ctx) {
+export async function northfield(ctx) {
 	let id = 'thisisnorthfield@gmail.com'
 	ctx.body = await GET_GOOGLE_CALENDAR(id)
+}
+
+export async function krlx(ctx) {
+	let id = 'krlxradio88.1@gmail.com'
+	ctx.body = await GET_GOOGLE_CALENDAR(id)
+}
+
+export async function ksto(ctx) {
+	let id = 'kstonarwhal@gmail.com'
+	ctx.body = await GET_GOOGLE_CALENDAR(id)
+}
+
+export async function convos(ctx) {
+	let url = 'https://apps.carleton.edu/events/convocations/'
+	ctx.body = await GET_REASON_CALENDAR(url)
+}
+
+export async function sumo(ctx) {
+	let url = 'https://apps.carleton.edu/student/orgs/sumo/'
+	ctx.body = await GET_REASON_CALENDAR(url)
 }
