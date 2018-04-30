@@ -41,7 +41,7 @@ workflows:
       - lint
       - test
       - deploy-docker:
-          requires: [lint, test]
+          requires: [lint, test, build]
           context: docker-hub
 
   on_tag:
@@ -57,7 +57,7 @@ workflows:
       - test:
           filters: *filters
       - deploy-docker:
-          requires: [lint, test]
+          requires: [lint, test, build]
           filters: *filters
           context: docker-hub
 
