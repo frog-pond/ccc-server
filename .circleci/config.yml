@@ -96,16 +96,18 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: npm install
+      - run: sudo npm i -g npm@6
+      - run: npm ci
       - run: npm run lint
-      - run: npm run p
+      - run: npm run p && git diff --exit-code
 
   # test the server-side js code
   test:
     <<: *defaults
     steps:
       - checkout
-      - run: npm install
+      - run: sudo npm i -g npm@6
+      - run: npm ci
       - run: npm test
 
   # deploy the docker images to Docker Hub
