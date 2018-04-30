@@ -1,4 +1,4 @@
-FROM docker.io/node:9-alpine
+FROM docker.io/node:10-alpine
 
 RUN apk add -U curl
 
@@ -13,4 +13,8 @@ HEALTHCHECK --interval=20s --timeout=1s \
 
 ADD . /app
 
-CMD env NODE_ENV=production NODE_PORT=3001 node --experimental-modules ./index.mjs 
+ENV NODE_ENV=production
+ENV NODE_PORT=3001
+ENV INSTITUTION=unknown
+
+CMD node --experimental-modules ./index.mjs

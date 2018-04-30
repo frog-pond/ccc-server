@@ -3,45 +3,55 @@ import etag from 'koa-etag'
 import compress from 'koa-compress'
 import logger from 'koa-logger'
 import responseTime from 'koa-response-time'
-import health from 'koa-ping'
 import Router from 'koa-router'
 import Koa from 'koa'
 
-import {v1} from './v1'
+async function main() {
+	const institution = process.env.INSTITUTION
+	if (institution === 'unknown') {
+		console.error('please add -e INSTITUTION=$place to your docker run, or set the environment variable in some way')
+		process.exit(1)
+	}
 
-const app = new Koa()
+	const {v1} = await import(`./institutions/${institution}/v1/index.mjs`)
 
-//
-// set up the routes
-//
-const router = new Router()
-const api = new Router({prefix: '/api'})
-api.use(v1.routes())
-router.use(api.routes())
+	const app = new Koa()
 
-router.get('/', async ctx => {
-	ctx.body = `Hello world! Prefix: ${ctx.route.prefix}`
-})
+	//
+	// set up the routes
+	//
+	const router = new Router()
+	router.use(v1.routes())
 
-// router.getRoutes().forEach(route => console.log(route.path))
+	router.get('/', async ctx => {
+		ctx.body = 'Hello world!'
+	})
 
-//
-// attach middleware
-//
-app.use(responseTime())
-app.use(logger())
-app.use(compress())
-// etag works together with conditional-get
-app.use(conditional())
-app.use(etag())
-app.use(health())
-// hook in the router
-app.use(router.routes())
-app.use(router.allowedMethods())
+	router.get('/ping', async ctx => {
+		ctx.body = 'pong'
+	})
 
-//
-// start the app
-//
-const PORT = process.env.NODE_PORT || '3000'
-app.listen(Number.parseInt(PORT, 10))
-console.log(`listening on port ${PORT}`)
+	// router.getRoutes().forEach(route => console.log(route.path))
+
+	//
+	// attach middleware
+	//
+	app.use(responseTime())
+	app.use(logger())
+	app.use(compress())
+	// etag works together with conditional-get
+	app.use(conditional())
+	app.use(etag())
+	// hook in the router
+	app.use(router.routes())
+	app.use(router.allowedMethods())
+
+	//
+	// start the app
+	//
+	const PORT = process.env.NODE_PORT || '3000'
+	app.listen(Number.parseInt(PORT, 10))
+	console.log(`listening on port ${PORT}`)
+}
+
+main()
