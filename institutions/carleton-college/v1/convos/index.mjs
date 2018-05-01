@@ -21,12 +21,15 @@ const GET_BASE = (url, opts) =>
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = ONE_HOUR * 24
 
-const archiveBase = 'https://apps.carleton.edu/events/convocations/feeds/media_files?page_id=342645'
+const archiveBase =
+	'https://apps.carleton.edu/events/convocations/feeds/media_files?page_id=342645'
 
 function processConvo(event) {
 	return {
 		title: event.querySelector('title').textContent,
-		description: event.querySelector('description') ? event.querySelector('description').textContent : '',
+		description: event.querySelector('description')
+			? event.querySelector('description').textContent
+			: '',
 		pubDate: moment(event.querySelector('pubDate').textContent),
 		enclosure: {},
 	}
