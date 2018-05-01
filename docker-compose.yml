@@ -15,9 +15,13 @@ services:
     restart: unless-stopped
     environment:
       INSTITUTION: carleton-college
+    volumes:
+      - ./.env:/app/.env
 
   stolaf:
     image: frogpond/ccc-server:HEAD
     restart: unless-stopped
     environment:
       INSTITUTION: stolaf-college
+    volumes:
+      - ./.env:/app/.env
