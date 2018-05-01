@@ -1,8 +1,6 @@
 import got from 'got'
 import mem from 'mem'
 import _jsdom from 'jsdom'
-import url from 'url'
-import qs from 'querystring'
 import moment from 'moment'
 const {JSDOM} = _jsdom
 
