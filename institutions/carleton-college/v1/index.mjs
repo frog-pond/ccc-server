@@ -28,13 +28,12 @@ api.get('/calendar/northfield', calendar.northfield)
 api.get('/calendar/krlx', calendar.krlx)
 api.get('/calendar/ksto', calendar.ksto)
 api.get('/calendar/sumo', calendar.sumo)
-api.get('/calendar/convos', calendar.convos)
 
 // dictionary
 api.get('/dictionary', dictionary)
 
 // jobs
-api.get('/convos/calendar', calendar.convos)
+api.get('/convos/upcoming', calendar.convos)
 api.get('/convos/archived', convos.archived)
 
 // jobs
