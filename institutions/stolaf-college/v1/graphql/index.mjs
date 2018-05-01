@@ -121,7 +121,7 @@ const typeDefs = `
   type CafeSchedule {
     date: DateString
     message: String
-    status: CafeScheduleStatusEnum
+    status: String
     shifts: [CafeScheduleShift]
   }
 
@@ -132,10 +132,6 @@ const typeDefs = `
     message: String
     label: String
     hide: Boolean
-  }
-
-  enum CafeScheduleStatusEnum {
-    open
   }
 
   enum MenuTypeEnum {
