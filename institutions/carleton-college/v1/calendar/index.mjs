@@ -17,17 +17,17 @@ const GET_BASE = (url, opts) =>
 		),
 	)
 
-const ONE_HOUR = 60 * 60 * 1000
-const GET_HOUR = mem(GET_BASE, {maxAge: ONE_HOUR})
+const ONE_MINUTE = 60 * 1000
+const GET_MINUTE = mem(GET_BASE, {maxAge: ONE_MINUTE})
 
-function buildGoogleCalendarUrl(calendarId) {
+function buildGoogleCalendarUrl(calendarId, now=new Date()) {
 	let calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`
 	let params = {
 		maxResults: 50,
 		orderBy: 'startTime',
 		showDeleted: false,
 		singleEvents: true,
-		timeMin: new Date().toISOString(),
+		timeMin: now.toISOString(),
 		key: process.env.GOOGLE_CALENDAR_API_KEY,
 	}
 	return `${calendarUrl}?${querystring.stringify(params)}`
@@ -58,7 +58,7 @@ function convertGoogleEvents(data, now = moment()) {
 
 async function getGoogleCalendar(calendarId) {
 	let url = buildGoogleCalendarUrl(calendarId)
-	let resp = await GET_HOUR(url, {json: true})
+	let resp = await GET_MINUTE(url, {json: true})
 	return convertGoogleEvents(resp.body.items)
 }
 
@@ -110,12 +110,12 @@ function convertReasonEvents(data, now = moment()) {
 
 async function getReasonCalendar(calendarUrl) {
 	let url = buildReasonCalendarUrl(calendarUrl)
-	let resp = await GET_HOUR(url, {json: true})
+	let resp = await GET_MINUTE(url, {json: true})
 	return convertReasonEvents(resp.body)
 }
 
-const GET_GOOGLE_CALENDAR = mem(getGoogleCalendar, {maxAge: ONE_HOUR})
-const GET_REASON_CALENDAR = mem(getReasonCalendar, {maxAge: ONE_HOUR})
+const GET_GOOGLE_CALENDAR = mem(getGoogleCalendar, {maxAge: ONE_MINUTE})
+const GET_REASON_CALENDAR = mem(getReasonCalendar, {maxAge: ONE_MINUTE})
 
 export async function google(ctx) {
 	let {calendarId} = ctx.params
