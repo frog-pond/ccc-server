@@ -7,6 +7,7 @@ import {menu, pauseMenu, cafe} from './menu'
 import * as calendar from './calendar'
 import {dictionary} from './dictionary'
 import {jobs} from './jobs'
+import * as convos from './convos'
 import {hours} from './hours'
 import {nnb} from './news'
 
@@ -26,11 +27,14 @@ api.get('/calendar/stolaf', calendar.stolaf)
 api.get('/calendar/northfield', calendar.northfield)
 api.get('/calendar/krlx', calendar.krlx)
 api.get('/calendar/ksto', calendar.ksto)
-api.get('/calendar/convos', calendar.convos)
 api.get('/calendar/sumo', calendar.sumo)
 
 // dictionary
 api.get('/dictionary', dictionary)
+
+// jobs
+api.get('/convos/upcoming', calendar.convos)
+api.get('/convos/archived', convos.archived)
 
 // jobs
 api.get('/jobs', jobs)

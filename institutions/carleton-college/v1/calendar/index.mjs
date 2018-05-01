@@ -33,7 +33,7 @@ function buildGoogleCalendarUrl(calendarId) {
 	return `${calendarUrl}?${querystring.stringify(params)}`
 }
 
-function convertGoogleEvents(data, now=moment()) {
+function convertGoogleEvents(data, now = moment()) {
 	let events = data.map(event => {
 		const startTime = moment(event.start.date || event.start.dateTime)
 		const endTime = moment(event.end.date || event.end.dateTime)
@@ -62,22 +62,24 @@ async function getGoogleCalendar(calendarId) {
 	return convertGoogleEvents(resp.body.items)
 }
 
-function buildReasonCalendarUrl(calendarUrl, now=moment()) {
-	let params = Object.assign({}, {
-		// eslint-disable-next-line camelcase
-		start_date: now.clone().format('YYYY-MM-DD'),
-		// eslint-disable-next-line camelcase
-		end_date: now
-			.clone()
-			.add(1, 'month')
-			.format('YYYY-MM-DD'),
+function buildReasonCalendarUrl(calendarUrl, now = moment()) {
+	let params = Object.assign(
+		{},
+		{
+			// eslint-disable-next-line camelcase
+			start_date: now.clone().format('YYYY-MM-DD'),
+			// eslint-disable-next-line camelcase
+			end_date: now
+				.clone()
+				.add(1, 'month')
+				.format('YYYY-MM-DD'),
 		},
 		{format: 'json'},
 	)
 	return `${calendarUrl}?${querystring.stringify(params)}`
 }
 
-function convertReasonEvents(data, now=moment()) {
+function convertReasonEvents(data, now = moment()) {
 	let events = data.map(event => {
 		const startTime = moment(event.datetime)
 		const endTime = startTime
