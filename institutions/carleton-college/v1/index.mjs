@@ -51,6 +51,6 @@ api.get('/spaces/hours', hours)
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({schema}))
 api.get('/graphql', graphqlKoa({schema}))
-api.get('/graphiql', graphiqlKoa({endpointURL: '/api/v1/graphql'}))
+api.get('/graphiql', graphiqlKoa({endpointURL: '/v1/graphql'}))
 
 export {api as v1}
