@@ -11,13 +11,13 @@ services:
       - ./nginx:/etc/nginx/conf.d:ro
 
   carleton:
-    build: ./
+    image: frogpond/ccc-server:HEAD
     restart: unless-stopped
     environment:
       INSTITUTION: carleton-college
 
   stolaf:
-    build: ./
+    image: frogpond/ccc-server:HEAD
     restart: unless-stopped
     environment:
       INSTITUTION: stolaf-college
