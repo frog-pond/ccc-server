@@ -159,7 +159,7 @@ const typeDefs = `
   Departments
   """
   type Department @cacheControl(maxAge: 86400) {
-    buildingroom: Int,
+    buildingroom: String,
     buildingabbr: String,
     buildingname: String,
     extension: Int,
