@@ -2,7 +2,9 @@ import got from 'got'
 import mem from 'mem'
 import _jsdom from 'jsdom'
 import moment from 'moment'
+import htmlEntities from 'html-entities'
 const {JSDOM} = _jsdom
+const entities = new htmlEntities.AllHtmlEntities()
 
 const GET_BASE = (url, opts) =>
 	got.get(
@@ -25,13 +27,26 @@ const archiveBase =
 	'https://apps.carleton.edu/events/convocations/feeds/media_files?page_id=342645'
 
 function processConvo(event) {
+	let enclosure = event.querySelector('enclosure')
 	return {
-		title: event.querySelector('title').textContent,
+		title: entities.decode(event.querySelector('title').textContent),
 		description: event.querySelector('description')
-			? event.querySelector('description').textContent
+			? entities.decode(event.querySelector('description').textContent)
 			: '',
 		pubDate: moment(event.querySelector('pubDate').textContent),
-		enclosure: {},
+		enclosure: enclosure
+			? {
+					type: enclosure.getAttribute('type')
+						? enclosure.getAttribute('type')
+						: '',
+					url: enclosure.getAttribute('url')
+						? enclosure.getAttribute('url')
+						: '',
+					length: enclosure.getAttribute('length')
+						? enclosure.getAttribute('length')
+						: '',
+			  }
+			: null,
 	}
 }
 
@@ -41,6 +56,7 @@ async function getArchived() {
 	let convos = [
 		...dom.window.document.querySelectorAll('rss channel item'),
 	].map(processConvo)
+	convos = convos.slice(0, 100)
 	return Promise.all(convos)
 }
 
