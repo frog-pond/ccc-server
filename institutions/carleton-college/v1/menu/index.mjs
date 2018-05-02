@@ -7,8 +7,8 @@ const GET_HOUR = mem(got.get, {maxAge: ONE_HOUR})
 const GET_DAY = mem(got.get, {maxAge: ONE_DAY})
 
 const pauseBase = 'https://stodevx.github.io/AAO-React-Native/pause-menu.json'
-const menuBase = 'http://legacy.cafebonappetit.com/api/2/menus'
-const cafeBase = 'http://legacy.cafebonappetit.com/api/2/cafes'
+const menuBase = 'https://legacy.cafebonappetit.com/api/2/menus'
+const cafeBase = 'https://legacy.cafebonappetit.com/api/2/cafes'
 
 export const getPauseMenu = () => GET_DAY(pauseBase, {json: true})
 export const getCafeMenu = cafeId =>
