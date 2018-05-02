@@ -20,7 +20,7 @@ const GET_BASE = (url, opts) =>
 const ONE_MINUTE = 60 * 1000
 const GET_MINUTE = mem(GET_BASE, {maxAge: ONE_MINUTE})
 
-function buildGoogleCalendarUrl(calendarId, now=new Date()) {
+function buildGoogleCalendarUrl(calendarId, now = new Date()) {
 	let calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`
 	let params = {
 		maxResults: 50,

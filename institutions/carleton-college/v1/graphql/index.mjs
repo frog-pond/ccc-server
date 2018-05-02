@@ -180,21 +180,16 @@ const extractCafeInfo = data => {
 	let menu = cafeMenu.days.map(menuDay => {
 		let dayparts = menuDay.cafe.dayparts.map(parts =>
 			parts.map(daypart =>
-				Object.assign({},
-					daypart,
-					{
-						start: daypart.starttime,
-						end: daypart.endtime,
-						stations: daypart.stations.map(station =>
-						Object.assign({},
-							station,
-							{items: station.items.map(itemId =>
-								cafeMenu.items[itemId]
-							)}
-						)
-					)}
-				)
-			)
+				Object.assign({}, daypart, {
+					start: daypart.starttime,
+					end: daypart.endtime,
+					stations: daypart.stations.map(station =>
+						Object.assign({}, station, {
+							items: station.items.map(itemId => cafeMenu.items[itemId]),
+						}),
+					),
+				}),
+			),
 		)
 		return Object.assign({}, menuDay, {dayparts, date: menuDay.date})
 	})
