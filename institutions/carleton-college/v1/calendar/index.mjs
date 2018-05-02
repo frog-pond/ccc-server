@@ -105,7 +105,7 @@ function convertReasonEvents(data, now = moment()) {
 		}
 	})
 
-	return events
+	return events.slice(0, 50)
 }
 
 async function getReasonCalendar(calendarUrl) {
