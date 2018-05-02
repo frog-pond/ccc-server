@@ -17,146 +17,147 @@ const books = [
 
 // The GraphQL schema in string form
 const typeDefs = `
-  scalar HtmlString
-  scalar TimeString24Hour
-  scalar DateString
+	scalar HtmlString
+	scalar TimeString24Hour
+	scalar DateString
 
-  type Query {
-    books: [Book]
-    cafe(id: Int): Cafe
-    cafes(ids: [Int]): [Cafe]
-    dictionary: [Term]
-  }
+	type Query {
+		books: [Book]
+		cafe(id: Int): Cafe
+		cafes(ids: [Int]): [Cafe]
+		dictionary: [Term]
+	}
 
-  type CorIcon {
-    id: ID!
-    label: String
-    sort: Int
-  }
+	type CorIcon {
+		id: ID!
+		label: String
+		sort: Int
+	}
 
-  type MenuItem {
-    id: ID!
-    label: String
-    description: String
-    cor: [CorIcon]
-    price: String
-    sizes: [String]
-    nutrition: Nutrition
-    special: Boolean
-    tier: Int
-    rating: String
-    connector: String
-    #options: [Option]
-    station: Station
-    substation: SubStation
-    #monotony: Monotony
-  }
+	type MenuItem {
+		id: ID!
+		label: String
+		description: String
+		cor: [CorIcon]
+		price: String
+		sizes: [String]
+		nutrition: Nutrition
+		special: Boolean
+		tier: Int
+		rating: String
+		connector: String
+		#options: [Option]
+		station: Station
+		substation: SubStation
+		#monotony: Monotony
+	}
 
-  type Nutrition {
-    kcal: Int
-  }
+	type Nutrition {
+		kcal: Int
+	}
 
-  #type Option {}
+	#type Option {}
 
-  #type Monotony {}
+	#type Monotony {}
 
-  type SubStation {
-    id: ID!
-    label: String
-    sort: String
-    items: [MenuItem]
-  }
+	type SubStation {
+		id: ID!
+		label: String
+		sort: String
+		items: [MenuItem]
+	}
 
-  type Station {
-    id: ID!
-    sort: String
-    label: String
-    price: String
-    note: String
-    items: [MenuItem]
-  }
+	type Station {
+		id: ID!
+		sort: String
+		label: String
+		price: String
+		note: String
+		items: [MenuItem]
+	}
 
-  type MenuPart {
-    id: ID!
-    start: String
-    end: String
-    label: String
-    abbreviation: String
-    stations: [Station]
-  }
+	type MenuPart {
+		id: ID!
+		start: String
+		end: String
+		label: String
+		abbreviation: String
+		stations: [Station]
+	}
 
-  type Menu @cacheControl(maxAge: 3600) {
-    id: ID!
-    name: String!
-    parts: [MenuPart]
-  }
+	type Menu @cacheControl(maxAge: 3600) {
+		menu_id: ID!
+		name: String!
+		date: String!
+		dayparts: [[MenuPart]]
+	}
 
-  """
-  A café
-  """
-  type Cafe @cacheControl(maxAge: 3600) {
-    menu: Menu
-    name: String
-    address: String
-    city: String
-    state: String
-    zip: String
-    latitude: Float
-    longitude: Float
-    description: HtmlString
-    message: HtmlString
-    eod: TimeString24Hour
-    timezone: String
-    menuType: MenuTypeEnum
-    menuHtml: HtmlString
-    locationDetail: String
-    weeklySchedule: HtmlString
-    schedule: [CafeSchedule]
-  }
+	"""
+	A café
+	"""
+	type Cafe @cacheControl(maxAge: 3600) {
+		menu: [Menu]
+		name: String
+		address: String
+		city: String
+		state: String
+		zip: String
+		latitude: Float
+		longitude: Float
+		description: HtmlString
+		message: HtmlString
+		eod: TimeString24Hour
+		timezone: String
+		menuType: MenuTypeEnum
+		menuHtml: HtmlString
+		locationDetail: String
+		weeklySchedule: HtmlString
+		schedule: [CafeSchedule]
+	}
 
-  type CafeSchedule {
-    date: DateString
-    message: String
-    status: CafeScheduleStatusEnum
-    shifts: [CafeScheduleShift]
-  }
+	type CafeSchedule {
+		date: DateString
+		message: String
+		status: CafeScheduleStatusEnum
+		shifts: [CafeScheduleShift]
+	}
 
-  type CafeScheduleShift {
-    id: ID!
-    start: TimeString24Hour
-    end: TimeString24Hour
-    message: String
-    label: String
-    hide: Boolean
-  }
+	type CafeScheduleShift {
+		id: ID!
+		start: TimeString24Hour
+		end: TimeString24Hour
+		message: String
+		label: String
+		hide: Boolean
+	}
 
-  enum CafeScheduleStatusEnum {
-    open
-  }
+	enum CafeScheduleStatusEnum {
+		open
+	}
 
-  enum MenuTypeEnum {
-    dynamic
-  }
+	enum MenuTypeEnum {
+		dynamic
+	}
 
-  type Book {
-    title: String
-    author: String
-  }
+	type Book {
+		title: String
+		author: String
+	}
 
-  """
-  Term
-  """
-  type Term {
-    word: String
-    definition: String
-  }
+	"""
+	Term
+	"""
+	type Term {
+		word: String
+		definition: String
+	}
 
-  #type Mutation {}
+	#type Mutation {}
 
-  schema {
-    query: Query
-    #mutation: Mutation
-  }
+	schema {
+		query: Query
+		#mutation: Mutation
+	}
 `
 
 const coerceCafeDays = day => ({
@@ -173,10 +174,26 @@ const coerceCafeDays = day => ({
 	})),
 })
 
-const extractCafeInfo = cafeId => data => {
+const extractCafeInfo = data => {
 	let [cafeMenu, cafeInfo] = data
-	let cafe = cafeInfo.body.cafes[cafeId]
-	let menu = cafeMenu.body.items
+	let cafe = cafeInfo.cafe
+	let menu = cafeMenu.days.map(menuDay => {
+		let dayparts = menuDay.cafe.dayparts.map(parts =>
+			parts.map(daypart =>
+				Object.assign({}, daypart, {
+					start: daypart.starttime,
+					end: daypart.endtime,
+					stations: daypart.stations.map(station =>
+						Object.assign({}, station, {
+							items: station.items.map(itemId => cafeMenu.items[itemId]),
+						}),
+					),
+				}),
+			),
+		)
+		return Object.assign({}, menuDay, {dayparts, date: menuDay.date})
+	})
+
 	return Object.assign({}, cafe, {
 		menuType: cafe.menu_type,
 		menuHtml: cafe.menu_html,
@@ -191,9 +208,9 @@ const extractCafeInfo = cafeId => data => {
 const resolvers = {
 	Query: {
 		books: () => books,
-		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo(args.id)),
+		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo),
 		cafes: (root, args) =>
-			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
+			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo))),
 		dictionary: () => getDefinitions().then(results => results.body.data),
 	},
 }

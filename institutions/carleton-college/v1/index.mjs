@@ -3,50 +3,99 @@ import apollo from 'apollo-server-koa'
 import {schema} from './graphql'
 
 import Router from 'koa-router'
-import {menu, pauseMenu, cafe} from './menu'
+import * as menus from './menu'
 import * as calendar from './calendar'
-import {dictionary} from './dictionary'
-import {jobs} from './jobs'
+import * as contacts from './contacts'
+import * as dictionary from './dictionary'
+import * as faqs from './faqs'
+import * as help from './help'
+import * as jobs from './jobs'
 import * as convos from './convos'
-import {hours} from './hours'
-import {nnb} from './news'
+import * as hours from './hours'
+import * as news from './news'
+import * as transit from './transit'
+import * as webcams from './webcams'
 
 const {graphqlKoa, graphiqlKoa} = apollo
 const api = new Router({prefix: '/v1'})
 
 // food
-api.get('/food/pause/menu', pauseMenu)
-api.get('/food/menu/:cafeId', menu)
-api.get('/food/cafe/:cafeId', cafe)
+// food:bonapp
+api.get('/food/menu/:cafeId', menus.bonAppMenu)
+api.get('/food/cafe/:cafeId', menus.bonAppCafe)
+
+api.get('/food/named/menu/the-pause', menus.pauseMenu)
+
+api.get('/food/named/cafe/stav-hall', menus.stavCafe)
+api.get('/food/named/menu/stav-hall', menus.stavMenu)
+
+api.get('/food/named/cafe/the-cage', menus.cageCafe)
+api.get('/food/named/menu/the-cage', menus.cageMenu)
+
+api.get('/food/named/cafe/kings-room', menus.kingsRoomCafe)
+api.get('/food/named/menu/kings-room', menus.kingsRoomMenu)
+
+api.get('/food/named/cafe/burton', menus.burtonCafe)
+api.get('/food/named/menu/burton', menus.burtonMenu)
+
+api.get('/food/named/cafe/ldc', menus.ldcCafe)
+api.get('/food/named/menu/ldc', menus.ldcMenu)
+
+api.get('/food/named/cafe/sayles', menus.saylesCafe)
+api.get('/food/named/menu/sayles', menus.saylesMenu)
+
+api.get('/food/named/cafe/weitz', menus.weitzCafe)
+api.get('/food/named/menu/weitz', menus.weitzMenu)
 
 // calendar
-api.get('/calendar/google/:calendarId', calendar.google)
-api.get('/calendar/carleton', calendar.carleton)
-api.get('/calendar/cave', calendar.cave)
-api.get('/calendar/stolaf', calendar.stolaf)
-api.get('/calendar/northfield', calendar.northfield)
-api.get('/calendar/krlx', calendar.krlx)
-api.get('/calendar/ksto', calendar.ksto)
-api.get('/calendar/sumo', calendar.sumo)
+api.get('/calendar/google', calendar.google)
+api.get('/calendar/reason', calendar.reason)
+api.get('/calendar/ics', calendar.ics)
+api.get('/calendar/named/carleton', calendar.carleton)
+api.get('/calendar/named/the-cave', calendar.cave)
+api.get('/calendar/named/stolaf', calendar.stolaf)
+api.get('/calendar/named/northfield', calendar.northfield)
+api.get('/calendar/named/krlx-schedule', calendar.krlx)
+api.get('/calendar/named/ksto-schedule', calendar.ksto)
+api.get('/calendar/named/upcoming-convos', calendar.convos)
+api.get('/calendar/named/sumo-schedule', calendar.sumo)
 
 // dictionary
-api.get('/dictionary', dictionary)
+api.get('/dictionary', dictionary.dictionary)
 
-// jobs
+// convos
 api.get('/convos/upcoming', calendar.convos)
 api.get('/convos/archived', convos.archived)
 
+// important contacts
+api.get('/contacts', contacts.contacts)
+
+// help tools
+api.get('/tools/help', help.help)
+
+// faqs
+api.get('/faqs', faqs.faqs)
+
+// webcams
+api.get('/webcams', webcams.webcams)
+
 // jobs
-api.get('/jobs', jobs)
+api.get('/jobs', jobs.jobs)
 
 // news
-api.get('/news/nnb', nnb)
-// api.get('/news/carleton-now', carletonNow)
-// api.get('/news/carletonian', carletonian)
-// api.get('/news/krlx', krlxNews)
+api.get('/news/rss', news.rss)
+api.get('/news/wpjson', news.wpJson)
+api.get('/news/named/nnb', news.nnb)
+api.get('/news/named/carleton-now', news.carletonNow)
+api.get('/news/named/carletonian', news.carletonian)
+api.get('/news/named/krlx', news.krlxNews)
 
 // hours
-api.get('/spaces/hours', hours)
+api.get('/spaces/hours', hours.hours)
+
+// transit
+api.get('/transit/bus', transit.bus)
+api.get('/transit/modes', transit.modes)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({schema}))

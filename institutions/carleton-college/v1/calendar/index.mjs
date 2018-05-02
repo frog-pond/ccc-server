@@ -20,7 +20,7 @@ const GET_BASE = (url, opts) =>
 const ONE_MINUTE = 60 * 1000
 const GET_MINUTE = mem(GET_BASE, {maxAge: ONE_MINUTE})
 
-function buildGoogleCalendarUrl(calendarId, now=new Date()) {
+function buildGoogleCalendarUrl(calendarId, now = new Date()) {
 	let calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`
 	let params = {
 		maxResults: 50,
@@ -105,7 +105,7 @@ function convertReasonEvents(data, now = moment()) {
 		}
 	})
 
-	return events
+	return events.slice(0, 50)
 }
 
 async function getReasonCalendar(calendarUrl) {
@@ -118,8 +118,17 @@ const GET_GOOGLE_CALENDAR = mem(getGoogleCalendar, {maxAge: ONE_MINUTE})
 const GET_REASON_CALENDAR = mem(getReasonCalendar, {maxAge: ONE_MINUTE})
 
 export async function google(ctx) {
-	let {calendarId} = ctx.params
+	let {id: calendarId} = ctx.query
 	ctx.body = await GET_GOOGLE_CALENDAR(calendarId)
+}
+
+export async function reason(ctx) {
+	let {url: calendarUrl} = ctx.query
+	ctx.body = await GET_REASON_CALENDAR(calendarUrl)
+}
+
+export async function ics(ctx) {
+	ctx.throw(501, 'ICS support is not implemented yet.')
 }
 
 export async function carleton(ctx) {
