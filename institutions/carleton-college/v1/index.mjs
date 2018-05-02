@@ -7,6 +7,7 @@ import * as menus from './menu'
 import * as calendar from './calendar'
 import * as contacts from './contacts'
 import * as dictionary from './dictionary'
+import * as help from './help'
 import * as jobs from './jobs'
 import * as convos from './convos'
 import * as hours from './hours'
@@ -65,6 +66,9 @@ api.get('/convos/archived', convos.archived)
 
 // important contacts
 api.get('/contacts', contacts.contacts)
+
+// help tools
+api.get('/tools/help', help.help)
 
 // jobs
 api.get('/jobs', jobs.jobs)
