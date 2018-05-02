@@ -20,7 +20,6 @@ api.get('/food/menu/:cafeId', menu)
 api.get('/food/cafe/:cafeId', cafe)
 
 // calendar
-api.get('/calendar/google/:calendarId', calendar.google)
 api.get('/calendar/carleton', calendar.carleton)
 api.get('/calendar/cave', calendar.cave)
 api.get('/calendar/stolaf', calendar.stolaf)
@@ -28,6 +27,7 @@ api.get('/calendar/northfield', calendar.northfield)
 api.get('/calendar/krlx', calendar.krlx)
 api.get('/calendar/ksto', calendar.ksto)
 api.get('/calendar/sumo', calendar.sumo)
+api.get('/calendar/google', calendar.google)
 
 // dictionary
 api.get('/dictionary', dictionary)
