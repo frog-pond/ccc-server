@@ -16,9 +16,9 @@ export const getCafeMenu = cafeId =>
 export const getCafeInfo = cafeId =>
 	GET_DAY(cafeBase, {json: true, query: {cafe: cafeId}})
 export const getCafe = cafeId =>
-	Promise.all([getCafeMenu(cafeId), getCafeInfo(cafeId)])
+	Promise.all([getBonAppMenu(cafeId), getBonAppCafe(cafeId)])
 
-export const getBonAppMenu(cafeId) => {
+export async function getBonAppMenu(cafeId) {
 	let resp = await getCafeMenu(cafeId)
 	let days = resp.body.days.map(dayInfo => {
 		let info = Object.assign({}, dayInfo)
@@ -26,12 +26,12 @@ export const getBonAppMenu(cafeId) => {
 		delete info.cafes
 		return info
 	})
-	return Object.assign(resp.body, {days})
+	return Object.assign({}, resp.body, {days})
 }
 
-export const getBonAppCafe(cafeId) => {
+export async function getBonAppCafe(cafeId) {
 	let resp = await getCafeInfo(cafeId)
-	let cafeInfo = resp.body
+	let cafeInfo = Object.assign({}, resp.body)
 	cafeInfo.cafe = cafeInfo.cafes[cafeId]
 	delete cafeInfo.cafes
 	return cafeInfo
@@ -60,7 +60,7 @@ let cafeIds = {
 }
 
 export async function stavCafe(ctx) {
-	ctx.body = await getCafeInfo(cafeIds.stav)
+	ctx.body = await getBonAppCafe(cafeIds.stav)
 }
 
 export async function stavMenu(ctx) {
@@ -68,7 +68,7 @@ export async function stavMenu(ctx) {
 }
 
 export async function cageCafe(ctx) {
-	ctx.body = await getCafeInfo(cafeIds.cage)
+	ctx.body = await getBonAppCafe(cafeIds.cage)
 }
 
 export async function cageMenu(ctx) {
@@ -76,7 +76,7 @@ export async function cageMenu(ctx) {
 }
 
 export async function kingsRoomCafe(ctx) {
-	ctx.body = await getCafeInfo(cafeIds.kingsRoom)
+	ctx.body = await getBonAppCafe(cafeIds.kingsRoom)
 }
 
 export async function kingsRoomMenu(ctx) {
@@ -84,7 +84,7 @@ export async function kingsRoomMenu(ctx) {
 }
 
 export async function burtonCafe(ctx) {
-	ctx.body = await getCafeInfo(cafeIds.burton)
+	ctx.body = await getBonAppCafe(cafeIds.burton)
 }
 
 export async function burtonMenu(ctx) {
@@ -92,7 +92,7 @@ export async function burtonMenu(ctx) {
 }
 
 export async function ldcCafe(ctx) {
-	ctx.body = await getCafeInfo(cafeIds.ldc)
+	ctx.body = await getBonAppCafe(cafeIds.ldc)
 }
 
 export async function ldcMenu(ctx) {
@@ -100,7 +100,7 @@ export async function ldcMenu(ctx) {
 }
 
 export async function saylesCafe(ctx) {
-	ctx.body = await getCafeInfo(cafeIds.sayles)
+	ctx.body = await getBonAppCafe(cafeIds.sayles)
 }
 
 export async function saylesMenu(ctx) {
@@ -108,7 +108,7 @@ export async function saylesMenu(ctx) {
 }
 
 export async function weitzCafe(ctx) {
-	ctx.body = await getCafeInfo(cafeIds.weitz)
+	ctx.body = await getBonAppCafe(cafeIds.weitz)
 }
 
 export async function weitzMenu(ctx) {
