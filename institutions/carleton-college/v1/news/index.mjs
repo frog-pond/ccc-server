@@ -50,3 +50,21 @@ const NOON_NEWS_BULLETEIN = mem(noonNewsBulletein, {maxAge: ONE_HOUR})
 export async function nnb(ctx) {
 	ctx.body = await NOON_NEWS_BULLETEIN()
 }
+
+export async function rss(ctx) {
+	ctx.throw(501, "rss is not yet implemented")
+}
+
+export async function wpJson(ctx) {
+	ctx.throw(501, "rss is not yet implemented")
+}
+
+export async function carletonNow(ctx) {
+	ctx.throw(501, "rss is not yet implemented")
+}
+export async function carletonian(ctx) {
+	ctx.throw(501, "rss is not yet implemented")
+}
+export async function krlxNews(ctx) {
+	ctx.throw(501, "rss is not yet implemented")
+}
