@@ -173,9 +173,9 @@ const coerceCafeDays = day => ({
 	})),
 })
 
-const extractCafeInfo = cafeId => data => {
+const extractCafeInfo = data => {
 	let [cafeMenu, cafeInfo] = data
-	let cafe = cafeInfo.body.cafes[cafeId]
+	let cafe = cafeInfo.body.cafe
 	let menu = cafeMenu.body.items
 	return Object.assign({}, cafe, {
 		menuType: cafe.menu_type,
@@ -191,9 +191,9 @@ const extractCafeInfo = cafeId => data => {
 const resolvers = {
 	Query: {
 		books: () => books,
-		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo(args.id)),
+		cafe: (root, args) => getCafe(args.id).then(extractCafeInfo),
 		cafes: (root, args) =>
-			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo(id)))),
+			Promise.all(args.ids.map(id => getCafe(id).then(extractCafeInfo))),
 		dictionary: () => getDefinitions().then(results => results.body.data),
 	},
 }
