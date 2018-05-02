@@ -13,6 +13,7 @@ import * as jobs from './jobs'
 import * as convos from './convos'
 import * as hours from './hours'
 import * as news from './news'
+import * as transit from './transit'
 import * as webcams from './webcams'
 
 const {graphqlKoa, graphiqlKoa} = apollo
@@ -91,6 +92,9 @@ api.get('/news/named/krlx', news.krlxNews)
 
 // hours
 api.get('/spaces/hours', hours.hours)
+
+// transit
+api.get('/transit/bus', transit.bus)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({schema}))
