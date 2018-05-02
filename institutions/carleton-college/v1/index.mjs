@@ -95,6 +95,7 @@ api.get('/spaces/hours', hours.hours)
 
 // transit
 api.get('/transit/bus', transit.bus)
+api.get('/transit/modes', transit.modes)
 
 // graphql
 api.post('/graphql', koaBody(), graphqlKoa({schema}))
