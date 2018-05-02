@@ -1,8 +1,11 @@
 {
   "name": "@frogpond/private",
-  "private": true,
-  "version": "1.0.0",
   "description": "",
+  "repository": "frog-pond/ccc-server",
+  "main": "index.mjs",
+  "keywords": [],
+  "author": "Frog Pond Labs, LLC",
+  "license": "AGPL-3.0-only",
   "prettier": {
     "useTabs": true,
     "singleQuote": true,
