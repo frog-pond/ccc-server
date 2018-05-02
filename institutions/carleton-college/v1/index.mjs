@@ -13,6 +13,7 @@ import * as jobs from './jobs'
 import * as convos from './convos'
 import * as hours from './hours'
 import * as news from './news'
+import * as orgs from './orgs'
 import * as transit from './transit'
 import * as webcams from './webcams'
 
@@ -81,6 +82,9 @@ api.get('/webcams', webcams.webcams)
 
 // jobs
 api.get('/jobs', jobs.jobs)
+
+// orgs
+api.get('/orgs', orgs.orgs)
 
 // news
 api.get('/news/rss', news.rss)
