@@ -37,7 +37,10 @@ function domToOrg(orgNode) {
 	contacts = contacts ? contacts.split(', ') : []
 
 	const websiteEls = [...orgNode.querySelectorAll('.site a')].map(n => n.getAttribute('href'))
-	const website = websiteEls.length ? websiteEls[0] : ''
+	let website = websiteEls.length ? websiteEls[0] : ''
+	if (website.length && !/^https?:\/\//.test(website)) {
+		website = `http://${website}`
+	}
 
 	const socialLinks = [...orgNode.querySelectorAll('img > a')].map(n => n.parentNode).map(n => n.getAttribute('href'))
 
