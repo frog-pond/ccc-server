@@ -72,7 +72,7 @@ api.get('/news/wpjson', news.wpJson)
 api.get('/news/named/nnb', news.nnb)
 api.get('/news/named/carleton-now', news.carletonNow)
 api.get('/news/named/carletonian', news.carletonian)
-api.get('/news/named/krlx-blog', news.krlxNews)
+api.get('/news/named/krlx', news.krlxNews)
 
 // hours
 api.get('/spaces/hours', hours.hours)
