@@ -42,7 +42,6 @@ api.get('/food/named/menu/sayles', menus.saylesMenu)
 api.get('/food/named/cafe/weitz', menus.weitzCafe)
 api.get('/food/named/menu/weitz', menus.weitzMenu)
 
-
 // calendar
 api.get('/calendar/google', calendar.google)
 api.get('/calendar/reason', calendar.reason)
