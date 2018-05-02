@@ -7,11 +7,13 @@ import * as menus from './menu'
 import * as calendar from './calendar'
 import * as contacts from './contacts'
 import * as dictionary from './dictionary'
+import * as faqs from './faqs'
 import * as help from './help'
 import * as jobs from './jobs'
 import * as convos from './convos'
 import * as hours from './hours'
 import * as news from './news'
+import * as webcams from './webcams'
 
 const {graphqlKoa, graphiqlKoa} = apollo
 const api = new Router({prefix: '/v1'})
@@ -69,6 +71,12 @@ api.get('/contacts', contacts.contacts)
 
 // help tools
 api.get('/tools/help', help.help)
+
+// faqs
+api.get('/faqs', faqs.faqs)
+
+// webcams
+api.get('/webcams', webcams.webcams)
 
 // jobs
 api.get('/jobs', jobs.jobs)
