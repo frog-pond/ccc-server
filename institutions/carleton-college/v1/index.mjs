@@ -5,6 +5,7 @@ import {schema} from './graphql'
 import Router from 'koa-router'
 import * as menus from './menu'
 import * as calendar from './calendar'
+import * as contacts from './contacts'
 import * as dictionary from './dictionary'
 import * as jobs from './jobs'
 import * as convos from './convos'
@@ -58,9 +59,12 @@ api.get('/calendar/named/sumo-schedule', calendar.sumo)
 // dictionary
 api.get('/dictionary', dictionary.dictionary)
 
-// jobs
+// convos
 api.get('/convos/upcoming', calendar.convos)
 api.get('/convos/archived', convos.archived)
+
+// important contacts
+api.get('/contacts', contacts.contacts)
 
 // jobs
 api.get('/jobs', jobs.jobs)
