@@ -9,10 +9,12 @@ import * as contacts from './contacts'
 import * as dictionary from './dictionary'
 import * as faqs from './faqs'
 import * as help from './help'
+import * as map from './map'
 import * as jobs from './jobs'
 import * as convos from './convos'
 import * as hours from './hours'
 import * as news from './news'
+import * as orgs from './orgs'
 import * as transit from './transit'
 import * as webcams from './webcams'
 
@@ -81,6 +83,12 @@ api.get('/webcams', webcams.webcams)
 
 // jobs
 api.get('/jobs', jobs.jobs)
+
+// map
+api.get('/map', map.map)
+
+// orgs
+api.get('/orgs', orgs.orgs)
 
 // news
 api.get('/news/rss', news.rss)

@@ -3,10 +3,8 @@ import mem from 'mem'
 import _jsdom from 'jsdom'
 import lodash from 'lodash'
 import querystring from 'querystring'
-import htmlEntities from 'html-entities'
 const {groupBy, toPairs} = lodash
 const {JSDOM} = _jsdom
-const entities = new htmlEntities.AllHtmlEntities()
 
 const GET_BASE = (url, opts) =>
 	got.get(
