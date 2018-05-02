@@ -39,7 +39,8 @@
     "koa-router": "^7.4.0",
     "lodash": "^4.17.10",
     "mem": "^3.0.0",
-    "moment": "^2.22.1"
+    "moment": "^2.22.1",
+    "p-map": "^1.2.0"
   },
   "devDependencies": {
     "babel-eslint": "^8.2.3",
