@@ -30,6 +30,7 @@
     "graphql": "^0.13.2",
     "graphql-tools": "^2.23.1",
     "html-entities": "^1.2.1",
+    "is-absolute-url": "^2.1.0",
     "jsdom": "^11.10.0",
     "koa": "^2.5.0",
     "koa-bodyparser": "^4.2.0",
@@ -44,6 +45,7 @@
     "mem": "^3.0.0",
     "moment": "^2.22.1",
     "moment-timezone": "^0.5.16",
+    "normalize-url": "^2.0.1",
     "p-map": "^1.2.0",
     "turndown": "^4.0.2"
   },
