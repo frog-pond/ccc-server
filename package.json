@@ -43,6 +43,7 @@
     "lodash": "^4.17.10",
     "mem": "^3.0.0",
     "moment": "^2.22.1",
+    "moment-timezone": "^0.5.16",
     "p-map": "^1.2.0"
   },
   "devDependencies": {
