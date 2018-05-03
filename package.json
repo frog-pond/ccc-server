@@ -44,7 +44,8 @@
     "mem": "^3.0.0",
     "moment": "^2.22.1",
     "moment-timezone": "^0.5.16",
-    "p-map": "^1.2.0"
+    "p-map": "^1.2.0",
+    "turndown": "^4.0.2"
   },
   "devDependencies": {
     "babel-eslint": "^8.2.3",
