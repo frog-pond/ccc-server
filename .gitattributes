@@ -1,1 +1,1 @@
-/modules/node_modules linguist-vendored=false linguist-generated=false
+/modules/node_modules/** linguist-vendored=false linguist-generated=false
