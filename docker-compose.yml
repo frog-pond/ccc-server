@@ -9,6 +9,7 @@ services:
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./nginx:/etc/nginx/conf.d:ro
+      - ./logs:/var/log/nginx
 
   carleton:
     image: frogpond/ccc-server:HEAD
