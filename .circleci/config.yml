@@ -106,6 +106,7 @@ jobs:
       - checkout
       - run: npm ci
       - run: npm test
+      - run: bash ./scripts/smoke-test.sh
 
   # deploy the docker images to Docker Hub
   deploy-docker:
