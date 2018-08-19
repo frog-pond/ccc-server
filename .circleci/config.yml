@@ -5,7 +5,7 @@ x-config:
   - &name "frogpond/ccc-server"
   - &defaults
     docker:
-      - image: docker.io/circleci/node:10
+      - image: &default-image docker.io/circleci/node:10
     environment: &default-environment
       LOCAL_NAME: *name
       DEST_NAME: docker.io/frogpond/ccc-server
@@ -102,6 +102,7 @@ jobs:
   # test the server-side js code
   test:
     <<: *defaults
+    docker: [{image: *default-image, cmd: '/bin/bash'}]
     steps:
       - checkout
       - run: npm ci
