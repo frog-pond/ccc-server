@@ -4,6 +4,11 @@
 set -e
 set -o pipefail
 
+if [[ ! $CI ]]; then
+	trap "exit" INT TERM
+	trap "kill 0" EXIT
+fi
+
 # check that the server can launch properly, but don't bind to a port
 env SMOKE_TEST=1 npm run stolaf
 
