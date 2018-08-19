@@ -4,8 +4,8 @@
 set -e
 
 # kill the servers if the script exits
-trap "exit" INT TERM
-trap "kill 0" EXIT
+# trap "exit" INT TERM
+# trap "kill 0" EXIT
 
 # check that the server can launch properly, but don't bind to a port
 env SMOKE_TEST=1 npm run stolaf
