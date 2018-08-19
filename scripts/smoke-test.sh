@@ -17,7 +17,7 @@ PORT=3000
 env NODE_PORT=$PORT npm run stolaf &
 
 # wait while the server starts up
-until nc -z -w5 127.0.0.1 $PORT; do
+until nc -z -w5 localhost $PORT; do
 	sleep 0.1
 done
 
