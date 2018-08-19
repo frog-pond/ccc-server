@@ -2,6 +2,7 @@
 
 # exit the script if any command exits
 set -e
+set -o pipefail
 
 # check that the server can launch properly, but don't bind to a port
 env SMOKE_TEST=1 npm run stolaf
