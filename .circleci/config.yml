@@ -5,7 +5,7 @@ x-config:
   - &name "frogpond/ccc-server"
   - &defaults
     docker:
-      - image: docker.io/circleci/node:10
+      - image: &default-image docker.io/circleci/node:10
     environment: &default-environment
       LOCAL_NAME: *name
       DEST_NAME: docker.io/frogpond/ccc-server
@@ -95,7 +95,6 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: sudo npm i -g npm@6
       - run: npm ci
       - run: npm run lint
       - run: npm run p && git diff --exit-code
@@ -103,9 +102,9 @@ jobs:
   # test the server-side js code
   test:
     <<: *defaults
+    docker: [{image: *default-image, cmd: '/bin/bash'}]
     steps:
       - checkout
-      - run: sudo npm i -g npm@6
       - run: npm ci
       - run: npm test
 
