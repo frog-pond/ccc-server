@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "apollo-server-koa": "^1.4.0",
-    "dotenv": "^5.0.1",
+    "dotenv": "^6.1.0",
     "esm": "^3.0.77",
     "get-urls": "^7.2.0",
     "got": "^8.3.0",
@@ -31,7 +31,7 @@
     "graphql-tools": "^2.23.1",
     "html-entities": "^1.2.1",
     "is-absolute-url": "^2.1.0",
-    "jsdom": "^11.10.0",
+    "jsdom": "^12.2.0",
     "koa": "^2.5.0",
     "koa-bodyparser": "^4.2.0",
     "koa-compress": "^2.0.0",
@@ -48,12 +48,12 @@
     "normalize-url": "^2.0.1",
     "p-map": "^1.2.0",
     "titlecase": "^1.1.2",
-    "turndown": "^4.0.2"
+    "turndown": "^5.0.1"
   },
   "devDependencies": {
-    "babel-eslint": "^8.2.3",
+    "babel-eslint": "^10.0.1",
     "eslint": "^5.7.0",
-    "eslint-config-prettier": "^2.9.0",
+    "eslint-config-prettier": "^3.1.0",
     "eslint-plugin-babel": "^5.1.0",
     "eslint-plugin-flowtype": "^2.46.3",
     "prettier": "^1.12.1",
