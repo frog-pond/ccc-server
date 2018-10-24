@@ -52,7 +52,7 @@
     "turndown": "^4.0.2"
   },
   "devDependencies": {
-    "babel-eslint": "^8.2.3",
+    "babel-eslint": "^10.0.1",
     "eslint": "^4.19.1",
     "eslint-config-prettier": "^2.9.0",
     "eslint-plugin-babel": "^5.1.0",
