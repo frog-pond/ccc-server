@@ -54,7 +54,7 @@
   "devDependencies": {
     "babel-eslint": "^8.2.3",
     "eslint": "^4.19.1",
-    "eslint-config-prettier": "^2.9.0",
+    "eslint-config-prettier": "^3.1.0",
     "eslint-plugin-babel": "^5.1.0",
     "eslint-plugin-flowtype": "^2.46.3",
     "prettier": "^1.12.1",
