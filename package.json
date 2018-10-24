@@ -31,7 +31,7 @@
     "graphql-tools": "^2.23.1",
     "html-entities": "^1.2.1",
     "is-absolute-url": "^2.1.0",
-    "jsdom": "^11.10.0",
+    "jsdom": "^12.2.0",
     "koa": "^2.5.0",
     "koa-bodyparser": "^4.2.0",
     "koa-compress": "^2.0.0",
