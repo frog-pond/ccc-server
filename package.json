@@ -2,7 +2,6 @@
   "name": "@frogpond/private",
   "description": "",
   "repository": "frog-pond/ccc-server",
-  "main": "index.mjs",
   "keywords": [],
   "author": "Frog Pond Labs, LLC",
   "license": "AGPL-3.0-only",
@@ -15,8 +14,8 @@
   },
   "scripts": {
     "p": "pretty-quick",
-    "pretty": "prettier --with-node-modules --write '*.mjs' 'modules/**/*.mjs'",
-    "lint": "eslint --cache '*.mjs' 'modules/**/*.mjs'",
+    "pretty": "prettier --with-node-modules --write 'modules/**/*.mjs'",
+    "lint": "eslint --cache 'modules/**/*.mjs'",
     "start": "node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.mjs",
     "stolaf": "env INSTITUTION=stolaf-college npm start",
     "carleton": "env INSTITUTION=carleton-college npm start",
@@ -53,7 +52,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^8.2.3",
-    "eslint": "^4.19.1",
+    "eslint": "^5.7.0",
     "eslint-config-prettier": "^2.9.0",
     "eslint-plugin-babel": "^5.1.0",
     "eslint-plugin-flowtype": "^2.46.3",
