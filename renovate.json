@@ -10,6 +10,7 @@
   "labels": [
     "renovate"
   ],
+  "prHourlyLimit": 6,
   "packageRules": [
     {
       "packagePatterns": ["^moment"],
