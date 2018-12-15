@@ -11,6 +11,7 @@
     "renovate"
   ],
   "prConcurrentLimit": 6,
+  "prHourlyLimit": 0,
   "packageRules": [
     {
       "packagePatterns": ["^moment"],
