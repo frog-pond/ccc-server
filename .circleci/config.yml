@@ -35,13 +35,24 @@ x-config:
 
 workflows:
   version: 2
-  on_commit:
+
+  on_branch_commit:
     jobs:
       - build
       - lint
       - test
+  
+  on_master_commit:
+    jobs:
+      - build
+          filters: &master-branch-filters
+            branches: {only: master}
+            tags: {ignore: /.*/}
+      - lint: {filters: *master-branch-filters}
+      - test: {filters: *master-branch-filters}
       - deploy-docker:
           requires: [lint, test, build]
+          filters: *master-branch-filters
           context: docker-hub
 
   on_tag:
