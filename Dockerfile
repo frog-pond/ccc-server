@@ -17,4 +17,4 @@ ENV NODE_ENV=production
 ENV NODE_PORT=3001
 ENV INSTITUTION=unknown
 
-CMD node --experimental-modules -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.mjs
+CMD node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js
