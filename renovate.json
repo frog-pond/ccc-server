@@ -1,5 +1,19 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    ":semanticCommitsDisabled"
+  ],
+  "lockFileMaintenance": {
+    "schedule": ["after 5pm on every weekday"]
+  },
+  "timezone": "America/Chicago",
+  "labels": [
+    "renovate"
+  ],
+  "packageRules": [
+    {
+      "packagePatterns": ["^moment"],
+      "groupName": "moment packages"
+    }
   ]
 }
