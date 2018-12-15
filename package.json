@@ -26,7 +26,7 @@
     "dotenv": "6.2.0",
     "esm": "3.0.84",
     "get-urls": "7.2.0",
-    "got": "8.3.0",
+    "got": "8.3.2",
     "graphql": "0.13.2",
     "graphql-tools": "2.23.1",
     "html-entities": "1.2.1",
