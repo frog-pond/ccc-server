@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "apollo-server-koa": "1.4.0",
-    "dotenv": "6.1.0",
+    "dotenv": "6.2.0",
     "esm": "3.0.77",
     "get-urls": "7.2.0",
     "got": "8.3.0",
