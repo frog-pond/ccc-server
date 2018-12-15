@@ -44,7 +44,7 @@ workflows:
   
   on_master_commit:
     jobs:
-      - build
+      - build:
           filters: &master-branch-filters
             branches: {only: master}
             tags: {ignore: /.*/}
