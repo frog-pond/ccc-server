@@ -41,7 +41,7 @@ workflows:
       - build
       - lint
       - test
-  
+
   on_master_commit:
     jobs:
       - build:
