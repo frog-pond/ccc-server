@@ -44,6 +44,9 @@ workflows:
       - approve:
           type: approval
           requires: [build, test, lint]
+      - deploy-docker:
+          requires: [approve, build, test, lint]
+          context: docker-hub
 
   on_master_commit:
     jobs:
