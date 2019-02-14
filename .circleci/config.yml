@@ -41,6 +41,9 @@ workflows:
       - build
       - lint
       - test
+      - approve:
+          type: approval
+          requires: [build, test, lint]
 
   on_master_commit:
     jobs:
