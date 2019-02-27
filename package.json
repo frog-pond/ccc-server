@@ -48,7 +48,7 @@
     "moment-timezone": "0.5.23",
     "normalize-url": "4.1.0",
     "p-map": "2.0.0",
-    "turndown": "5.0.1"
+    "turndown": "5.0.3"
   },
   "devDependencies": {
     "babel-eslint": "10.0.1",
