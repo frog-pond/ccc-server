@@ -43,7 +43,7 @@
     "koa-response-time": "2.1.0",
     "koa-router": "7.4.0",
     "lodash": "4.17.11",
-    "mem": "4.0.0",
+    "mem": "4.1.0",
     "moment": "2.23.0",
     "moment-timezone": "0.5.23",
     "normalize-url": "4.1.0",
