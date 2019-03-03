@@ -24,7 +24,7 @@
   "dependencies": {
     "apollo-server-koa": "1.4.0",
     "dotenv": "6.2.0",
-    "esm": "3.2.9",
+    "esm": "3.2.10",
     "get-urls": "9.0.0",
     "got": "9.6.0",
     "graphql": "0.13.2",
