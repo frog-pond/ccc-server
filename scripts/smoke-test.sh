@@ -10,11 +10,11 @@ if [[ ! $CI ]]; then
 fi
 
 # check that the server can launch properly, but don't bind to a port
-env SMOKE_TEST=1 npm run stolaf
+env SMOKE_TEST=1 npm run stolaf-college
 
 # launch and background the server, so we can test it
 PORT=3000
-env NODE_PORT=$PORT npm run stolaf &
+env NODE_PORT=$PORT npm run stolaf-college &
 
 # wait while the server starts up
 until nc -z -w5 localhost $PORT; do

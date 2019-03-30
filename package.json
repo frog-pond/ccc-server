@@ -17,8 +17,8 @@
     "pretty": "prettier --with-node-modules --write 'modules/**/*.js'",
     "lint": "eslint --cache 'modules/**/*.js'",
     "start": "node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js",
-    "stolaf": "env INSTITUTION=stolaf-college npm start",
-    "carleton": "env INSTITUTION=carleton-college npm start",
+    "stolaf-college": "env INSTITUTION=stolaf-college npm start",
+    "carleton-college": "env INSTITUTION=carleton-college npm start",
     "test": "./scripts/smoke-test.sh"
   },
   "dependencies": {
