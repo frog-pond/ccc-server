@@ -41,7 +41,7 @@ workflows:
       - build
       - lint
       - test
-  
+
   on_master_commit:
     jobs:
       - build:
@@ -106,9 +106,9 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run p && git diff --exit-code
+      - run: yarn
+      - run: yarn run lint
+      - run: yarn run p && git diff --exit-code
 
   # test the server-side js code
   test:
@@ -116,8 +116,8 @@ jobs:
     docker: [{image: *default-image, cmd: '/bin/bash'}]
     steps:
       - checkout
-      - run: npm ci
-      - run: npm test
+      - run: yarn
+      - run: yarn test
 
   # deploy the docker images to Docker Hub
   deploy-docker:
