@@ -1001,13 +1001,13 @@ get-stream@^4.0.0, get-stream@^4.1.0:
   dependencies:
     pump "^3.0.0"
 
-get-urls@9.0.0:
-  version "9.0.0"
-  resolved "https://registry.yarnpkg.com/get-urls/-/get-urls-9.0.0.tgz#3ce8e4774a62016fb358cd19ad0a53d1b6ceb836"
-  integrity sha512-5S10Ya9GeUuiiCZ7M47oqznuC00WJEYpO5m5VgjAi07LoIf6GEk4y1FYPBiG1CXMFdNXDa/awszuipUX5JVTFg==
+get-urls@9.1.0:
+  version "9.1.0"
+  resolved "https://registry.yarnpkg.com/get-urls/-/get-urls-9.1.0.tgz#2a6a772fd462aa1c3ec0cfb2e7f82551b32afe6c"
+  integrity sha512-hp4c9xj6YnPTfTn8/ZkmhR5I4QTuUk9/NWDA0L4YLDoohQaDIF4C4nqvpEZUfmWDePVl1Ze8wPByyLItNkLtyg==
   dependencies:
-    normalize-url "^4.1.0"
-    url-regex "^4.0.0"
+    normalize-url "^4.3.0"
+    url-regex "^4.1.1"
 
 getpass@^0.1.1:
   version "0.1.7"
@@ -1749,7 +1749,7 @@ nice-try@^1.0.4:
   resolved "https://registry.yarnpkg.com/nice-try/-/nice-try-1.0.5.tgz#a3378a7696ce7d223e88fc9b764bd7ef1089e366"
   integrity sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==
 
-normalize-url@4.3.0, normalize-url@^4.1.0:
+normalize-url@4.3.0, normalize-url@^4.3.0:
   version "4.3.0"
   resolved "https://registry.yarnpkg.com/normalize-url/-/normalize-url-4.3.0.tgz#9c49e10fc1876aeb76dba88bf1b2b5d9fa57b2ee"
   integrity sha512-0NLtR71o4k6GLP+mr6Ty34c5GA6CMoEsncKJxvQd8NzPxaHRJNnb5gZE8R1XF4CPIS7QPHLJ74IFszwtNVAHVQ==
@@ -2442,7 +2442,7 @@ url-parse-lax@^3.0.0:
   dependencies:
     prepend-http "^2.0.0"
 
-url-regex@^4.0.0:
+url-regex@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/url-regex/-/url-regex-4.1.1.tgz#a5617b22e15e26dac57ce74c3f52088bcdfec995"
   integrity sha512-ViSDgDPNKkrQHI81GLCjdDN+Rsk3tAW/uLXlBOJxtcHzWZjta58Z0APXhfXzS89YszsheMnEvXeDXsWUB53wwA==
