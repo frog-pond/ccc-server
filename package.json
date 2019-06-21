@@ -28,7 +28,7 @@
     "get-urls": "9.1.0",
     "got": "9.6.0",
     "graphql": "0.13.2",
-    "graphql-tools": "4.0.4",
+    "graphql-tools": "4.0.5",
     "html-entities": "1.2.1",
     "is-absolute-url": "3.0.0",
     "jsdom": "15.1.1",
