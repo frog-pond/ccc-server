@@ -30,7 +30,7 @@
     "graphql": "0.13.2",
     "graphql-tools": "4.0.5",
     "html-entities": "1.2.1",
-    "is-absolute-url": "3.0.1",
+    "is-absolute-url": "3.0.2",
     "jsdom": "15.1.1",
     "koa": "2.8.1",
     "koa-bodyparser": "4.2.1",
