@@ -22,7 +22,7 @@
     "test": "./scripts/smoke-test.sh"
   },
   "dependencies": {
-    "apollo-server-koa": "1.4.0",
+    "apollo-server-koa": "2.9.7",
     "dotenv": "8.2.0",
     "esm": "3.2.25",
     "get-urls": "9.2.0",
