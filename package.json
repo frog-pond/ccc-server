@@ -41,7 +41,7 @@
     "koa-json-error": "3.1.2",
     "koa-logger": "3.2.1",
     "koa-response-time": "2.1.0",
-    "koa-router": "7.4.0",
+    "koa-router": "8.0.7",
     "lodash": "4.17.15",
     "mem": "5.1.1",
     "moment": "2.24.0",
