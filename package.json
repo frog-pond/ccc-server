@@ -42,7 +42,7 @@
     "lodash": "4.17.15",
     "mem": "5.1.1",
     "moment": "2.24.0",
-    "moment-timezone": "0.5.27",
+    "moment-timezone": "0.5.28",
     "normalize-url": "5.0.0",
     "p-map": "4.0.0",
     "turndown": "6.0.0"
