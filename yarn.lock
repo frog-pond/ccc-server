@@ -905,10 +905,10 @@ get-stream@^5.0.0, get-stream@^5.1.0:
   dependencies:
     pump "^3.0.0"
 
-get-urls@9.2.0:
-  version "9.2.0"
-  resolved "https://registry.yarnpkg.com/get-urls/-/get-urls-9.2.0.tgz#df05cfad3ad984a34a5794209b837dd507af53fd"
-  integrity sha512-ErGHKhzGIrtobqmNNxjy7yxe4cEmAp9SMerzmFpldn0CkEr2EC+SvIiyef038JDjl2LVng7MMw8YunUKM7k3ww==
+get-urls@9.2.1:
+  version "9.2.1"
+  resolved "https://registry.yarnpkg.com/get-urls/-/get-urls-9.2.1.tgz#e823a0f64e115578cc4ccd22d0b946119ae92629"
+  integrity sha512-/3TvzO0Na4v5mvTs+6mOGTOz3woxuEcB3TiGzKry6VtKBrqSOm6D33vjYUxU2WD2mPmBPe73oE5d6zx119+DdA==
   dependencies:
     normalize-url "^4.3.0"
     url-regex "^5.0.0"
