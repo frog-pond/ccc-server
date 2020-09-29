@@ -43,7 +43,7 @@
     "mem": "6.1.0",
     "moment": "2.27.0",
     "moment-timezone": "0.5.31",
-    "normalize-url": "5.0.0",
+    "normalize-url": "5.2.0",
     "p-map": "4.0.0",
     "turndown": "6.0.0"
   },
