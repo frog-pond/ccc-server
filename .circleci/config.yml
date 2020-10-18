@@ -91,7 +91,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker: { version: 19.03.13 }
       - run:
           name: List docker images
           command: docker images -a
@@ -124,7 +124,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker: { version: 19.03.13 }
       - restore_cache: *cache-load-docker
       - run: *cmd-docker-load
       - run: docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
