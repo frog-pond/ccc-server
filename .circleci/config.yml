@@ -5,7 +5,7 @@ x-config:
   - &name "frogpond/ccc-server"
   - &defaults
     docker:
-      - image: &default-image docker.io/circleci/node:10
+      - image: &default-image docker.io/circleci/node:12
     environment: &default-environment
       LOCAL_NAME: *name
       DEST_NAME: docker.io/frogpond/ccc-server
