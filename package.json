@@ -34,7 +34,7 @@
     "koa-compress": "4.0.1",
     "koa-conditional-get": "2.0.0",
     "koa-ctx-cache-control": "1.0.1",
-    "koa-etag": "3.0.0",
+    "koa-etag": "4.0.0",
     "koa-json-error": "3.1.2",
     "koa-logger": "3.2.1",
     "koa-response-time": "2.1.0",
