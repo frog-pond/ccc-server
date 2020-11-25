@@ -32,7 +32,7 @@
     "koa": "2.13.0",
     "koa-bodyparser": "4.3.0",
     "koa-compress": "5.0.1",
-    "koa-conditional-get": "2.0.0",
+    "koa-conditional-get": "3.0.0",
     "koa-ctx-cache-control": "1.0.1",
     "koa-etag": "4.0.0",
     "koa-json-error": "3.1.2",
