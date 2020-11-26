@@ -41,7 +41,7 @@
     "koa-router": "10.0.0",
     "lodash": "4.17.20",
     "mem": "8.0.0",
-    "moment": "2.27.0",
+    "moment": "2.29.1",
     "moment-timezone": "0.5.32",
     "normalize-url": "5.3.0",
     "p-map": "4.0.0",
