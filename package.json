@@ -15,7 +15,7 @@
   "scripts": {
     "p": "pretty-quick",
     "pretty": "prettier --with-node-modules --write 'modules/**/*.js'",
-    "lint": "eslint --cache 'modules/**/*.js'",
+    "lint": "eslint --ignore-pattern '!modules/node_modules/*' --cache",
     "start": "node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college yarn start",
     "carleton-college": "env INSTITUTION=carleton-college yarn start",
