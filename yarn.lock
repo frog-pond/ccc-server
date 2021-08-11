@@ -1309,10 +1309,10 @@ ip-regex@^4.1.0:
   resolved "https://registry.yarnpkg.com/ip-regex/-/ip-regex-4.1.0.tgz#5ad62f685a14edb421abebc2fff8db94df67b455"
   integrity sha512-pKnZpbgCTfH/1NLIlOduP/V+WRXzC2MOz3Qo8xmxk8C5GudJLgK5QyLVXOSWy3ParAH7Eemurl3xjv/WXYFvMA==
 
-is-absolute-url@3.0.3:
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/is-absolute-url/-/is-absolute-url-3.0.3.tgz#96c6a22b6a23929b11ea0afb1836c36ad4a5d698"
-  integrity sha512-opmNIX7uFnS96NtPmhWQgQx6/NYFgsUXYMllcfzwWKUMwfo8kku1TvE6hkNcH+Q1ts5cMVrsY7j0bxXQDciu9Q==
+is-absolute-url@4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/is-absolute-url/-/is-absolute-url-4.0.0.tgz#0b889189f6c0bcf705bf2c6ad784addef6d3c2ca"
+  integrity sha512-6+2Kd9oMEx6d7XvVwbbHwn+HmddHeFEoDhWHnjMUFsMsghKwd4Imk6P6FJB2oAzOl6NGcNCx3zyenG6JVtPwnw==
 
 is-extglob@^2.1.1:
   version "2.1.1"
