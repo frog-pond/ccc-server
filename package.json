@@ -24,7 +24,7 @@
   "dependencies": {
     "dotenv": "10.0.0",
     "esm": "3.2.25",
-    "get-urls": "10.0.1",
+    "get-urls": "11.0.0",
     "got": "9.6.0",
     "html-entities": "2.3.2",
     "is-absolute-url": "3.0.3",
