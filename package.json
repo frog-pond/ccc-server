@@ -22,7 +22,7 @@
     "test": "./scripts/smoke-test.sh"
   },
   "dependencies": {
-    "dotenv": "10.0.0",
+    "dotenv": "14.0.0",
     "esm": "3.2.25",
     "get-urls": "10.0.1",
     "got": "9.6.0",
