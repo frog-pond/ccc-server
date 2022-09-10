@@ -4,9 +4,9 @@ RUN apk add -U curl
 
 WORKDIR /app
 ADD ./package.json /app
-ADD ./yarn.lock /app
+ADD ./package-lock.json /app
 
-RUN yarn install --production
+RUN npm install --omit=dev
 
 HEALTHCHECK --interval=20s --timeout=1s \
   CMD curl -f http://localhost:80/ping
