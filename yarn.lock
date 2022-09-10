@@ -109,6 +109,11 @@
     minimatch "^3.0.4"
     strip-json-comments "^3.1.1"
 
+"@frogpond/titlecase@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@frogpond/titlecase/-/titlecase-1.0.0.tgz#993e5371c31b58a839e76fdc531053c55b1a2736"
+  integrity sha512-C1qKm/J+B+cXo+7+ZHbRnt2iApx/IrxMEXwOxe+ZkeTvSC1nZ2XRWf0xzFuAanpBNDhFcgrxdnR8FMKNHo1scQ==
+
 "@gar/promisify@^1.0.1":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@gar/promisify/-/promisify-1.1.2.tgz#30aa825f11d438671d585bd44e7fd564535fc210"
@@ -1129,11 +1134,6 @@ html-encoding-sniffer@^2.0.1:
   integrity sha512-D5JbOMBIR/TVZkubHT+OyT2705QvogUW4IBn6nHd756OwieSF9aDYFj4dv6HHEVGYbHaLETa3WggZYWWMyy3ZQ==
   dependencies:
     whatwg-encoding "^1.0.5"
-
-html-entities@2.3.2:
-  version "2.3.2"
-  resolved "https://registry.yarnpkg.com/html-entities/-/html-entities-2.3.2.tgz#760b404685cb1d794e4f4b744332e3b00dcfe488"
-  integrity sha512-c3Ab/url5ksaT0WyleslpBEthOzWhrjQbg75y7XUsfSzi3Dgzt0l8w5e7DylRn15MTlMMD58dTfzddNS2kcAjQ==
 
 http-assert@^1.3.0:
   version "1.4.1"
