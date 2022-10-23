@@ -1,6 +1,6 @@
 FROM docker.io/node:18-alpine
 
-RUN apk add -U curl
+RUN apk add -U curl g++ make python3
 
 WORKDIR /app
 ADD ./package.json /app
