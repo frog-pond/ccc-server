@@ -1,4 +1,4 @@
-FROM docker.io/node:12-alpine
+FROM docker.io/node:18-alpine
 
 RUN apk add -U curl
 
