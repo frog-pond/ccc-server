@@ -16,7 +16,7 @@
     "p": "pretty-quick",
     "pretty": "prettier --with-node-modules --write 'modules/**/*.js'",
     "lint": "eslint --ignore-pattern '!modules/node_modules/*' --cache",
-    "start": "node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js",
+    "start": "DOCKER_VERSION=$(yarn --silent docker-version) node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college yarn start",
     "carleton-college": "env INSTITUTION=carleton-college yarn start",
     "test": "./scripts/smoke-test.sh",
