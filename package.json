@@ -19,7 +19,8 @@
     "start": "node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college yarn start",
     "carleton-college": "env INSTITUTION=carleton-college yarn start",
-    "test": "./scripts/smoke-test.sh"
+    "test": "./scripts/smoke-test.sh",
+    "docker-version": "./scripts/docker-version.sh"
   },
   "dependencies": {
     "dotenv": "10.0.0",
