@@ -1,0 +1,48 @@
+name: frog-pond/ccc-server/on_branch_commit
+on:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/circleci/node:10
+    env:
+      LOCAL_NAME: frogpond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
+    steps:
+    - uses: actions/checkout@v2
+#     # 'setup_remote_docker' was not transformed because there is no suitable equivalent in GitHub Actions
+    - name: List docker images
+      run: docker images -a
+    - name: Build docker image
+      run: docker build --cache-from="$(docker images -a -q)" -t "$LOCAL_NAME:${{ github.sha }}" .
+    - name: Dump image to cachable .tar file
+      run: docker save "$LOCAL_NAME:${{ github.sha }}" > /tmp/image.tar
+    - name: save_cache
+      uses: actions/cache@v2
+      with:
+        path: "/tmp/image.tar"
+        key: docker--{{ arch }}-{{ .Branch }}-{{ .Revision }}
+  lint:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/circleci/node:10
+    env:
+      LOCAL_NAME: frogpond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
+    steps:
+    - uses: actions/checkout@v2
+    - run: yarn
+    - run: yarn run lint
+    - run: yarn run p && git diff --exit-code
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/circleci/node:10
+    env:
+      LOCAL_NAME: frogpond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
+    steps:
+    - uses: actions/checkout@v2
+    - run: yarn
+    - run: yarn test
