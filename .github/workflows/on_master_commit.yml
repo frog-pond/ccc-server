@@ -1,0 +1,109 @@
+name: frog-pond/ccc-server/on_master_commit
+on:
+  push:
+jobs:
+  build:
+    if: contains('refs/heads/master', github.ref) && ${{ !contains('refs/heads//.*/', github.ref) }}
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/circleci/node:10
+    env:
+      LOCAL_NAME: frogpond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
+    steps:
+    - uses: actions/checkout@v2
+#     # 'setup_remote_docker' was not transformed because there is no suitable equivalent in GitHub Actions
+    - name: List docker images
+      run: docker images -a
+    - name: Build docker image
+      run: docker build --cache-from="$(docker images -a -q)" -t "$LOCAL_NAME:${{ github.sha }}" .
+    - name: Dump image to cachable .tar file
+      run: docker save "$LOCAL_NAME:${{ github.sha }}" > /tmp/image.tar
+    - name: save_cache
+      uses: actions/cache@v2
+      with:
+        path: "/tmp/image.tar"
+        key: docker--{{ arch }}-{{ .Branch }}-{{ .Revision }}
+  lint:
+    if: contains('refs/heads/master', github.ref) && ${{ !contains('refs/heads//.*/', github.ref) }}
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/circleci/node:10
+    env:
+      LOCAL_NAME: frogpond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
+    steps:
+    - uses: actions/checkout@v2
+    - run: yarn
+    - run: yarn run lint
+    - run: yarn run p && git diff --exit-code
+  test:
+    if: contains('refs/heads/master', github.ref) && ${{ !contains('refs/heads//.*/', github.ref) }}
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/circleci/node:10
+    env:
+      LOCAL_NAME: frogpond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
+    steps:
+    - uses: actions/checkout@v2
+    - run: yarn
+    - run: yarn test
+  deploy-docker:
+    if: contains('refs/heads/master', github.ref) && ${{ !contains('refs/heads//.*/', github.ref) }}
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/circleci/node:10
+    needs:
+    - lint
+    - test
+    - build
+    env:
+      LOCAL_NAME: frogpond/ccc-server
+      DEST_NAME: docker.io/frogpond/ccc-server
+      DOCKER_PASSWORD:
+      DOCKER_USERNAME:
+    steps:
+    - uses: actions/checkout@v2
+#     # 'setup_remote_docker' was not transformed because there is no suitable equivalent in GitHub Actions
+    - name: restore_cache
+      uses: actions/cache@v2
+      with:
+        key: docker--{{ arch }}-{{ .Branch }}-{{ .Revision }}
+        restore-keys: |-
+          docker--{{ arch }}-{{ .Branch }}-{{ .Revision }}
+          docker--{{ arch }}-{{ .Branch }}
+          docker--{{ arch }}
+    - name: Load from cache if possible
+      run: |-
+        if test -r /tmp/image.tar; then
+          echo "Loading from /tmp/image.tar"
+          docker load -qi /tmp/image.tar
+        else
+          echo "missing /tmp/image.tar; failing the build"
+          exit 1
+        fi
+    - run: docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+    - name: Push to Docker Hub
+      run: |-
+        image_id="$(docker images -q "$LOCAL_NAME:${{ github.sha }}")"
+        echo "image_id: $image_id"
+        if [ -z $image_id ]; then
+          echo "could not find docker image to load; exiting"
+          exit 1
+        fi
+        echo "${{ github.ref }}: ${{ github.ref }}" "${{ github.ref }}: ${{ github.ref }}"
+        if [[ ${{ github.ref }} = master ]]; then
+          docker_tag="$DEST_NAME:HEAD"
+        elif [[ ${{ github.ref }} ]]; then
+          docker_tag="$DEST_NAME:${{ github.ref }}"
+        elif [[ ${{ github.ref }} ]]; then
+          docker_tag="$DEST_NAME:${{ github.ref }}"
+        fi
+        echo "docker_tag: $docker_tag"
+        docker tag "$image_id" "$docker_tag"
+        docker push "$docker_tag"
+        if [[ ${{ github.ref }} ]]; then
+          docker tag "$image_id" "$DEST_NAME:latest"
+          docker push "$DEST_NAME:latest"
+        fi
