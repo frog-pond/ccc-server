@@ -28,7 +28,7 @@
     "got": "9.6.0",
     "html-entities": "2.3.2",
     "is-absolute-url": "3.0.3",
-    "jsdom": "16.6.0",
+    "jsdom": "20.0.3",
     "koa": "2.13.4",
     "koa-bodyparser": "4.3.0",
     "koa-compress": "5.1.0",
