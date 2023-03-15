@@ -30,7 +30,7 @@
     "is-absolute-url": "3.0.3",
     "jsdom": "16.6.0",
     "koa": "2.13.4",
-    "koa-bodyparser": "4.3.0",
+    "koa-bodyparser": "4.4.0",
     "koa-compress": "5.1.0",
     "koa-conditional-get": "3.0.0",
     "koa-ctx-cache-control": "1.0.1",
