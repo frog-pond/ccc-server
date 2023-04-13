@@ -29,7 +29,7 @@
     "html-entities": "2.3.2",
     "is-absolute-url": "3.0.3",
     "jsdom": "16.6.0",
-    "koa": "2.13.4",
+    "koa": "2.14.2",
     "koa-bodyparser": "4.3.0",
     "koa-compress": "5.1.0",
     "koa-conditional-get": "3.0.0",
