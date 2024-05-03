@@ -1,6 +1,6 @@
 FROM node:22-alpine
 
-RUN apk add -U curl g++ make python3
+RUN apk add -U curl
 
 WORKDIR /app
 COPY ./package.json ./package-lock.json /app
