@@ -2,15 +2,9 @@ parser: babel-eslint
 parserOptions:
   sourceType: module
 
-plugins:
-  - babel
-  - flowtype
-
 extends:
   - eslint:recommended
-  - plugin:flowtype/recommended
   - prettier
-  - prettier/flowtype
 
 env:
   es6: true
@@ -58,7 +52,3 @@ rules:
   quotes: [warn, single, avoid-escape]
   require-await: warn
   semi: off
-
-  # flow rules
-  flowtype/no-dupe-keys: error
-  flowtype/use-flow-type: error
