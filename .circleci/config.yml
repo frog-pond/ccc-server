@@ -113,7 +113,7 @@ jobs:
   # test the server-side js code
   test:
     <<: *defaults
-    docker: [{image: *default-image, cmd: '/bin/bash'22
+    docker: [{image: *default-image, cmd: '/bin/bash'}]
     steps:
       - checkout
       - run: npm ci
