@@ -25,7 +25,6 @@
   "dependencies": {
     "dotenv": "16.4.5",
     "get-urls": "12.1.0",
-    "got": "14.2.1",
     "html-entities": "2.5.2",
     "is-absolute-url": "4.0.1",
     "jsdom": "24.0.0",
@@ -39,6 +38,7 @@
     "koa-logger": "3.2.1",
     "koa-response-time": "2.1.0",
     "koa-router": "12.0.1",
+    "ky": "^1.2.4",
     "lodash": "4.17.21",
     "memoize": "10.0.0",
     "moment": "2.30.1",
