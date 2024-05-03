@@ -5,7 +5,7 @@ x-config:
   - &name 'frogpond/ccc-server'
   - &defaults
     docker:
-      - image: &default-image docker.io/circleci/node:12
+      - image: &default-image cimg/node:22.1
     environment: &default-environment
       LOCAL_NAME: *name
       DEST_NAME: docker.io/frogpond/ccc-server
@@ -91,7 +91,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - setup_remote_docker: {version: 20.10.18}
+      - setup_remote_docker: {version: default}
       - run:
           name: List docker images
           command: docker images -a
@@ -106,9 +106,9 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: yarn
-      - run: yarn run lint
-      - run: yarn run p && git diff --exit-code
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run p && git diff --exit-code
 
   # test the server-side js code
   test:
@@ -116,15 +116,15 @@ jobs:
     docker: [{image: *default-image, cmd: '/bin/bash'}]
     steps:
       - checkout
-      - run: yarn
-      - run: yarn test
+      - run: npm ci
+      - run: npm test
 
   # deploy the docker images to Docker Hub
   deploy-docker:
     <<: *defaults
     steps:
       - checkout
-      - setup_remote_docker: {version: 20.10.18}
+      - setup_remote_docker: {version: default}
       - restore_cache: *cache-load-docker
       - run: *cmd-docker-load
       - run: docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"

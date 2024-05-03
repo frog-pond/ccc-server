@@ -1,17 +1,16 @@
-FROM docker.io/node:18-alpine
+FROM node:22-alpine
 
-RUN apk add -U curl g++ make python3
+RUN apk add -U curl
 
 WORKDIR /app
-ADD ./package.json /app
-ADD ./yarn.lock /app
+COPY ./package.json ./package-lock.json ./
 
-RUN yarn install --production
+RUN npm ci --omit=dev
 
 HEALTHCHECK --interval=20s --timeout=1s \
   CMD curl -f http://localhost:80/ping
 
-ADD . /app
+COPY . ./
 
 ENV NODE_ENV=production
 ENV NODE_PORT=80
