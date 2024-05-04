@@ -9,6 +9,7 @@ if [[ ! $CI ]]; then
 	trap "kill 0" EXIT
 fi
 
+#for institution in stolaf-college carleton-college; do
 # check that the server can launch properly, but don't bind to a port
 env SMOKE_TEST=1 npm run stolaf-college
 
@@ -25,6 +26,33 @@ done
 TEST=$(curl -s localhost:3000/ping)
 
 # assert that the /ping endpoint responded with "pong"
-if [[ ! $TEST -eq pong ]]; then
+if [[ $TEST != "pong" ]]; then
 	exit 1
 fi
+
+for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
+  echo "validating $route"
+
+  case $route in
+    "/v1/calendar/"*)
+      echo "skip because we don't have authorization during smoke tests"
+      continue
+      ;;
+
+    "/v1/news/rss" | "/v1/news/wpjson" | "/v1/util/html-to-md")
+      echo "skip because of required query parameters"
+      continue
+      ;;
+
+    *"/:"*)
+      echo "skip because of parameter placeholders"
+      continue
+      ;;
+
+    *)
+      # do nothing
+      ;;
+  esac
+
+  curl --silent --fail "localhost:3000$route" >/dev/null
+done
