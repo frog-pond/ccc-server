@@ -34,7 +34,7 @@ for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
   echo "validating $route"
 
   case $route in
-    "/v1/calendar/"*)
+    "/v1/calendar/"* | "/v1/convos/upcoming")
       echo "skip because we don't have authorization during smoke tests"
       continue
       ;;
