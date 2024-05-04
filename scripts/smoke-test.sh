@@ -39,7 +39,11 @@ for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
       continue
       ;;
 
-    # skip any with placeholders
+    "/v1/news/rss" | "/v1/news/wpjson" | "/v1/util/html-to-md")
+      echo "skip because of required query parameters"
+      continue
+      ;;
+
     *"/:"*)
       echo "skip because of parameter placeholders"
       continue
@@ -50,6 +54,5 @@ for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
       ;;
   esac
 
-  # TODO: add --fail to the below once we fix the remaining endpoints
-  curl --silent "localhost:3000$route" >/dev/null
+  curl --silent --fail "localhost:3000$route" >/dev/null
 done
