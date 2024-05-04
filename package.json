@@ -23,6 +23,9 @@
     "test": "./scripts/smoke-test.sh"
   },
   "dependencies": {
+    "@sentry/node": "^7.113.0",
+    "@sentry/profiling-node": "^7.113.0",
+    "@sentry/utils": "^7.113.0",
     "dotenv": "16.4.5",
     "get-urls": "12.1.0",
     "html-entities": "2.5.2",
