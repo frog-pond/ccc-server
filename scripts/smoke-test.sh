@@ -25,6 +25,29 @@ done
 TEST=$(curl -s localhost:3000/ping)
 
 # assert that the /ping endpoint responded with "pong"
-if [[ ! $TEST -eq pong ]]; then
+if [[ $TEST != "pong" ]]; then
 	exit 1
 fi
+
+for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
+  echo "validating $route"
+
+  case $route in
+    "/v1/calendar/"*)
+      echo "skip because we don't have authorization during smoke tests"
+      continue
+      ;;
+
+    # skip any with placeholders
+    *"/:"*)
+      echo "skip because of parameter placeholders"
+      continue
+      ;;
+
+    *)
+      # do nothing
+      ;;
+  esac
+
+  curl --silent --fail "localhost:3000$route" >/dev/null
+done
