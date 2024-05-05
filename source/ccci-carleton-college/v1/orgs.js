@@ -1,10 +1,9 @@
 import {get} from '../../ccc-lib/http.js'
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
-import _jsdom from 'jsdom'
+import {JSDOM} from 'jsdom'
 import lodash from 'lodash'
 const {sortBy, startCase} = lodash
-const {JSDOM} = _jsdom
 
 function domToOrg(orgNode) {
 	let name = orgNode

@@ -3,9 +3,8 @@ import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import {makeAbsoluteUrl} from '../../ccc-lib/url.js'
 import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.js'
 import mem from 'memoize'
-import _jsdom from 'jsdom'
+import {JSDOM} from 'jsdom'
 import moment from 'moment'
-const {JSDOM} = _jsdom
 
 const archiveBase = 'https://feed.podbean.com/carletonconvos/feed.xml'
 

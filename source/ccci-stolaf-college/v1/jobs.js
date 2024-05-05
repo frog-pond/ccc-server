@@ -3,10 +3,8 @@ import {ONE_DAY} from '../../ccc-lib/constants.js'
 import {cleanTextBlock, getDetailMap, findHtmlKey} from '../../ccc-lib/html.js'
 import mem from 'memoize'
 import pMap from 'p-map'
-import _jsdom from 'jsdom'
+import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
-
-const {JSDOM} = _jsdom
 
 const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
 const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})

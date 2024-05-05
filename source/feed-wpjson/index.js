@@ -1,6 +1,5 @@
 import {get} from '../../ccc-lib/http.js'
-import _jsdom from 'jsdom'
-const {JSDOM} = _jsdom
+import {JSDOM} from 'jsdom'
 
 export async function fetchWpJson(url, query = {}) {
 	const feed = await get(url, {searchParams: query}).json()

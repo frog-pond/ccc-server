@@ -1,12 +1,11 @@
 import {get} from '../../ccc-lib/http.js'
 import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
-import _jsdom from 'jsdom'
+import {JSDOM} from 'jsdom'
 import url from 'url'
 import qs from 'querystring'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
-const {JSDOM} = _jsdom
 
 const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
 const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})

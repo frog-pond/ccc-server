@@ -1,8 +1,7 @@
 import {get} from '../../../ccc-lib/http.js'
-import _jsdom from 'jsdom'
+import {JSDOM} from 'jsdom'
 import lodash from 'lodash'
 const {groupBy, toPairs} = lodash
-const {JSDOM} = _jsdom
 
 export async function noonNewsBulletin() {
 	let body = await get('https://apps.carleton.edu/campact/nnb/show.php3', {

@@ -1,9 +1,8 @@
 import {get} from '../ccc-lib/http.js'
 import lodash from 'lodash'
-import _jsdom from 'jsdom'
+import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 const {sortBy, startCase} = lodash
-const {JSDOM} = _jsdom
 
 /*
 type ContactPersonType = {

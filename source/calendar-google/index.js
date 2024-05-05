@@ -1,8 +1,7 @@
 import {get} from '../ccc-lib/http.js'
 import moment from 'moment'
 import getUrls from 'get-urls'
-import _jsdom from 'jsdom'
-const {JSDOM} = _jsdom
+import {JSDOM} from 'jsdom'
 
 function convertGoogleEvents(data, now = moment()) {
 	let events = data.map((event) => {

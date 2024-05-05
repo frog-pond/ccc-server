@@ -1,6 +1,5 @@
 import {get} from '../../ccc-lib/http.js'
-import _jsdom from 'jsdom'
-const {JSDOM} = _jsdom
+import {JSDOM} from 'jsdom'
 
 export async function fetchRssFeed(url, query = {}) {
 	const body = await get(url, {query}).text()

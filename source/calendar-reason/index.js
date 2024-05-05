@@ -4,8 +4,7 @@ import {get} from '../ccc-lib/http.js'
 import moment from 'moment-timezone'
 import lodash from 'lodash'
 import getUrls from 'get-urls'
-import _jsdom from 'jsdom'
-const {JSDOM} = _jsdom
+import {JSDOM} from 'jsdom'
 const {dropWhile, dropRightWhile, sortBy} = lodash
 
 const TZ = 'US/Central'
