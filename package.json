@@ -14,7 +14,7 @@
   },
   "scripts": {
     "p": "pretty-quick",
-    "pretty": "prettier --with-node-modules --write 'source/**/*.js'",
+    "pretty": "prettier --write 'source/**/*.js'",
     "lint": "eslint --cache",
     "start": "node -r dotenv/config source/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college npm start",
