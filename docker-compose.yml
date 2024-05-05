@@ -12,7 +12,7 @@ services:
       - ./logs:/var/log/nginx
 
   carleton:
-    image: frogpond/ccc-server:HEAD
+    image: frogpond/ccc-server:master
     restart: unless-stopped
     environment:
       INSTITUTION: carleton-college
@@ -20,7 +20,7 @@ services:
       - ./.env:/app/.env
 
   stolaf:
-    image: frogpond/ccc-server:HEAD
+    image: frogpond/ccc-server:master
     restart: unless-stopped
     environment:
       INSTITUTION: stolaf-college
