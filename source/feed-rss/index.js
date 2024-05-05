@@ -1,8 +1,8 @@
-import {get} from '../../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.js'
 import {JSDOM} from 'jsdom'
 
 export async function fetchRssFeed(url, query = {}) {
-	const body = await get(url, {query}).text()
+	const body = await get(url, {searchParams: query}).text()
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 
 	let storyEls = [...dom.window.document.querySelectorAll('item')]
