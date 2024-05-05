@@ -1,9 +1,11 @@
+/* eslint-disable camelcase */
+
 import {get} from '../ccc-lib/http.js'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import {z} from 'zod'
 import * as Sentry from '@sentry/node'
 
-async function getBonAppWebpage(url) {
+function getBonAppWebpage(url) {
 	const virtualConsole = new VirtualConsole()
 	virtualConsole.sendTo(console, {omitJSDOMErrors: true})
 	virtualConsole.on('jsdomError', (err) => {
