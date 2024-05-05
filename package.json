@@ -13,7 +13,7 @@
     "semi": false
   },
   "scripts": {
-    "p": "pretty-quick",
+    "p": "npm run pretty -- --no-write --check",
     "pretty": "prettier --write 'source/**/*.js'",
     "lint": "eslint --cache --max-warnings=0 .",
     "start": "node -r dotenv/config source/ccc-server/index.js",
@@ -53,7 +53,6 @@
   "devDependencies": {
     "eslint": "8.57.0",
     "eslint-config-prettier": "9.1.0",
-    "prettier": "3.2.5",
-    "pretty-quick": "4.0.0"
+    "prettier": "3.2.5"
   }
 }
