@@ -1,5 +1,3 @@
-import koaBody from 'koa-bodyparser'
-
 import Router from 'koa-router'
 import * as atoz from './a-z.js'
 import * as calendar from './calendar.js'

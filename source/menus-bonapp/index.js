@@ -265,7 +265,7 @@ export async function cafe(cafeUrl) {
 	return response.data
 }
 
-export async function nutrition(itemId) {
+export function nutrition(itemId) {
 	let url = 'https://legacy.cafebonappetit.com/api/2/items'
 	return get(url, {searchParams: {item: itemId}}).json()
 }
@@ -377,7 +377,7 @@ function CafeMenuWithError(error, label) {
 							CustomCafeDayPart({
 								abbreviation: 'ERR',
 								label: 'Errored',
-								message: `Error loading the BonApp menu data`,
+								message: 'Error loading the BonApp menu data',
 								note: String(error),
 							}),
 						],
@@ -411,7 +411,7 @@ function CafeMenuIsClosed() {
 							CustomCafeDayPart({
 								abbreviation: 'CLSD',
 								label: 'Closed',
-								message: `This café is currently closed.`,
+								message: 'This café is currently closed.',
 								note: '',
 							}),
 						],

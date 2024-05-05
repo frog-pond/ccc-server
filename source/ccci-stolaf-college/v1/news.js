@@ -34,7 +34,7 @@ export async function oleville(ctx) {
 	ctx.body = await cachedRssFeed(url)
 }
 
-export async function politicole(ctx) {
+export function politicole(ctx) {
 	ctx.body = deprecatedWpJson()
 }
 
@@ -45,7 +45,7 @@ export async function mess(ctx) {
 	ctx.body = await cachedWpJsonFeed(url, {per_page: 10, _embed: true})
 }
 
-export async function ksto(ctx) {
+export function ksto(ctx) {
 	ctx.body = deprecatedWpJson()
 }
 

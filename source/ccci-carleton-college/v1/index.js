@@ -1,5 +1,3 @@
-import koaBody from 'koa-bodyparser'
-
 import Router from 'koa-router'
 import * as calendar from './calendar.js'
 import * as contacts from './contacts.js'

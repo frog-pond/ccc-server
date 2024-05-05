@@ -20,7 +20,7 @@ export async function reason(ctx) {
 	ctx.body = await getReasonCalendar(calendarUrl)
 }
 
-export async function ics(ctx) {
+export function ics(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
 	ctx.throw(501, 'ICS support is not implemented yet.')

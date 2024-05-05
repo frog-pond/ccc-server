@@ -195,6 +195,7 @@ async function _getJobs() {
 	let previousDom = undefined
 
 	do {
+		// eslint-disable-next-line no-await-in-loop
 		const body = await GET_ONE_DAY(`${jobsUrl}?pagenum=${pageNumber}`).json()
 		const {rendered} = body.content
 

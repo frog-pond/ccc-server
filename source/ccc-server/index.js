@@ -9,7 +9,7 @@ import Router from 'koa-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {nodeProfilingIntegration} from '@sentry/profiling-node'
-import {sentryRequestHandler, sentryTracingMiddleware} from './sentry.js'
+// import {sentryRequestHandler, sentryTracingMiddleware} from './sentry.js'
 
 function setupSentry() {
 	const dsn = process.env.SENTRY_DSN
@@ -69,7 +69,7 @@ async function main() {
 	//
 	// attach middleware
 	//
-	app.use(responseTime())
+	app.use(responseTime({hrtime: true}))
 	app.use(logger())
 	app.use(compress())
 	// etag works together with conditional-get
