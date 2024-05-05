@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # exit the script if any command exits
-set -e
-set -o pipefail
+set -e -o pipefail
 
 if [[ ! $CI ]]; then
 	trap "exit" INT TERM
