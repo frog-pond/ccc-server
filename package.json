@@ -15,7 +15,7 @@
   "scripts": {
     "p": "pretty-quick",
     "pretty": "prettier --write 'source/**/*.js'",
-    "lint": "eslint --cache",
+    "lint": "eslint --cache --max-warnings=0 .",
     "start": "node -r dotenv/config source/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college npm start",
     "carleton-college": "env INSTITUTION=carleton-college npm start",
