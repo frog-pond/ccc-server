@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: "docker hub"
+    environment: 'docker hub'
     steps:
       - uses: docker/setup-buildx-action@v3
       - name: Log in to Docker Hub
