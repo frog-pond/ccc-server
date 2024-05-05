@@ -12,9 +12,6 @@ const getMenu = mem(bonapp.menu, {maxAge: ONE_HOUR})
 const getInfo = mem(bonapp.cafe, {maxAge: ONE_HOUR})
 const getNutrition = mem(bonapp.nutrition, {maxAge: ONE_HOUR})
 
-export const getCafe = (cafeId) =>
-	Promise.all([getMenu(cafeId), getInfo(cafeId)])
-
 let cafeUrls = {
 	stav: 'https://stolaf.cafebonappetit.com/cafe/stav-hall/',
 	cage: 'https://stolaf.cafebonappetit.com/cafe/the-cage/',
