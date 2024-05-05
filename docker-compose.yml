@@ -17,7 +17,7 @@ services:
     environment:
       INSTITUTION: carleton-college
     volumes:
-      - ./.env:/app/.env
+      - ./.env:/app/.env:ro
 
   stolaf:
     image: frogpond/ccc-server:master
@@ -25,4 +25,4 @@ services:
     environment:
       INSTITUTION: stolaf-college
     volumes:
-      - ./.env:/app/.env
+      - ./.env:/app/.env:ro
