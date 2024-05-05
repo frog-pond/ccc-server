@@ -1,19 +1,19 @@
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import {fetchRssFeed} from '../../feed-rss/index.js'
 import {fetchWpJson, deprecatedWpJson} from '../../feed-wpjson/index.js'
-import {noonNewsBulletein} from './news/nnb.js'
+import {noonNewsBulletin} from './news/nnb.js'
 import mem from 'memoize'
 
 export const cachedRssFeed = mem(fetchRssFeed, {maxAge: ONE_HOUR})
 export const cachedWpJsonFeed = mem(fetchWpJson, {maxAge: ONE_HOUR})
-export const cachedNoonNewsBulletein = mem(noonNewsBulletein, {
+export const cachedNoonNewsBulletin = mem(noonNewsBulletin, {
 	maxAge: ONE_HOUR * 6,
 })
 
 export async function nnb(ctx) {
 	ctx.cacheControl(ONE_HOUR * 6)
 
-	ctx.body = await cachedNoonNewsBulletein()
+	ctx.body = await cachedNoonNewsBulletin()
 }
 
 export async function rss(ctx) {
