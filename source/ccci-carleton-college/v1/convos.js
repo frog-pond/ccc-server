@@ -1,5 +1,7 @@
-import {get, ONE_HOUR, makeAbsoluteUrl} from '../../ccc-lib/index.js'
-import {fromHtml} from '../../ccc-markdown/index.js'
+import {get} from '../../ccc-lib/http.js'
+import {ONE_HOUR} from '../../ccc-lib/constants.js'
+import {makeAbsoluteUrl} from '../../ccc-lib/url.js'
+import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.js'
 import mem from 'memoize'
 import _jsdom from 'jsdom'
 import moment from 'moment'
@@ -47,14 +49,14 @@ async function fetchUpcoming(eventId) {
 	let eventEl = dom.window.document.querySelector('.campus-calendar--event')
 
 	let descEl = eventEl.querySelector('.event_description')
-	let descText = descEl ? fromHtml(descEl, {baseUrl}) : ''
+	let descText = descEl ? htmlToMarkdown(descEl, {baseUrl}) : ''
 
 	let images = [...eventEl.querySelectorAll('.single_event_image a')]
 		.map((imgLink) => imgLink.getAttribute('href'))
 		.map((href) => makeAbsoluteUrl(href, {baseUrl}))
 
 	let sponsor = eventEl.querySelector('.sponsorContactInfo')
-	let sponsorText = sponsor ? fromHtml(sponsor, baseUrl) : ''
+	let sponsorText = sponsor ? htmlToMarkdown(sponsor, baseUrl) : ''
 
 	return {
 		images,

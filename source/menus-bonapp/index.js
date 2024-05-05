@@ -1,4 +1,4 @@
-import {get} from '../ccc-lib/index.js'
+import {get} from '../ccc-lib/http.js'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import {z} from 'zod'
 import * as Sentry from '@sentry/node'

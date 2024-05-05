@@ -1,5 +1,5 @@
-import {fromHtml} from '../../ccc-markdown/index.js'
+import {htmlToMarkdown as toMarkdown} from '../../ccc-lib/html-to-markdown.js'
 
 export function htmlToMarkdown(ctx) {
-	ctx.response.body = fromHtml(ctx.request.body.text)
+	ctx.response.body = toMarkdown(ctx.request.body.text)
 }

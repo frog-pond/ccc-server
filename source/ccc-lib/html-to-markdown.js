@@ -1,5 +1,5 @@
 import Turndown from 'turndown'
-import {makeAbsoluteUrl} from '../ccc-lib/index.js'
+import {makeAbsoluteUrl} from './url.js'
 
 const turndown = (content, {baseUrl = ''} = {}) => {
 	let t = new Turndown({
@@ -28,6 +28,6 @@ const turndown = (content, {baseUrl = ''} = {}) => {
 	return t.turndown(content)
 }
 
-export function fromHtml(htmlStr, opts) {
+export function htmlToMarkdown(htmlStr, opts) {
 	return turndown(htmlStr, opts)
 }

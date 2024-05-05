@@ -1,5 +1,6 @@
-import {get, ONE_DAY, ONE_HOUR} from '../../ccc-lib/index.js'
-import * as bonapp from '../../ccc-bonapp/index.js'
+import {get} from '../../ccc-lib/http.js'
+import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.js'
+import * as bonapp from '../../menus-bonapp/index.js'
 import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
 

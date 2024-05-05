@@ -1,5 +1,4 @@
-import {get, ONE_HOUR} from '../ccc-lib/index.js'
-import mem from 'memoize'
+import {get} from '../ccc-lib/http.js'
 import lodash from 'lodash'
 import _jsdom from 'jsdom'
 import pMap from 'p-map'

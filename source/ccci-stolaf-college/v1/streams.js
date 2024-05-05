@@ -1,4 +1,5 @@
-import {get, ONE_HOUR} from '../../ccc-lib/index.js'
+import {get} from '../../ccc-lib/http.js'
+import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import moment from 'moment-timezone'
 
 export async function getStreams({streamClass, sort, dateFrom, dateTo}) {

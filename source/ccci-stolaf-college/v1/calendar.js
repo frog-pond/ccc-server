@@ -1,6 +1,6 @@
-import {googleCalendar} from '../../ccc-google-calendar/index.js'
-import {reasonCalendar} from '../../ccc-reason-calendar/index.js'
-import {ONE_MINUTE} from '../../ccc-lib/index.js'
+import {googleCalendar} from '../../calendar-google/index.js'
+import {reasonCalendar} from '../../calendar-reason/index.js'
+import {ONE_MINUTE} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 
 export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})

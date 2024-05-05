@@ -1,9 +1,6 @@
-import {get, ONE_DAY} from '../../ccc-lib/index.js'
-import {
-	cleanTextBlock,
-	getDetailMap,
-	findHtmlKey,
-} from '../../ccc-html/index.js'
+import {get} from '../../ccc-lib/http.js'
+import {ONE_DAY} from '../../ccc-lib/constants.js'
+import {cleanTextBlock, getDetailMap, findHtmlKey} from '../../ccc-lib/html.js'
 import mem from 'memoize'
 import pMap from 'p-map'
 import _jsdom from 'jsdom'

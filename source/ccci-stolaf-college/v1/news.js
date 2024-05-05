@@ -1,8 +1,8 @@
 /* eslint-disable camelcase */
 
-import {ONE_HOUR} from '../../ccc-lib/index.js'
-import {fetchRssFeed} from '../../ccc-rss-feed/index.js'
-import {fetchWpJson, deprecatedWpJson} from '../../ccc-wpjson-feed/index.js'
+import {ONE_HOUR} from '../../ccc-lib/constants.js'
+import {fetchRssFeed} from '../../feed-rss/index.js'
+import {fetchWpJson, deprecatedWpJson} from '../../feed-wpjson/index.js'
 import mem from 'memoize'
 
 export const cachedRssFeed = mem(fetchRssFeed, {maxAge: ONE_HOUR})

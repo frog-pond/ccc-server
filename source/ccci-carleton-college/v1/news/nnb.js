@@ -1,4 +1,4 @@
-import {get} from '../../../ccc-lib/index.js'
+import {get} from '../../../ccc-lib/http.js'
 import _jsdom from 'jsdom'
 import lodash from 'lodash'
 const {groupBy, toPairs} = lodash
