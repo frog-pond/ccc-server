@@ -10,7 +10,7 @@ RUN npm ci --omit=dev
 HEALTHCHECK --interval=20s --timeout=1s \
   CMD curl -f http://localhost:80/ping
 
-COPY ./modules ./modules
+COPY ./source ./source
 
 ENV NODE_ENV=production
 ENV NODE_PORT=80
