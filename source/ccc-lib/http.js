@@ -1,4 +1,6 @@
 import ky from 'ky'
+import memoize from 'memoize'
+import {ONE_MINUTE} from './constants.js'
 
 export const USER_AGENT = 'ccc-server/0.2.0'
 
@@ -15,4 +17,4 @@ export const http = ky.extend({
  * @param {import("ky").Options} [opts]
  * @returns {import("ky").ResponsePromise}
  */
-export const get = (url, opts) => http.get(url, opts)
+export const get = memoize(http.get, {maxAge: ONE_MINUTE})
