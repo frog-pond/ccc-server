@@ -221,7 +221,7 @@ export async function cafe(cafeUrl) {
 		return CustomCafe({message: 'Café is closed'})
 	}
 
-	let response = CafeMenu.safeParse({
+	let response = BamcoCafeInfo.safeParse({
 		cafe: {
 			name: bamco.data.current_cafe.name,
 			address: '',
