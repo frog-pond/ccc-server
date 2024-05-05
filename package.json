@@ -1,7 +1,6 @@
 {
-  "name": "@frogpond/private",
+  "name": "@frogpond/ccc-server",
   "description": "",
-  "repository": "frog-pond/ccc-server",
   "keywords": [],
   "author": "Frog Pond Labs, LLC",
   "license": "AGPL-3.0-only",
@@ -15,9 +14,9 @@
   },
   "scripts": {
     "p": "pretty-quick",
-    "pretty": "prettier --with-node-modules --write 'modules/**/*.js'",
-    "lint": "eslint --ignore-pattern '!modules/node_modules/*' --cache",
-    "start": "node -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js",
+    "pretty": "prettier --with-node-modules --write 'source/**/*.js'",
+    "lint": "eslint --cache",
+    "start": "node -r dotenv/config source/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college npm start",
     "carleton-college": "env INSTITUTION=carleton-college npm start",
     "test": "./scripts/smoke-test.sh"
