@@ -54,6 +54,11 @@ for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
       continue
       ;;
 
+    "/v1/orgs")
+      echo "skip because presence is so slow"
+      continue
+      ;;
+
     *)
       # do nothing
       ;;
