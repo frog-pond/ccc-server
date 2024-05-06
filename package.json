@@ -19,7 +19,7 @@
     "start": "node -r dotenv/config source/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college npm start",
     "carleton-college": "env INSTITUTION=carleton-college npm start",
-    "test": "./scripts/smoke-test.sh"
+    "test": "./scripts/smoke-all.sh"
   },
   "dependencies": {
     "@sentry/node": "^7.113.0",
