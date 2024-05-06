@@ -1,6 +1,6 @@
 import {get} from '../../ccc-lib/http.js'
 import {ONE_DAY} from '../../ccc-lib/constants.js'
-import {cleanTextBlock, getDetailMap, findHtmlKey} from '../../ccc-lib/html.js'
+import {cleanTextBlock, findHtmlKey, getDetailMap} from '../../ccc-lib/html.js'
 import mem from 'memoize'
 import pMap from 'p-map'
 import {JSDOM} from 'jsdom'
@@ -88,7 +88,7 @@ async function fetchDetail(url) {
 
 	/**
 	 * Details is a node list of HTMLDivElement. It is a scoped version of the webpage containing
-	 * all of the text elements we need to parse (both keys and values) via `getDetailMap`.
+	 * all the text elements we need to parse (both keys and values) via `getDetailMap`.
 	 */
 	const details = dom.window.document.querySelectorAll('div')
 
@@ -140,7 +140,7 @@ function fixupEmailFormat(email) {
  * The paginator is included within the nested html. We can see if we need to continue requesting
  * more data by checking if the button dedicated to clicking next is present.
  *
- * While there are are a few ways to go about parsing whether we've reached the last page, the
+ * While there are a few ways to go about parsing whether we've reached the last page, the
  * paginator looks like it doesn't even know when it has reached the end of the results! Instead
  * of trying to keep tracking of the amount of items we can opt to check the dom for the presence
  * of the button.
@@ -159,13 +159,11 @@ function nextPageExists(dom) {
  * each link's href from these pages.
  */
 export function findPageUrls(dom) {
-	const jobLinks = Array.from(
+	return Array.from(
 		dom.window.document.querySelectorAll(
 			'.gv-list-view > .gv-list-view-title > h3 > a',
 		),
-	).map((url) => url.getAttribute('href'))
-
-	return jobLinks
+	).map((anchor) => anchor.getAttribute('href'))
 }
 
 /**
