@@ -32,7 +32,7 @@ export async function cave(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
 	let url =
-		'https://www.carleton.edu/student/orgs/cave/calendar/?loadFeed=calendar&stamp=1714844429\n'
+		'https://www.carleton.edu/student/orgs/cave/calendar/?loadFeed=calendar'
 	ctx.body = await getInternetCalendar(url)
 }
 
