@@ -1,7 +1,7 @@
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 
-import {presence as _presence} from '../../calendar-presence/index.js'
+import {presence as _presence} from '../../student-orgs/presence.js'
 
 const CACHE_DURATION = ONE_HOUR * 36
 

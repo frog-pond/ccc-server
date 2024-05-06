@@ -2,18 +2,19 @@ import {get} from '../ccc-lib/http.js'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
+import {Event} from './types.js'
 
 function convertGoogleEvents(data, now = moment()) {
-	let events = data.map((event) => {
+	return data.map((event) => {
 		const startTime = moment(event.start.date || event.start.dateTime)
 		const endTime = moment(event.end.date || event.end.dateTime)
 		let description = (event.description || '').replace('<br>', '\n')
 		description = JSDOM.fragment(description).textContent.trim()
 
-		return {
+		return Event.parse({
 			dataSource: 'google',
-			startTime,
-			endTime,
+			startTime: startTime.toISOString(),
+			endTime: endTime.toISOString(),
 			title: event.summary || '',
 			description: description,
 			location: event.location || '',
@@ -24,10 +25,8 @@ function convertGoogleEvents(data, now = moment()) {
 				endTime: true,
 				subtitle: 'location',
 			},
-		}
+		})
 	})
-
-	return events
 }
 
 export async function googleCalendar(calendarId, now = moment()) {
