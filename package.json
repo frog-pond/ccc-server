@@ -28,6 +28,7 @@
     "dotenv": "16.4.5",
     "get-urls": "12.1.0",
     "html-entities": "2.5.2",
+    "ical.js": "^2.0.1",
     "is-absolute-url": "4.0.1",
     "jsdom": "24.0.0",
     "koa": "2.15.3",
