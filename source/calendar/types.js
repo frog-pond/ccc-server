@@ -12,6 +12,7 @@ export const Event = z.object({
 	endTime: z.string().datetime(),
 	title: z.string(),
 	description: z.string(),
+	location: z.string().default(''),
 	isOngoing: z.boolean(),
 	links: z.array(z.unknown()),
 	config: EventConfig,
