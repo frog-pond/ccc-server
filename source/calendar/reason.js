@@ -5,6 +5,8 @@ import moment from 'moment-timezone'
 import lodash from 'lodash'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
+import {Event} from './types.js'
+
 const {dropWhile, dropRightWhile, sortBy} = lodash
 
 const TZ = 'US/Central'
@@ -116,7 +118,7 @@ function convertReasonEvent(event, now = moment()) {
 
 	let links = description ? [...getUrls(description)] : []
 
-	return {
+	return Event.parse({
 		dataSource: 'reason',
 		startTime: event.startTime,
 		endTime: event.endTime,
@@ -133,7 +135,7 @@ function convertReasonEvent(event, now = moment()) {
 			endTime: true,
 			subtitle: 'location',
 		},
-	}
+	})
 }
 
 export async function reasonCalendar(calendarUrl, now = moment()) {
