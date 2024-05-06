@@ -6,9 +6,7 @@ export async function getStreams({streamClass, sort, dateFrom, dateTo}) {
 	const params = {
 		class: streamClass,
 		sort,
-		// eslint-disable-next-line camelcase
 		date_from: dateFrom,
-		// eslint-disable-next-line camelcase
 		date_to: dateTo,
 	}
 
