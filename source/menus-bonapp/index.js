@@ -79,7 +79,7 @@ export function cafe(cafeUrl) {
 	} catch (err) {
 		console.error(err)
 		Sentry.isInitialized() && Sentry.captureException(err)
-		return CustomCafe({message: 'Could not load the BonApp menu data'})
+		return CustomCafe({message: 'Could not load café from BonApp'})
 	}
 }
 
