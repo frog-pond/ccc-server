@@ -157,6 +157,8 @@ function nextPageExists(dom) {
 /**
  * The top-level results html provides a bunch of html with links to each posting. We can gather
  * each link's href from these pages.
+ *
+ * @returns {string[]}
  */
 export function findPageUrls(dom) {
 	return Array.from(
@@ -181,6 +183,7 @@ export function findPageUrls(dom) {
  * all job posting urls, and finally request each url we find to build our data.
  */
 async function _getJobs() {
+	/**  @type {string[]} */
 	let allUrls = []
 
 	/**
