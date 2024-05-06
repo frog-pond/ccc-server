@@ -39,8 +39,8 @@ export async function cave(ctx) {
 export async function stolaf(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
-	let id = '5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com'
-	ctx.body = await getGoogleCalendar(id)
+	let id = 'https://www.stolaf.edu/apps/calendar/ical.cfm'
+	ctx.body = await getInternetCalendar(id)
 }
 
 export async function northfield(ctx) {
