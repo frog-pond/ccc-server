@@ -56,7 +56,6 @@ api.get('/food/named/menu/schulze', menus.schulzeMenu)
 
 // calendar
 api.get('/calendar/google', calendar.google)
-api.get('/calendar/reason', calendar.reason)
 api.get('/calendar/ics', calendar.ics)
 api.get('/calendar/named/stolaf', calendar.stolaf)
 api.get('/calendar/named/oleville', calendar.oleville)

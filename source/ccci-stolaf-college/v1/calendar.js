@@ -1,10 +1,10 @@
-import {googleCalendar} from '../../calendar-google/index.js'
-import {reasonCalendar} from '../../calendar-reason/index.js'
+import {googleCalendar} from '../../calendar/google.js'
+import {ical} from '../../calendar/ical.js'
 import {ONE_MINUTE} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 
 export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})
-export const getReasonCalendar = mem(reasonCalendar, {maxAge: ONE_MINUTE})
+export const getInternetCalendar = mem(ical, {maxAge: ONE_MINUTE})
 
 export async function google(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
@@ -13,15 +13,11 @@ export async function google(ctx) {
 	ctx.body = await getGoogleCalendar(calendarId)
 }
 
-export async function reason(ctx) {
+export async function ics(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
 	let {url: calendarUrl} = ctx.query
-	ctx.body = await getReasonCalendar(calendarUrl)
-}
-
-export function ics(ctx) {
-	ctx.throw(501, 'ICS support is not implemented yet.')
+	ctx.body = await getInternetCalendar(calendarUrl)
 }
 
 export async function stolaf(ctx) {
