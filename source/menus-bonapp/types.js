@@ -79,7 +79,7 @@ export const BamcoDayPart = z.object({
 	endtime_formatted: z.string(),
 	id: z.unknown(),
 	label: z.string(),
-	message: z.union([z.literal(''), z.string()]),
+	message: z.union([z.literal(''), z.string(), z.null()]),
 	starttime: zod24Time,
 	starttime_formatted: z.string(),
 	time_formatted: z.string(),
