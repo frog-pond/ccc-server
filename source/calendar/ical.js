@@ -4,6 +4,9 @@ import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
 import InternetCalendar from 'ical.js'
 import {Event} from './types.js'
+import lodash from 'lodash'
+
+const {sortBy} = lodash
 
 /**
  * @param {InternetCalendar.Event[]} data
@@ -37,7 +40,7 @@ function convertEvents(data, now = moment()) {
 	})
 }
 
-export async function ical(url, now = moment()) {
+export async function ical(url, {onlyFuture = true} = {}, now = moment()) {
 	let body = await get(url).text()
 
 	let comp = InternetCalendar.Component.fromString(body)
@@ -45,5 +48,11 @@ export async function ical(url, now = moment()) {
 		.getAllSubcomponents('vevent')
 		.map((vevent) => new InternetCalendar.Event(vevent))
 
-	return convertEvents(events, now)
+	if (onlyFuture) {
+		events = events.filter((event) =>
+			moment(event.endDate.toString()).isAfter(now, 'day'),
+		)
+	}
+
+	return sortBy(convertEvents(events, now), (event) => event.startTime)
 }
