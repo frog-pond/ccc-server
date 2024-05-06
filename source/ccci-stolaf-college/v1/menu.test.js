@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import lodash from 'lodash'
 
 import * as menu from './menu.js'
+import {BamcoCafeInfo, CafeMenu} from '../../menus-bonapp/types.js'
 
 const {noop} = lodash
 
@@ -48,16 +49,16 @@ suite('sanity checks', () => {
 
 suite('endpoints should not throw', {concurrency: 4}, () => {
 	for (const cafe of Object.keys(menu.CAFE_URLS)) {
-		test(`${cafe} cafe endpoint should not throw`, async () => {
-			await assert.doesNotReject(() =>
-				cafeInfoFunctions[cafe]({cacheControl: noop, body: null}),
-			)
+		test(`${cafe} cafe endpoint should return a BamcoCafeInfo struct`, async () => {
+			let ctx = {cacheControl: noop, body: null}
+			await assert.doesNotReject(() => cafeInfoFunctions[cafe](ctx))
+			assert.doesNotThrow(() => BamcoCafeInfo.parse(ctx.body))
 		})
 
-		test(`${cafe} menu endpoint should not throw`, async () => {
-			await assert.doesNotReject(() =>
-				cafeMenuFunctions[cafe]({cacheControl: noop, body: null}),
-			)
+		test(`${cafe} menu endpoint should return a CafeMenu struct`, async () => {
+			let ctx = {cacheControl: noop, body: null}
+			await assert.doesNotReject(() => cafeMenuFunctions[cafe](ctx))
+			assert.doesNotThrow(() => CafeMenu.parse(ctx.body))
 		})
 	}
 })
