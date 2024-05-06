@@ -24,6 +24,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
+    - run: npm test
     - run: npm run test-stolaf-college
     - run: npm run test-carleton-college
 

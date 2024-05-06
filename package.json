@@ -21,7 +21,7 @@
     "carleton-college": "env INSTITUTION=carleton-college npm start",
     "test-stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test-carleton-college": "./scripts/smoke-test.sh stolaf-college",
-    "test": "npm run test-stolaf-college; npm run test-carleton-college;"
+    "test": "node --test"
   },
   "dependencies": {
     "@sentry/node": "^7.113.0",
