@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 import {get} from '../ccc-lib/http.js'
 import {ONE_MINUTE} from '../ccc-lib/constants.js'
 import {JSDOM, VirtualConsole} from 'jsdom'

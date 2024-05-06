@@ -34,7 +34,6 @@ export const sentryTracingMiddleware = (ctx, next) => {
 		...traceparentData,
 	})
 
-	// eslint-disable-next-line camelcase
 	ctx.__sentry_transaction = transaction
 
 	// We put the transaction on the scope so users can attach children to it
