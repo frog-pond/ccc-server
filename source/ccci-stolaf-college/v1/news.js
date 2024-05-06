@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import {fetchRssFeed} from '../../feed-rss/index.js'
 import {fetchWpJson, deprecatedWpJson} from '../../feed-wpjson/index.js'

@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 import {get} from '../ccc-lib/http.js'
 import moment from 'moment-timezone'
 import lodash from 'lodash'
@@ -15,12 +13,12 @@ function* expandReasonEvent(event, now = moment()) {
 	let {
 		id,
 		name,
-		contact_username,
+		contact_username: contactUsername,
 		sponsor,
-		end_date,
+		end_date: endDate,
 		location,
 		description,
-		datetime: start_date,
+		datetime: startDate,
 		url,
 		dates,
 		hours,
@@ -28,10 +26,10 @@ function* expandReasonEvent(event, now = moment()) {
 		recurrence,
 	} = event
 
-	let originalStartDate = moment.tz(start_date, TZ)
+	let originalStartDate = moment.tz(startDate, TZ)
 
 	if (recurrence === 'daily') {
-		let naturalEndDate = moment.tz(end_date, TZ)
+		let naturalEndDate = moment.tz(endDate, TZ)
 
 		let thisStartDate = originalStartDate.clone()
 
@@ -58,7 +56,7 @@ function* expandReasonEvent(event, now = moment()) {
 			id,
 			startTime: thisStartDate.toISOString(),
 			endTime: thisEndDate.toISOString(),
-			contact: contact_username,
+			contact: contactUsername,
 			name,
 			sponsor,
 			location,
@@ -98,7 +96,7 @@ function* expandReasonEvent(event, now = moment()) {
 			id,
 			startTime: thisStartDate.toISOString(),
 			endTime: thisEndDate.toISOString(),
-			contact: contact_username,
+			contact: contactUsername,
 			name,
 			sponsor,
 			location,
@@ -140,9 +138,7 @@ function convertReasonEvent(event, now = moment()) {
 
 export async function reasonCalendar(calendarUrl, now = moment()) {
 	let dateParams = {
-		// eslint-disable-next-line camelcase
 		start_date: now.clone().format('YYYY-MM-DD'),
-		// eslint-disable-next-line camelcase
 		end_date: now.clone().add(1, 'month').format('YYYY-MM-DD'),
 	}
 

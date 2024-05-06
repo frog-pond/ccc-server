@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 import {get} from '../ccc-lib/http.js'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import {z} from 'zod'

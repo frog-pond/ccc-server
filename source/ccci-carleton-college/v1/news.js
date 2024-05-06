@@ -32,7 +32,6 @@ export async function carletonNow(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
 	let url = 'https://www.carleton.edu/news/wp-json/wp/v2/posts'
-	// eslint-disable-next-line camelcase
 	ctx.body = await cachedWpJsonFeed(url, {per_page: 10, _embed: true})
 }
 export async function carletonian(ctx) {
