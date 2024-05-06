@@ -1,5 +1,6 @@
 import {BamcoCafeInfo, BamcoDayPart, CafeMenu, CafeMenuItem} from './types.js'
 
+/** @returns {BamcoCafeInfo} */
 export function CustomCafe({message}) {
 	let today = new Date()
 	return BamcoCafeInfo.parse({
@@ -32,6 +33,7 @@ function CustomCafeMenuItem({station, sub_station, description, label}) {
 	})
 }
 
+/** @returns {CafeMenu} */
 export function CafeMenuIsClosed() {
 	let today = new Date()
 	return CafeMenu.parse({
