@@ -5,10 +5,20 @@ import {ONE_MINUTE} from './constants.js'
 export const USER_AGENT = 'ccc-server/0.2.0'
 
 export const http = ky.extend({
-	headers: {
-		'User-Agent': USER_AGENT,
-	},
+	headers: {'User-Agent': USER_AGENT},
 	timeout: 30_000,
+	// hooks: {
+	// 	beforeRequest: [
+	// 		(request) => {
+	// 			console.log(`${request.method} ${request.url}`)
+	// 		},
+	// 	],
+	// 	afterResponse: [
+	// 		(_request, _, response) => {
+	// 			console.log(`got ${response.url}`)
+	// 		},
+	// 	],
+	// },
 })
 
 /**
