@@ -12,7 +12,7 @@ const getMenu = mem(bonapp.menu, {maxAge: ONE_HOUR})
 const getInfo = mem(bonapp.cafe, {maxAge: ONE_HOUR})
 const getNutrition = mem(bonapp.nutrition, {maxAge: ONE_HOUR})
 
-let cafeUrls = {
+export const CAFE_URLS = {
 	stav: 'https://stolaf.cafebonappetit.com/cafe/stav-hall/',
 	cage: 'https://stolaf.cafebonappetit.com/cafe/the-cage/',
 	kingsRoom: 'https://stolaf.cafebonappetit.com/cafe/the-kings-room/',
@@ -24,7 +24,7 @@ let cafeUrls = {
 	schulze: 'https://carleton.cafebonappetit.com/cafe/schulze-cafe/',
 }
 
-let cafeIdToUrl = {
+export const CAFE_ID_TO_URL = {
 	261: 'stav',
 	262: 'cage',
 	263: 'kingsRoom',
@@ -43,13 +43,13 @@ export async function pauseMenu(ctx) {
 export async function bonAppMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls[cafeIdToUrl[ctx.params.cafeId]])
+	ctx.body = await getMenu(CAFE_URLS[CAFE_ID_TO_URL[ctx.params.cafeId]])
 }
 
 export async function bonAppCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls[cafeIdToUrl[ctx.params.cafeId]])
+	ctx.body = await getInfo(CAFE_URLS[CAFE_ID_TO_URL[ctx.params.cafeId]])
 }
 
 export async function bonAppNutrition(ctx) {
@@ -61,107 +61,107 @@ export async function bonAppNutrition(ctx) {
 export async function stavCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.stav)
+	ctx.body = await getInfo(CAFE_URLS.stav)
 }
 
 export async function stavMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.stav)
+	ctx.body = await getMenu(CAFE_URLS.stav)
 }
 
 export async function cageCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.cage)
+	ctx.body = await getInfo(CAFE_URLS.cage)
 }
 
 export async function cageMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.cage)
+	ctx.body = await getMenu(CAFE_URLS.cage)
 }
 
 export async function kingsRoomCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.kingsRoom)
+	ctx.body = await getInfo(CAFE_URLS.kingsRoom)
 }
 
 export async function kingsRoomMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.kingsRoom)
+	ctx.body = await getMenu(CAFE_URLS.kingsRoom)
 }
 
 export async function caveCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.cave)
+	ctx.body = await getInfo(CAFE_URLS.cave)
 }
 
 export async function caveMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.cave)
+	ctx.body = await getMenu(CAFE_URLS.cave)
 }
 
 export async function burtonCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.burton)
+	ctx.body = await getInfo(CAFE_URLS.burton)
 }
 
 export async function burtonMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.burton)
+	ctx.body = await getMenu(CAFE_URLS.burton)
 }
 
 export async function ldcCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.ldc)
+	ctx.body = await getInfo(CAFE_URLS.ldc)
 }
 
 export async function ldcMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.ldc)
+	ctx.body = await getMenu(CAFE_URLS.ldc)
 }
 
 export async function saylesCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.sayles)
+	ctx.body = await getInfo(CAFE_URLS.sayles)
 }
 
 export async function saylesMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.sayles)
+	ctx.body = await getMenu(CAFE_URLS.sayles)
 }
 
 export async function weitzCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.weitz)
+	ctx.body = await getInfo(CAFE_URLS.weitz)
 }
 
 export async function weitzMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.weitz)
+	ctx.body = await getMenu(CAFE_URLS.weitz)
 }
 
 export async function schulzeCafe(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(cafeUrls.schulze)
+	ctx.body = await getInfo(CAFE_URLS.schulze)
 }
 
 export async function schulzeMenu(ctx) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(cafeUrls.schulze)
+	ctx.body = await getMenu(CAFE_URLS.schulze)
 }
