@@ -1,18 +1,15 @@
 import {get} from '../../ccc-lib/http.js'
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
+import pMemoize from 'p-memoize'
+import {ONE_HOUR_CACHE} from '../../ccc-lib/cache.js'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
-
-let url = GH_PAGES('building-hours.json')
-
-export function getBuildingHours() {
-	return GET(url).json()
-}
+const _getBuildingHours = () => get(GH_PAGES('building-hours.json')).json()
+export const getBuildingHours = pMemoize(_getBuildingHours, {
+	cache: ONE_HOUR_CACHE,
+})
 
 export async function buildingHours(ctx) {
 	ctx.cacheControl(ONE_HOUR)
-
 	ctx.body = await getBuildingHours()
 }
