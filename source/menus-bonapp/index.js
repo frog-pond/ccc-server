@@ -2,17 +2,18 @@ import {get} from '../ccc-lib/http.js'
 import {ONE_MINUTE} from '../ccc-lib/constants.js'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
-import mem from 'memoize'
+import pMemoize from 'p-memoize'
+import ExpiryMap from 'expiry-map'
 import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe} from './helpers.js'
 import {BamcoCafeInfo, BamcoPageContents, CafeMenu} from './types.js'
 
-const getBamcoPage = mem(get, {maxAge: ONE_MINUTE})
+const cache = new ExpiryMap(ONE_MINUTE)
 
 /**
- * @param {string|URL} url
+ * @param {string} url
  * @return {Promise<JSDOM>}
  */
-async function getBonAppWebpage(url) {
+async function _getBonAppWebpage(url) {
 	const virtualConsole = new VirtualConsole()
 	virtualConsole.sendTo(console, {omitJSDOMErrors: true})
 	virtualConsole.on('jsdomError', (err) => {
@@ -26,12 +27,14 @@ async function getBonAppWebpage(url) {
 		console.error(err)
 	})
 
-	const body = await getBamcoPage(url).text()
+	const body = await get(url).text()
 	return new JSDOM(body, {
 		runScripts: 'dangerously',
 		virtualConsole,
 	})
 }
+
+const getBonAppWebpage = pMemoize(_getBonAppWebpage, {cache})
 
 /**
  * @param {string|URL} cafeUrl
@@ -39,7 +42,7 @@ async function getBonAppWebpage(url) {
  */
 export async function _cafe(cafeUrl) {
 	let today = new Date()
-	let dom = await getBonAppWebpage(cafeUrl)
+	let dom = await getBonAppWebpage(cafeUrl.toString())
 
 	let bamco = BamcoPageContents.parse(dom.window.Bamco)
 	if (typeof bamco === 'undefined') {
@@ -92,7 +95,7 @@ export function nutrition(itemId) {
  */
 export async function _menu(cafeUrl) {
 	let today = new Date()
-	let dom = await getBonAppWebpage(cafeUrl)
+	let dom = await getBonAppWebpage(cafeUrl.toString())
 
 	let bamco = BamcoPageContents.parse(dom.window.Bamco)
 	if (typeof bamco === 'undefined') {
