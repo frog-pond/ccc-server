@@ -1,10 +1,13 @@
 import {googleCalendar} from '../../calendar/google.js'
 import {ical} from '../../calendar/ical.js'
 import {ONE_MINUTE} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
+import pMemoize from 'p-memoize'
+import {ONE_MINUTE_CACHE} from '../../ccc-lib/cache.js'
 
-export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})
-export const getInternetCalendar = mem(ical, {maxAge: ONE_MINUTE})
+export const getGoogleCalendar = pMemoize(googleCalendar, {
+	cache: ONE_MINUTE_CACHE,
+})
+export const getInternetCalendar = pMemoize(ical, {cache: ONE_MINUTE_CACHE})
 
 export async function google(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
