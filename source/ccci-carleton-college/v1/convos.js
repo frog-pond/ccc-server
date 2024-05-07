@@ -2,11 +2,10 @@ import {get} from '../../ccc-lib/http.js'
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import {makeAbsoluteUrl} from '../../ccc-lib/url.js'
 import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.js'
-import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import moment from 'moment'
-
-const archiveBase = 'https://feed.podbean.com/carletonconvos/feed.xml'
+import pMemoize from 'p-memoize'
+import {ONE_HOUR_CACHE} from '../../ccc-lib/cache.js'
 
 function processConvo(event) {
 	let title = JSDOM.fragment(
@@ -38,7 +37,7 @@ function processConvo(event) {
 	return {title, description, pubDate, enclosure}
 }
 
-async function fetchUpcoming(eventId) {
+async function _getUpcoming(eventId) {
 	let baseUrl = 'https://www.carleton.edu/convocations/calendar/'
 	let url = 'https://www.carleton.edu/convocations/calendar/'
 	let body = await get(url, {searchParams: {eId: String(eventId)}}).text()
@@ -64,7 +63,7 @@ async function fetchUpcoming(eventId) {
 	}
 }
 
-export const getUpcoming = mem(fetchUpcoming, {maxAge: ONE_HOUR * 6})
+export const getUpcoming = pMemoize(_getUpcoming, {cache: ONE_HOUR_CACHE})
 
 export async function upcomingDetail(ctx) {
 	ctx.cacheControl(ONE_HOUR * 6)
@@ -72,17 +71,16 @@ export async function upcomingDetail(ctx) {
 	ctx.body = await getUpcoming(ctx.params.id)
 }
 
-async function fetchArchived() {
-	let body = await get(archiveBase).text()
+async function _getArchived() {
+	let body = await get(
+		'https://feed.podbean.com/carletonconvos/feed.xml',
+	).text()
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	let convos = Array.from(
-		dom.window.document.querySelectorAll('rss channel item'),
-	).map(processConvo)
-	convos = convos.slice(0, 100)
-	return Promise.all(convos)
+	let items = dom.window.document.querySelectorAll('rss channel item')
+	return Array.from(items).map(processConvo).slice(0, 100)
 }
 
-export const getArchived = mem(fetchArchived, {maxAge: ONE_HOUR * 6})
+export const getArchived = pMemoize(_getArchived, {cache: ONE_HOUR_CACHE})
 
 export async function archived(ctx) {
 	ctx.cacheControl(ONE_HOUR * 6)
