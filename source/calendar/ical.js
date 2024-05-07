@@ -41,7 +41,7 @@ function convertEvents(data, now = moment()) {
 }
 
 export async function ical(url, {onlyFuture = true} = {}, now = moment()) {
-	let body = await get(url).text()
+	let body = await get(url, {headers: {accept: 'text/calendar'}}).text()
 
 	let comp = InternetCalendar.Component.fromString(body)
 	let events = comp

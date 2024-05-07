@@ -3,7 +3,7 @@ import {z} from 'zod'
 const EventConfig = z.object({
 	startTime: z.boolean(),
 	endTime: z.boolean(),
-	subtitle: z.union([z.literal('location')]),
+	subtitle: z.union([z.literal('location'), z.literal('description')]),
 })
 
 export const Event = z.object({
@@ -12,6 +12,7 @@ export const Event = z.object({
 	endTime: z.string().datetime(),
 	title: z.string(),
 	description: z.string(),
+	location: z.string().default(''),
 	isOngoing: z.boolean(),
 	links: z.array(z.unknown()),
 	config: EventConfig,
