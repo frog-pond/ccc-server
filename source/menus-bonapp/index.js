@@ -1,13 +1,10 @@
 import {get} from '../ccc-lib/http.js'
-import {ONE_MINUTE} from '../ccc-lib/constants.js'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
 import pMemoize from 'p-memoize'
-import ExpiryMap from 'expiry-map'
 import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe} from './helpers.js'
 import {BamcoCafeInfo, BamcoPageContents, CafeMenu} from './types.js'
-
-const cache = new ExpiryMap(ONE_MINUTE)
+import {ONE_HOUR_CACHE} from '../ccc-lib/cache.js'
 
 /**
  * @param {string} url
@@ -34,7 +31,7 @@ async function _getBonAppWebpage(url) {
 	})
 }
 
-const getBonAppWebpage = pMemoize(_getBonAppWebpage, {cache})
+const getBonAppWebpage = pMemoize(_getBonAppWebpage, {cache: ONE_HOUR_CACHE})
 
 /**
  * @param {string|URL} cafeUrl
