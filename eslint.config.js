@@ -50,7 +50,7 @@ export default [
 			'no-undef-init': 'off',
 			'no-underscore-dangle': 'off',
 			'no-unmodified-loop-condition': 'error',
-			'no-unused-vars': ['warn', {args: 'after-used', argsIgnorePattern: '^_'}],
+			'@typescript-eslint/no-unused-vars': ['warn', {args: 'after-used', argsIgnorePattern: '^_'}],
 			'no-useless-constructor': 'error',
 			'no-var': 'error',
 			'prefer-const': 'off',
