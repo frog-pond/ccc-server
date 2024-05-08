@@ -1,6 +1,6 @@
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import {fetchRssFeed} from '../../feed-rss/index.js'
-import {fetchWpJson, deprecatedWpJson} from '../../feed-wpjson/index.js'
+import {fetchRssFeed} from '../../feeds/rss.ts'
+import {fetchWpJson, deprecatedWpJson} from '../../feeds/wp-json.ts'
 import mem from 'memoize'
 
 export const cachedRssFeed = mem(fetchRssFeed, {maxAge: ONE_HOUR})
