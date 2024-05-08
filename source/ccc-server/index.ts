@@ -9,16 +9,18 @@ import Router from 'koa-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {nodeProfilingIntegration} from '@sentry/profiling-node'
+import {z} from 'zod'
 // import {sentryRequestHandler, sentryTracingMiddleware} from './sentry.js'
 
 function setupSentry() {
-	const dsn = process.env.SENTRY_DSN
+	const dsn = process.env['SENTRY_DSN']
 	if (!dsn) {
 		console.warn('no SENTRY_DSN set, not starting Sentry')
 		return
 	}
 
-	const environment = process.env.NODE_ENV || 'development'
+	// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+	const environment = process.env['NODE_ENV'] || 'development'
 
 	Sentry.init({
 		dsn,
@@ -33,22 +35,35 @@ function setupSentry() {
 	})
 }
 
+const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
+
 async function main() {
-	const smokeTesting = process.env.SMOKE_TEST || false
+	const smokeTesting = Boolean(process.env['SMOKE_TEST'])
 
 	if (!smokeTesting) {
 		setupSentry()
 	}
 
-	const institution = process.env.INSTITUTION
-	if (!institution || institution === 'unknown') {
+	const institutionResult = InstitutionSchema.safeParse(
+		process.env['INSTITUTION'],
+	)
+	if (institutionResult.error) {
 		console.error(
-			'please add -e INSTITUTION=$place to your docker run, or set the environment variable in some way',
+			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
 		)
 		process.exit(1)
 	}
+	const institution = institutionResult.data
 
-	const {v1} = await import(`../ccci-${institution}/index.js`)
+	let v1: Router
+	switch (institution) {
+		case 'carleton-college':
+			v1 = (await import('../ccci-carleton-college/index.js')).v1
+			break
+		case 'stolaf-college':
+			v1 = (await import('../ccci-stolaf-college/index.js')).v1
+			break
+	}
 
 	const app = new Koa()
 
@@ -84,7 +99,7 @@ async function main() {
 	app.use(router.allowedMethods())
 
 	// capture errors and send to Sentry too, not just the console.
-	app.on('error', (err, ctx) => {
+	app.on('error', (err: Error, ctx: Koa.Context) => {
 		console.error(err)
 		Sentry.isInitialized() &&
 			Sentry.withScope((scope) => {
@@ -101,12 +116,10 @@ async function main() {
 		return
 	}
 
-	const PORT = process.env.NODE_PORT || '3000'
+	// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+	const PORT = process.env['NODE_PORT'] || '3000'
 	app.listen(Number.parseInt(PORT, 10))
 	console.log(`listening on port ${PORT}`)
 }
 
-main().catch((err) => {
-	console.error(err)
-	process.exit(1)
-})
+await main()
