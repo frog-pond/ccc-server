@@ -25,7 +25,6 @@ export default [
 			camelcase: ['warn', {properties: 'never', ignoreDestructuring: true}],
 			'consistent-this': ['error', 'self'],
 			curly: ['warn', 'multi-line'],
-			'default-case': 'error',
 			'guard-for-in': 'error',
 			eqeqeq: ['error', 'always', {null: 'ignore'}],
 			'linebreak-style': ['error', 'unix'],
