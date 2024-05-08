@@ -59,6 +59,12 @@ export default [
 			quotes: ['warn', 'single', 'avoid-escape'],
 			'require-await': 'warn',
 			semi: 'off',
+
+			// conflicts with the noPropertyAccessFromIndexSignature tsconfig rule
+			'@typescript-eslint/dot-notation': [
+				'error',
+				{allowIndexSignaturePropertyAccess: true},
+			],
 		},
 	},
 	{
