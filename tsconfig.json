@@ -11,7 +11,7 @@
      "lib": ["ESNext"], /* Specify a set of bundled library declaration files that describe the target runtime environment. */
 
     /* Modules */
-    "module": "ESNext", /* Specify what module code is generated. */
+    "module": "NodeNext", /* Specify what module code is generated. */
     "rootDir": "./", /* Specify the root folder within your source files. */
 
     /* JavaScript Support */
