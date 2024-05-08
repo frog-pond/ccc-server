@@ -2,46 +2,81 @@ import {get} from '../../ccc-lib/http.js'
 import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 import {JSDOM} from 'jsdom'
-import lodash from 'lodash'
-const {sortBy, startCase} = lodash
+import {sortBy} from 'lodash-es'
+import {z} from 'zod'
+import Router from 'koa-router'
 
-function domToOrg(orgNode) {
-	let name = orgNode
-		.querySelector('h4')
-		.textContent.replace(/ Manage$/, '')
-		.trim()
+export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
+export const CarletonStudentOrgSchema = z.object({
+	id: z.string(),
+	contacts: z.string().array(),
+	categories: z.string().array(),
+	socialLinks: z.string().url().array(),
+	adminLink: z.string().url(),
+	description: z.string(),
+	website: z.string().url(),
+	name: z.string().min(1),
+})
 
-	let adminLink = orgNode.querySelector('h4 > a').href
-	adminLink = `https://apps.carleton.edu${adminLink}`
+export type SortableCarletonStudentOrgType = z.infer<
+	typeof SortableCarletonStudentOrgSchema
+>
+export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend(
+	{
+		$sortableName: z.string(),
+		$groupableName: z.string(),
+	},
+)
 
-	const ids = [...orgNode.querySelectorAll('a[name]')].map((n) =>
+function domToOrg(orgNode: Element, sortableRegex: RegExp) {
+	let name =
+		orgNode
+			.querySelector('h4')
+			?.textContent?.replace(/ Manage$/, '')
+			.trim() ?? ''
+
+	let adminLink = orgNode.querySelector('h4 > a')?.getAttribute('href')
+	adminLink = adminLink ? `https://apps.carleton.edu${adminLink}` : ''
+
+	const ids = Array.from(orgNode.querySelectorAll('a[name]')).map((n) =>
 		n.getAttribute('name'),
 	)
-	const id = ids.length ? ids[0] : name
+	const id = ids[0] ?? name
 
-	const description = orgNode
-		.querySelector('.orgDescription')
-		.textContent.trim()
+	const description =
+		orgNode.querySelector('.orgDescription')?.textContent?.trim() ?? ''
 
-	let contacts = orgNode.querySelector('.contacts')
-	contacts = contacts ? contacts.textContent.trim() : ''
-	contacts = contacts.replace(/^Contact: /, '')
-	contacts = contacts ? contacts.split(', ') : []
-	contacts = [...new Set(contacts)]
-
-	const websiteEls = [...orgNode.querySelectorAll('.site a')].map((n) =>
-		n.getAttribute('href'),
+	let contacts = Array.from(
+		new Set(
+			orgNode
+				.querySelector('.contacts')
+				?.textContent?.trim()
+				.replace(/^Contact: /, '')
+				.split(', ') ?? [],
+		),
 	)
-	let website = websiteEls.length ? websiteEls[0] : ''
+
+	const websiteEls = Array.from(orgNode.querySelectorAll('.site a')).flatMap(
+		(n) => {
+			let href = n.getAttribute('href')
+			return href ? [href] : []
+		},
+	)
+	let website = websiteEls[0] ?? ''
 	if (website.length && !/^https?:\/\//.test(website)) {
 		website = `http://${website}`
 	}
 
-	const socialLinks = [...orgNode.querySelectorAll('a > img')]
-		.map((n) => n.parentNode)
-		.map((n) => n.getAttribute('href'))
+	const socialLinks = Array.from(orgNode.querySelectorAll('a > img')).flatMap(
+		(n) => {
+			let href = n.parentElement?.getAttribute('href')
+			return href ? [href] : []
+		},
+	)
 
-	return {
+	let sortableName = name.replace(sortableRegex, '')
+
+	let orgObj: SortableCarletonStudentOrgType = {
 		id,
 		contacts,
 		description,
@@ -50,7 +85,11 @@ function domToOrg(orgNode) {
 		categories: [],
 		socialLinks,
 		adminLink,
+		$sortableName: sortableName,
+		$groupableName: sortableName.at(0)?.toLocaleUpperCase() ?? '',
 	}
+
+	return SortableCarletonStudentOrgSchema.parse(orgObj)
 }
 
 async function _getOrgs() {
@@ -61,16 +100,17 @@ async function _getOrgs() {
 	const allOrgWrappers = dom.window.document.querySelectorAll(
 		'.orgContainer, .careerField',
 	)
-	const allOrgs = new Map()
 
+	const allOrgs = new Map<string, CarletonStudentOrgType>()
+	const sortableRegex = /^(Carleton( College)?|The) +/i
 	let currentCategory = null
 	for (const orgNode of allOrgWrappers) {
 		if (orgNode.classList.contains('careerField')) {
-			currentCategory = orgNode.textContent.trim()
+			currentCategory = orgNode.textContent?.trim()
 			continue
 		}
 
-		const org = domToOrg(orgNode)
+		const org = domToOrg(orgNode, sortableRegex)
 		if (!allOrgs.has(org.id)) {
 			allOrgs.set(org.id, org)
 		}
@@ -84,24 +124,15 @@ async function _getOrgs() {
 		}
 	}
 
-	const sortableRegex = /^(Carleton( College)?|The) +/i
-	const withSortableNames = Array.from(allOrgs.values()).map((item) => {
-		const sortableName = item.name.replace(sortableRegex, '')
-
-		return {
-			...item,
-			$sortableName: sortableName,
-			$groupableName: startCase(sortableName)[0],
-		}
-	})
-
-	const sorted = sortBy(withSortableNames, '$sortableName')
-	return sorted
+	return sortBy(Array.from(allOrgs.values()), '$sortableName')
 }
 
 export const getOrgs = mem(_getOrgs, {maxAge: ONE_HOUR * 6})
 
-export async function orgs(ctx) {
+export const orgs: Router.IMiddleware<
+	unknown,
+	{cacheControl: (n: number) => unknown}
+> = async (ctx) => {
 	ctx.cacheControl(ONE_HOUR * 6)
 
 	ctx.body = await getOrgs()
