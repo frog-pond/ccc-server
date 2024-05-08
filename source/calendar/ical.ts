@@ -4,7 +4,7 @@ import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
 import InternetCalendar from 'ical.js'
 import {EventSchema} from './types.js'
-import {sortBy} from 'lodash'
+import {sortBy} from 'lodash-es'
 
 function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	const startTime = moment(event.startDate.toString())

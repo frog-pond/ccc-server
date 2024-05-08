@@ -47,7 +47,7 @@
     "koa-response-time": "2.1.0",
     "koa-router": "12.0.1",
     "ky": "^1.2.4",
-    "lodash": "4.17.21",
+    "lodash-es": "^4.17.21",
     "memoize": "10.0.0",
     "moment": "2.30.1",
     "moment-timezone": "0.5.45",

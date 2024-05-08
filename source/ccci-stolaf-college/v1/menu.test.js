@@ -1,6 +1,6 @@
 import {suite, test} from 'node:test'
 import assert from 'node:assert/strict'
-import lodash from 'lodash'
+import {noop} from 'lodash-es'
 
 import * as menu from './menu.js'
 import {

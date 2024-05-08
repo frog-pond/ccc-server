@@ -1,5 +1,5 @@
 import {get, http} from '../ccc-lib/http.js'
-import lodash from 'lodash'
+import {sortBy} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 import {z} from 'zod'
@@ -77,5 +77,5 @@ export async function presence(
 
 	let cleaned = orgs.map((org) => cleanOrg(org, sortableRegex))
 
-	return lodash.sortBy(cleaned, '$sortableName')
+	return sortBy(cleaned, '$sortableName')
 }

@@ -1,14 +1,12 @@
 import {suite, test} from 'node:test'
 import assert from 'node:assert/strict'
-import lodash from 'lodash'
+import {noop} from 'lodash-es'
 
 import * as menu from './menu.js'
 import {
 	CafeInfoResponseSchema,
 	CafeMenuResponseSchema,
 } from '../../menus-bonapp/types.js'
-
-const {noop} = lodash
 
 const cafeInfoFunctions = {
 	stav: menu.stavCafe,
