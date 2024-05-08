@@ -1,7 +1,14 @@
 import Turndown from 'turndown'
 import {makeAbsoluteUrl} from './url.js'
 
-const turndown = (content, {baseUrl = ''} = {}) => {
+interface TurndownOptions {
+	baseUrl?: string
+}
+
+function turndown(
+	content: string,
+	{baseUrl = ''}: TurndownOptions = {},
+): string {
 	let t = new Turndown({
 		headingStyle: 'atx',
 		hr: '---',
@@ -9,18 +16,29 @@ const turndown = (content, {baseUrl = ''} = {}) => {
 	})
 
 	t.addRule('absolute-urls', {
-		filter: function (node, options) {
+		filter(node, options) {
 			return (
 				options.linkStyle === 'inlined' &&
 				node.nodeName === 'A' &&
-				node.getAttribute('href')
+				Boolean(node.getAttribute('href'))
 			)
 		},
 
-		replacement: function (content, node) {
+		replacement(content, node) {
+			if (!('getAttribute' in node)) {
+				return ''
+			}
+
 			let href = node.getAttribute('href')
+			if (!href) {
+				return ''
+			}
+
 			href = makeAbsoluteUrl(href, {baseUrl})
-			let title = node.title ? ` "${node.title}"` : ''
+
+			let title = node.getAttribute('title')
+			title = title ? ` "${title}"` : ''
+
 			return `[${content}](${href}${title})`
 		},
 	})
@@ -28,6 +46,6 @@ const turndown = (content, {baseUrl = ''} = {}) => {
 	return t.turndown(content)
 }
 
-export function htmlToMarkdown(htmlStr, opts) {
+export function htmlToMarkdown(htmlStr: string, opts: TurndownOptions) {
 	return turndown(htmlStr, opts)
 }

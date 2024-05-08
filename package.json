@@ -60,6 +60,7 @@
     "@types/jsdom": "^21.1.6",
     "@types/koa": "^2.15.0",
     "@types/lodash": "^4.17.1",
+    "@types/turndown": "^5.0.4",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^9.1.0",
     "globals": "^15.1.0",

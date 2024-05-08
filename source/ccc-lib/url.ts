@@ -1,23 +1,22 @@
-import url from 'url'
 import isAbsoluteUrl from 'is-absolute-url'
 import normalizeUrl from 'normalize-url'
 
-function getBaseUrl(urlStr) {
+function getBaseUrl(urlStr: string): string {
 	// removes everything but the base url
-	let urlObj = url.parse(urlStr)
+	let urlObj = new URL(urlStr)
 	if (!urlObj.hostname && !urlObj.pathname) {
 		throw new Error('Invalid URL')
 	}
-	delete urlObj.pathname
-	delete urlObj.fragment
-	delete urlObj.query
-	return url.format(urlObj)
+	urlObj.pathname = ''
+	urlObj.hash = ''
+	urlObj.search = ''
+	return urlObj.toString()
 }
 
-export function makeAbsoluteUrl(urlStr, {baseUrl} = {}) {
+export function makeAbsoluteUrl(urlStr: string, {baseUrl = ''} = {}) {
 	if (!isAbsoluteUrl(urlStr)) {
 		baseUrl = getBaseUrl(baseUrl)
 		urlStr = `${baseUrl}${urlStr}`
 	}
-	return normalizeUrl(urlStr, {removeWWW: false, removeHash: false})
+	return normalizeUrl(urlStr, {stripWWW: false, stripHash: false})
 }
