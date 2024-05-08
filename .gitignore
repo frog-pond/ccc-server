@@ -14,3 +14,7 @@
 # Logs
 *.log
 npm-debug.log*
+
+# Typescript
+/.tsbuildinfo
+/dist/
