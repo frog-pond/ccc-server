@@ -4,15 +4,18 @@ import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
 import mem from 'memoize'
 import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe} from './helpers.js'
-import {BamcoCafeInfo, BamcoPageContents, CafeMenu} from './types.js'
+import {
+	CafeInfoResponseSchema,
+	CafeMenuResponseSchema,
+	type CafeInfoResponseType,
+	type CafeMenuResponseType,
+} from './types.js'
 
-const getBamcoPage = mem(get, {maxAge: ONE_MINUTE})
+import {BamcoPageContentsSchema} from './types-bonapp.js'
 
-/**
- * @param {string|URL} url
- * @return {Promise<JSDOM>}
- */
-async function getBonAppWebpage(url) {
+const _getBamcoPage = mem(get, {maxAge: ONE_MINUTE})
+
+async function getBonAppWebpage(url: string | URL) {
 	const virtualConsole = new VirtualConsole()
 	virtualConsole.sendTo(console, {omitJSDOMErrors: true})
 	virtualConsole.on('jsdomError', (err) => {
@@ -26,27 +29,25 @@ async function getBonAppWebpage(url) {
 		console.error(err)
 	})
 
-	const body = await getBamcoPage(url).text()
+	const body = await _getBamcoPage(url.toString()).text()
 	return new JSDOM(body, {
 		runScripts: 'dangerously',
 		virtualConsole,
 	})
 }
 
-/**
- * @param {string|URL} cafeUrl
- * @returns {Promise<BamcoCafeInfo>}
- */
-export async function _cafe(cafeUrl) {
+export async function _cafe(
+	cafeUrl: string | URL,
+): Promise<CafeInfoResponseType> {
 	let today = new Date()
 	let dom = await getBonAppWebpage(cafeUrl)
 
-	let bamco = BamcoPageContents.parse(dom.window.Bamco)
+	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
 	if (typeof bamco === 'undefined') {
-		return CustomCafe({message: 'Café is closed'})
+		return CustomCafe('Café is closed')
 	}
 
-	return BamcoCafeInfo.parse({
+	return CafeInfoResponseSchema.parse({
 		cafe: {
 			name: bamco.current_cafe.name,
 			days: [
@@ -67,39 +68,33 @@ export async function _cafe(cafeUrl) {
 	})
 }
 
-/**
- * @param {string|URL} cafeUrl
- * @returns {Promise<BamcoCafeInfo>}
- */
-export function cafe(cafeUrl) {
+export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	try {
 		return _cafe(cafeUrl)
 	} catch (err) {
 		console.error(err)
 		Sentry.isInitialized() && Sentry.captureException(err)
-		return CustomCafe({message: 'Could not load café from BonApp'})
+		return Promise.resolve(CustomCafe('Could not load café from BonApp'))
 	}
 }
 
-export function nutrition(itemId) {
+export function nutrition(itemId: string) {
 	let url = 'https://legacy.cafebonappetit.com/api/2/items'
 	return get(url, {searchParams: {item: itemId}}).json()
 }
 
-/**
- * @param {string|URL} cafeUrl
- * @returns {Promise<CafeMenu>}
- */
-export async function _menu(cafeUrl) {
+export async function _menu(
+	cafeUrl: string | URL,
+): Promise<CafeMenuResponseType> {
 	let today = new Date()
 	let dom = await getBonAppWebpage(cafeUrl)
 
-	let bamco = BamcoPageContents.parse(dom.window.Bamco)
+	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
 	if (typeof bamco === 'undefined') {
 		return CafeMenuIsClosed()
 	}
 
-	return CafeMenu.parse({
+	return CafeMenuResponseSchema.parse({
 		cor_icons: Array.isArray(bamco.cor_icons) ? {} : bamco.cor_icons,
 		items: bamco.menu_items,
 		days: [
@@ -115,16 +110,17 @@ export async function _menu(cafeUrl) {
 	})
 }
 
-/**
- * @param {string|URL} cafeUrl
- * @returns {Promise<CafeMenu>}
- */
-export function menu(cafeUrl) {
+export function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	try {
 		return _menu(cafeUrl)
 	} catch (err) {
 		console.error(err)
 		Sentry.isInitialized() && Sentry.captureException(err)
-		return CafeMenuWithError(err.message, 'Could not load the BonApp menu data')
+		return Promise.resolve(
+			CafeMenuWithError(
+				err && typeof err === 'object' && 'message' in err && err.message,
+				'Could not load the BonApp menu data',
+			),
+		)
 	}
 }

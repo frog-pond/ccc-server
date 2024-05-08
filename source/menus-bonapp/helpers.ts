@@ -1,9 +1,13 @@
-import {BamcoCafeInfo, BamcoDayPart, CafeMenu, CafeMenuItem} from './types.js'
+import {
+	CafeInfoResponseSchema,
+	CafeMenuDayPartSchema,
+	CafeMenuResponseSchema,
+	CafeMenuItemSchema,
+} from './types.js'
 
-/** @returns {BamcoCafeInfo} */
-export function CustomCafe({message}) {
+export function CustomCafe(message: string) {
 	let today = new Date()
-	return BamcoCafeInfo.parse({
+	return CafeInfoResponseSchema.parse({
 		cafe: {
 			name: 'Café',
 			message,
@@ -18,8 +22,18 @@ export function CustomCafe({message}) {
 	})
 }
 
-function CustomCafeMenuItem({station, sub_station, description, label}) {
-	return CafeMenuItem.parse({
+function CustomCafeMenuItem({
+	station,
+	sub_station,
+	description,
+	label,
+}: {
+	station: string
+	sub_station: string
+	description: string
+	label: string
+}) {
+	return CafeMenuItemSchema.parse({
 		description,
 		id: '1',
 		label,
@@ -33,10 +47,9 @@ function CustomCafeMenuItem({station, sub_station, description, label}) {
 	})
 }
 
-/** @returns {CafeMenu} */
 export function CafeMenuIsClosed() {
 	let today = new Date()
-	return CafeMenu.parse({
+	return CafeMenuResponseSchema.parse({
 		cor_icons: {},
 		items: {
 			1: CustomCafeMenuItem({
@@ -68,8 +81,18 @@ export function CafeMenuIsClosed() {
 	})
 }
 
-function CustomCafeDayPart({abbreviation, label, message, note}) {
-	return BamcoDayPart.parse({
+function CustomCafeDayPart({
+	abbreviation,
+	label,
+	message,
+	note,
+}: {
+	abbreviation: string
+	label: string
+	message: string
+	note: string
+}) {
+	return CafeMenuDayPartSchema.parse({
 		abbreviation,
 		endtime: '24:00',
 		endtime_formatted: 'Twilight',
@@ -93,13 +116,13 @@ function CustomCafeDayPart({abbreviation, label, message, note}) {
 	})
 }
 
-export function CafeMenuWithError(error, label) {
+export function CafeMenuWithError(error: unknown, label: string) {
 	let today = new Date()
-	return CafeMenu.parse({
+	return CafeMenuResponseSchema.parse({
 		cor_icons: {},
 		items: {
 			1: CustomCafeMenuItem({
-				description: `Please email allaboutolaf@frogpond.tech: ${error}`,
+				description: `Please email allaboutolaf@frogpond.tech: ${String(error)}`,
 				label: label,
 				station: 'error!?‽',
 				sub_station: 'error…',

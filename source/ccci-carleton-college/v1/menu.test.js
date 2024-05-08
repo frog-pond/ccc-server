@@ -3,7 +3,10 @@ import assert from 'node:assert/strict'
 import lodash from 'lodash'
 
 import * as menu from './menu.js'
-import {BamcoCafeInfo, CafeMenu} from '../../menus-bonapp/types.js'
+import {
+	CafeInfoResponseSchema,
+	CafeMenuResponseSchema,
+} from '../../menus-bonapp/types.js'
 
 const {noop} = lodash
 
@@ -52,13 +55,13 @@ suite('endpoints should not throw', {concurrency: 4}, () => {
 		test(`${cafe} cafe endpoint should return a BamcoCafeInfo struct`, async () => {
 			let ctx = {cacheControl: noop, body: null}
 			await assert.doesNotReject(() => cafeInfoFunctions[cafe](ctx))
-			assert.doesNotThrow(() => BamcoCafeInfo.parse(ctx.body))
+			assert.doesNotThrow(() => CafeInfoResponseSchema.parse(ctx.body))
 		})
 
 		test(`${cafe} menu endpoint should return a CafeMenu struct`, async () => {
 			let ctx = {cacheControl: noop, body: null}
 			await assert.doesNotReject(() => cafeMenuFunctions[cafe](ctx))
-			assert.doesNotThrow(() => CafeMenu.parse(ctx.body))
+			assert.doesNotThrow(() => CafeMenuResponseSchema.parse(ctx.body))
 		})
 	}
 })
