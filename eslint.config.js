@@ -2,15 +2,23 @@ import js from '@eslint/js'
 import globals from 'globals'
 
 import prettier from 'eslint-config-prettier'
+import ts from 'typescript-eslint'
 
+/** @type {import('@typescript-eslint/utils').TSESLint.FlatConfig.ConfigFile} */
 export default [
 	js.configs.recommended,
+	...ts.configs.strictTypeChecked,
+	...ts.configs.stylisticTypeChecked,
 	prettier,
 	{
 		languageOptions: {
 			ecmaVersion: 'latest',
 			sourceType: 'module',
 			globals: {...globals.node},
+			parserOptions: {
+				project: true,
+				tsconfigRoot: import.meta.dirname,
+			},
 		},
 		rules: {
 			'array-callback-return': 'error',
@@ -45,11 +53,16 @@ export default [
 			'no-unused-vars': ['warn', {args: 'after-used', argsIgnorePattern: '^_'}],
 			'no-useless-constructor': 'error',
 			'no-var': 'error',
+			'prefer-const': 'off',
 			'prefer-promise-reject-errors': 'error',
 			'prefer-spread': 'error',
 			quotes: ['warn', 'single', 'avoid-escape'],
 			'require-await': 'warn',
 			semi: 'off',
 		},
+	},
+	{
+		files: ['**/*.js'],
+		...ts.configs.disableTypeChecked,
 	},
 ]
