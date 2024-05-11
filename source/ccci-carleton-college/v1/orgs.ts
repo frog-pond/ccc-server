@@ -4,7 +4,7 @@ import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import {sortBy} from 'lodash-es'
 import {z} from 'zod'
-import Router from 'koa-router'
+import type {Context} from '../../ccc-server/context.js'
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
@@ -23,12 +23,16 @@ export type SortableCarletonStudentOrgType = z.infer<
 >
 export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend(
 	{
+		/** The name, but with leading common prefixes stripped, such as "The" */
 		$sortableName: z.string(),
 		$groupableName: z.string(),
 	},
 )
 
-function domToOrg(orgNode: Element, sortableRegex: RegExp) {
+function domToOrg(
+	orgNode: Element,
+	sortableRegex: RegExp,
+): SortableCarletonStudentOrgType {
 	let name =
 		orgNode
 			.querySelector('h4')
@@ -92,7 +96,7 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp) {
 	return SortableCarletonStudentOrgSchema.parse(orgObj)
 }
 
-async function _getOrgs() {
+async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let orgsUrl = 'https://apps.carleton.edu/student/orgs/'
 	let body = await get(orgsUrl).text()
 	let dom = new JSDOM(body)
@@ -101,7 +105,7 @@ async function _getOrgs() {
 		'.orgContainer, .careerField',
 	)
 
-	const allOrgs = new Map<string, CarletonStudentOrgType>()
+	const allOrgs = new Map<string, SortableCarletonStudentOrgType>()
 	const sortableRegex = /^(Carleton( College)?|The) +/i
 	let currentCategory = null
 	for (const orgNode of allOrgWrappers) {
@@ -129,10 +133,7 @@ async function _getOrgs() {
 
 export const getOrgs = mem(_getOrgs, {maxAge: ONE_HOUR * 6})
 
-export const orgs: Router.IMiddleware<
-	unknown,
-	{cacheControl: (n: number) => unknown}
-> = async (ctx) => {
+export async function orgs(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
 
 	ctx.body = await getOrgs()
