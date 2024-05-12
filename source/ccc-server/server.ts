@@ -9,15 +9,14 @@ import Router from 'koa-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {z} from 'zod'
+import type {ContextState, RouterState} from './context.js'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
 async function main() {
 	const smokeTesting = Boolean(process.env['SMOKE_TEST'])
 
-	const institutionResult = InstitutionSchema.safeParse(
-		process.env['INSTITUTION'],
-	)
+	const institutionResult = InstitutionSchema.safeParse(process.env['INSTITUTION'])
 	if (institutionResult.error) {
 		console.error(
 			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
@@ -26,7 +25,7 @@ async function main() {
 	}
 	const institution = institutionResult.data
 
-	let v1: Router
+	let v1: Router<RouterState, ContextState>
 	switch (institution) {
 		case 'carleton-college':
 			v1 = (await import('../ccci-carleton-college/index.js')).v1
@@ -41,7 +40,7 @@ async function main() {
 	//
 	// set up the routes
 	//
-	const router = new Router()
+	const router = new Router<RouterState, ContextState>()
 	router.use(v1.routes())
 
 	router.get('/', (ctx) => {

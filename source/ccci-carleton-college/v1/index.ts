@@ -14,8 +14,9 @@ import * as orgs from './orgs.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
 import * as webcams from './webcams.js'
+import type {ContextState, RouterState} from '../../ccc-server/context.js'
 
-const api = new Router({prefix: '/v1'})
+const api = new Router<RouterState, ContextState>({prefix: '/v1'})
 
 // food
 api.get('/food/item/:itemId', menus.bonAppNutrition)

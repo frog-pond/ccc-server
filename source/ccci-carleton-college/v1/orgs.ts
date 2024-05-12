@@ -18,21 +18,14 @@ export const CarletonStudentOrgSchema = z.object({
 	name: z.string().min(1),
 })
 
-export type SortableCarletonStudentOrgType = z.infer<
-	typeof SortableCarletonStudentOrgSchema
->
-export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend(
-	{
-		/** The name, but with leading common prefixes stripped, such as "The" */
-		$sortableName: z.string(),
-		$groupableName: z.string(),
-	},
-)
+export type SortableCarletonStudentOrgType = z.infer<typeof SortableCarletonStudentOrgSchema>
+export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend({
+	/** The name, but with leading common prefixes stripped, such as "The" */
+	$sortableName: z.string(),
+	$groupableName: z.string(),
+})
 
-function domToOrg(
-	orgNode: Element,
-	sortableRegex: RegExp,
-): SortableCarletonStudentOrgType {
+function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
 	let name =
 		orgNode
 			.querySelector('h4')
@@ -42,13 +35,10 @@ function domToOrg(
 	let adminLink = orgNode.querySelector('h4 > a')?.getAttribute('href')
 	adminLink = adminLink ? `https://apps.carleton.edu${adminLink}` : ''
 
-	const ids = Array.from(orgNode.querySelectorAll('a[name]')).map((n) =>
-		n.getAttribute('name'),
-	)
+	const ids = Array.from(orgNode.querySelectorAll('a[name]')).map((n) => n.getAttribute('name'))
 	const id = ids[0] ?? name
 
-	const description =
-		orgNode.querySelector('.orgDescription')?.textContent?.trim() ?? ''
+	const description = orgNode.querySelector('.orgDescription')?.textContent?.trim() ?? ''
 
 	let contacts = Array.from(
 		new Set(
@@ -60,23 +50,19 @@ function domToOrg(
 		),
 	)
 
-	const websiteEls = Array.from(orgNode.querySelectorAll('.site a')).flatMap(
-		(n) => {
-			let href = n.getAttribute('href')
-			return href ? [href] : []
-		},
-	)
+	const websiteEls = Array.from(orgNode.querySelectorAll('.site a')).flatMap((n) => {
+		let href = n.getAttribute('href')
+		return href ? [href] : []
+	})
 	let website = websiteEls[0] ?? ''
 	if (website.length && !/^https?:\/\//.test(website)) {
 		website = `http://${website}`
 	}
 
-	const socialLinks = Array.from(orgNode.querySelectorAll('a > img')).flatMap(
-		(n) => {
-			let href = n.parentElement?.getAttribute('href')
-			return href ? [href] : []
-		},
-	)
+	const socialLinks = Array.from(orgNode.querySelectorAll('a > img')).flatMap((n) => {
+		let href = n.parentElement?.getAttribute('href')
+		return href ? [href] : []
+	})
 
 	let sortableName = name.replace(sortableRegex, '')
 
@@ -101,9 +87,7 @@ async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let body = await get(orgsUrl).text()
 	let dom = new JSDOM(body)
 
-	const allOrgWrappers = dom.window.document.querySelectorAll(
-		'.orgContainer, .careerField',
-	)
+	const allOrgWrappers = dom.window.document.querySelectorAll('.orgContainer, .careerField')
 
 	const allOrgs = new Map<string, SortableCarletonStudentOrgType>()
 	const sortableRegex = /^(Carleton( College)?|The) +/i

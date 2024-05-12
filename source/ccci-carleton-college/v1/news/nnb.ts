@@ -10,10 +10,10 @@ export async function noonNewsBulletin() {
 
 	let bulletinEls = [...dom.window.document.querySelectorAll('item')]
 	let bulletins = bulletinEls.map((item) => {
-		let description = item.querySelector('description').textContent
-		description = JSDOM.fragment(description).textContent.trim()
-		let category = item.querySelector('category').textContent
-		category = JSDOM.fragment(category).textContent.trim()
+		let description = item.querySelector('description')?.textContent ?? ''
+		description = JSDOM.fragment(description).textContent?.trim() ?? ''
+		let category = item.querySelector('category')?.textContent ?? ''
+		category = JSDOM.fragment(category).textContent?.trim() ?? ''
 		return {description, category}
 	})
 

@@ -11,6 +11,22 @@ const cachedNoonNewsBulletin = mem(noonNewsBulletin, {
 	maxAge: ONE_HOUR * 6,
 })
 
+export async function rss(ctx: Context) {
+	ctx.cacheControl(ONE_HOUR)
+
+	let urlToFetch = ctx.URL.searchParams.get('url')
+	ctx.assert(urlToFetch, 400, '?url is required')
+	ctx.body = await cachedRssFeed(urlToFetch)
+}
+
+export async function wpJson(ctx: Context) {
+	ctx.cacheControl(ONE_HOUR)
+
+	let urlToFetch = ctx.URL.searchParams.get('url')
+	ctx.assert(urlToFetch, 400, '?url is required')
+	ctx.body = await cachedWpJsonFeed(urlToFetch)
+}
+
 export async function nnb(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
 
@@ -20,10 +36,10 @@ export async function nnb(ctx: Context) {
 export async function carletonNow(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await cachedWpJsonFeed(
-		new URL('https://www.carleton.edu/news/wp-json/wp/v2/posts'),
-		{per_page: 10, _embed: true},
-	)
+	ctx.body = await cachedWpJsonFeed(new URL('https://www.carleton.edu/news/wp-json/wp/v2/posts'), {
+		per_page: 10,
+		_embed: true,
+	})
 }
 
 export async function carletonian(ctx: Context) {

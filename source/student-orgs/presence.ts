@@ -33,9 +33,7 @@ const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
 export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 	let name = org.name.trim()
 	let category = org.categories.join(', ')
-	let meetings =
-		(org.regularMeetingLocation || '').trim() +
-		(org.regularMeetingTime || '').trim()
+	let meetings = (org.regularMeetingLocation || '').trim() + (org.regularMeetingTime || '').trim()
 	let description = JSDOM.fragment(org.description).textContent?.trim() ?? ''
 	let website = org.website?.trim() ?? ''
 	if (website && !/^https?:\/\//.test(website)) {
@@ -60,14 +58,10 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 const fetchOrg = async (base: string, orgUri: string) =>
 	DetailedPresenceOrgSchema.parse(await get(`${base}/${orgUri}`).json())
 
-export async function presence(
-	school: string,
-): Promise<SortableStudentOrgType[]> {
+export async function presence(school: string): Promise<SortableStudentOrgType[]> {
 	let orgsUrl = `https://api.presence.io/${school}/v1/organizations`
 
-	let body = BasicPresenceOrgSchema.array().parse(
-		await http.get(orgsUrl).json(),
-	)
+	let body = BasicPresenceOrgSchema.array().parse(await http.get(orgsUrl).json())
 
 	let orgs = await pMap(body, (org) => fetchOrg(orgsUrl, org.uri), {
 		concurrency: 8,

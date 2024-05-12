@@ -36,9 +36,7 @@ async function getBonAppWebpage(url: string | URL) {
 	})
 }
 
-export async function _cafe(
-	cafeUrl: string | URL,
-): Promise<CafeInfoResponseType> {
+export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	let today = new Date()
 	let dom = await getBonAppWebpage(cafeUrl)
 
@@ -83,9 +81,7 @@ export function nutrition(itemId: string) {
 	return get(url, {searchParams: {item: itemId}}).json()
 }
 
-export async function _menu(
-	cafeUrl: string | URL,
-): Promise<CafeMenuResponseType> {
+export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	let today = new Date()
 	let dom = await getBonAppWebpage(cafeUrl)
 

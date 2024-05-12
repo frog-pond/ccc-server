@@ -1,2 +1,2 @@
-export const GH_PAGES = (filename) =>
-	`https://stodevx.github.io/AAO-React-Native/${filename}`
+export const GH_PAGES = (filename: string) =>
+	new URL(`https://stodevx.github.io/AAO-React-Native/${filename}`)

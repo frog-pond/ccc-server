@@ -2,21 +2,14 @@ import {get} from '../ccc-lib/http.js'
 import {JSDOM} from 'jsdom'
 import {FeedItemSchema, type FeedItemType} from './types.js'
 
-export async function fetchRssFeed(
-	url: string | URL,
-	query = {},
-): Promise<FeedItemType[]> {
+export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedItemType[]> {
 	let body = await get(url, {searchParams: query}).text()
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	return Array.from(dom.window.document.querySelectorAll('item')).map(
-		convertRssItemToStory,
-	)
+	return Array.from(dom.window.document.querySelectorAll('item')).map(convertRssItemToStory)
 }
 
 function nodeListTextContent(nodeList: NodeListOf<Element>): string[] {
-	return Array.from(nodeList).flatMap((el) =>
-		el.textContent ? [el.textContent] : [],
-	)
+	return Array.from(nodeList).flatMap((el) => (el.textContent ? [el.textContent] : []))
 }
 
 export function convertRssItemToStory(item: Element) {
@@ -34,22 +27,16 @@ export function convertRssItemToStory(item: Element) {
 
 	let descriptionEl = item.querySelector('description')
 
-	let content =
-		item.getAttribute('content:encoded') ??
-		descriptionEl?.textContent ??
-		'(no content)'
+	let content = item.getAttribute('content:encoded') ?? descriptionEl?.textContent ?? '(no content)'
 	content = JSDOM.fragment(content).textContent?.trim() ?? ''
 
-	let excerpt: string | null =
-		descriptionEl?.textContent ?? content.substring(0, 250)
+	let excerpt: string | null = descriptionEl?.textContent ?? content.substring(0, 250)
 	excerpt = JSDOM.fragment(excerpt).textContent?.trim() ?? null
 
 	let featuredImage = null
 	if (item.querySelector('enclosure')) {
 		let featuredMediaInfo = item.querySelector('enclosure')
-		let containsImage = featuredMediaInfo
-			?.getAttribute('type')
-			?.startsWith('image/')
+		let containsImage = featuredMediaInfo?.getAttribute('type')?.startsWith('image/')
 
 		if (featuredMediaInfo && containsImage) {
 			featuredImage = featuredMediaInfo.getAttribute('url')

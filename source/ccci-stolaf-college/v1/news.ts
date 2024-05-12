@@ -26,18 +26,16 @@ export async function wpJson(ctx: Context) {
 export async function stolaf(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await cachedWpJsonFeed(
-		new URL('https://wp.stolaf.edu/wp-json/wp/v2/posts'),
-		{per_page: 10, _embed: true},
-	)
+	ctx.body = await cachedWpJsonFeed(new URL('https://wp.stolaf.edu/wp-json/wp/v2/posts'), {
+		per_page: 10,
+		_embed: true,
+	})
 }
 
 export async function oleville(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await cachedRssFeed(
-		new URL('https://www.oleville.com/blog-feed.xml'),
-	)
+	ctx.body = await cachedRssFeed(new URL('https://www.oleville.com/blog-feed.xml'))
 }
 
 export function politicole(ctx: Context) {

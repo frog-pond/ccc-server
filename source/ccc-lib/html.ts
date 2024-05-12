@@ -1,3 +1,5 @@
+import type {} from 'typed-query-selector/strict.js'
+
 /**
  * Creates a map for consumption by `findHtmlKey` for fast key/value queries from html structures.
  *
@@ -13,14 +15,28 @@
  *
  * @param {NodeListOf<HTMLElement>} details - Details is a node list of HTML{*}Element values.
  * It is a scoped version of the webpage containing all the html elements that we aim to parse.
- * @param {Array<string>} paragraphicalKeys  A set of strings that are parsed as long-form content
+ * @param specialKeys - a set of keys to treat specially
+ * @param specialKeys.paragraphs - A set of strings that are parsed as long-form content
  * that receive separate parsing for line breaks and special characters.
+ * @param specialKeys.boolean - A set of strings that are set to `true`, if present
  */
-export function getDetailMap(
+export function buildDetailMap(
 	details: NodeListOf<HTMLElement>,
-	paragraphicalKeys: readonly string[],
+	specialKeys: {paragraphs: readonly string[]},
+): Map<string, string>
+export function buildDetailMap(
+	details: NodeListOf<HTMLElement>,
+	specialKeys: {boolean: readonly string[]},
+): Map<string, true>
+export function buildDetailMap(
+	details: NodeListOf<HTMLElement>,
+	specialKeys: {paragraphs: readonly string[]; boolean: readonly string[]},
+): Map<string, string | true>
+export function buildDetailMap(
+	details: NodeListOf<HTMLElement>,
+	specialKeys: {paragraphs?: readonly string[]; boolean?: readonly string[]} = {},
 ) {
-	let map = new Map<string, string>()
+	let map = new Map<string, string | true>()
 
 	for (const listEl of details) {
 		let [node, ...childNodeValue] = listEl.childNodes
@@ -29,10 +45,12 @@ export function getDetailMap(
 		}
 
 		let key = node.textContent?.replace(/:$/, '') ?? ''
-		let value = ''
+		let value: string | boolean = ''
 
-		if (paragraphicalKeys.includes(key)) {
-			let paragraphs = [...listEl.querySelectorAll('p')]
+		if (specialKeys.boolean?.includes(key)) {
+			value = true
+		} else if (specialKeys.paragraphs?.includes(key)) {
+			let paragraphs = Array.from(listEl.querySelectorAll('p'))
 			let content = paragraphs.length ? paragraphs : childNodeValue
 			value = content
 				.map((el) => el.textContent)
@@ -53,11 +71,11 @@ export function getDetailMap(
 
 /**
  * Enables fast lookup of a named section of html content using the data structure
- * generated from `getDetailMap`.
+ * generated from `buildDetailMap`.
  *
  * For example, if we need to find  content associated with a section on a page
  * named "Description", we call this function looking for that string along with
- * the output from `getDetailMap` to quickly return the value for a key.
+ * the output from `buildDetailMap` to quickly return the value for a key.
  *
  * @param value - a key name to look up
  * @param detailMap - a data structure containing the key:value content pairs

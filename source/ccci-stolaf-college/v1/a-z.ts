@@ -2,32 +2,58 @@ import {get} from '../../ccc-lib/http.js'
 import {ONE_DAY} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
+import type {Context} from '../../ccc-server/context.js'
+import {z} from 'zod'
 
 const GET = mem(get, {maxAge: ONE_DAY})
 
-function getOlafAtoZ() {
+type StOlafAzResponseType = z.infer<typeof StOlafAzResponseSchema>
+const StOlafAzResponseSchema = z.object({
+	az_nav: z.object({
+		menu_items: z.array(
+			z.object({
+				letter: z.string(),
+				values: z.array(z.object({label: z.string(), url: z.string().url()})),
+			}),
+		),
+	}),
+})
+
+type AllAboutOlafExtraAzResponseType = z.infer<typeof AllAboutOlafExtraAzResponseSchema>
+const AllAboutOlafExtraAzResponseSchema = z.object({
+	data: z.array(
+		z.object({
+			letter: z.string(),
+			values: z.array(z.object({label: z.string(), url: z.string().url()})),
+		}),
+	),
+})
+
+async function getOlafAtoZ() {
 	let url = 'https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z'
-	return GET(url).json()
+	return StOlafAzResponseSchema.parse(await GET(url).json())
 }
 
-function getPagesAtoZ() {
-	return GET(GH_PAGES('a-to-z.json')).json()
+async function getPagesAtoZ() {
+	return AllAboutOlafExtraAzResponseSchema.parse(await GET(GH_PAGES('a-to-z.json')).json())
 }
 
 // merge custom entries defined on GH pages with the fetched WP-JSON
-function combineResponses(pagesResponse, olafResponse) {
+function combineResponses(
+	pagesResponse: AllAboutOlafExtraAzResponseType,
+	olafResponse: StOlafAzResponseType,
+) {
 	let olafData = olafResponse.az_nav.menu_items
 
 	pagesResponse.data.forEach(({letter, values}) => {
 		// find the matching keyed letter to add our own values to
 		let targetIndex = olafData.findIndex((entry) => entry.letter === letter)
+		let targetData = olafData[targetIndex]
 
-		if (targetIndex in olafData) {
+		if (targetData) {
 			// add our custom values and only resort the impacted indices
-			olafData[targetIndex].values.push(...values)
-			olafData[targetIndex].values.sort((a, b) =>
-				a.label.localeCompare(b.label),
-			)
+			targetData.values.push(...values)
+			targetData.values.sort((a, b) => a.label.localeCompare(b.label))
 		}
 	})
 
@@ -37,7 +63,7 @@ function combineResponses(pagesResponse, olafResponse) {
 	}))
 }
 
-export async function atoz(ctx) {
+export async function atoz(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 
 	let pagesResponse = await getPagesAtoZ()

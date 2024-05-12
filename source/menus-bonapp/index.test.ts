@@ -1,29 +1,24 @@
-import {describe, it} from 'node:test'
-import assert from 'node:assert/strict'
+import test from 'ava'
 
 import * as bonApp from './index.js'
 import {CafeInfoResponseSchema, CafeMenuResponseSchema} from './types.js'
 
 const STAV = 'https://stolaf.cafebonappetit.com/cafe/stav-hall/'
 
-void describe('cafe info', {concurrency: true}, () => {
-	void it('fetching the data should not throw', async () => {
-		await assert.doesNotReject(() => bonApp._cafe(STAV))
-	})
-
-	void it('it should return a CafeInfoResponseSchema struct', async () => {
-		let data = await bonApp._cafe(STAV)
-		assert.doesNotThrow(() => CafeInfoResponseSchema.parse(data))
-	})
+test('fetching cafe info should not throw', async (t) => {
+	await t.notThrowsAsync(() => bonApp._cafe(STAV))
 })
 
-void describe('menu info', {concurrency: true}, () => {
-	void it('fetching the data should not throw', async () => {
-		await assert.doesNotReject(() => bonApp._menu(STAV))
-	})
+test('fetching cafe info should return a CafeInfoResponseSchema struct', async (t) => {
+	let data = await bonApp._cafe(STAV)
+	t.notThrows(() => CafeInfoResponseSchema.parse(data))
+})
 
-	void it('it should return a CafeMenuResponseSchema struct', async () => {
-		let data = await bonApp._menu(STAV)
-		assert.doesNotThrow(() => CafeMenuResponseSchema.parse(data))
-	})
+test('fetching menu info should not throw', async (t) => {
+	await t.notThrowsAsync(() => bonApp._menu(STAV))
+})
+
+test('fetching menu info should return a CafeMenuResponseSchema struct', async (t) => {
+	let data = await bonApp._menu(STAV)
+	t.notThrows(() => CafeMenuResponseSchema.parse(data))
 })

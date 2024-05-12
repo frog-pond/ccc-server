@@ -17,8 +17,9 @@ import * as streams from './streams.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
 import * as webcams from './webcams.js'
+import type {Context, ContextState, RouterState} from '../../ccc-server/context.js'
 
-const api = new Router({prefix: '/v1'})
+const api = new Router<RouterState, ContextState>({prefix: '/v1'})
 
 // food
 api.get('/food/item/:itemId', menus.bonAppNutrition)
@@ -119,7 +120,7 @@ api.get('/printing/color-printers', printing.colorPrinters)
 api.get('/util/html-to-md', util.htmlToMarkdown)
 
 // sitemap
-api.get('/routes', (ctx) => {
+api.get('/routes', (ctx: Context) => {
 	const leadingVersionRegex = /\/v[0-9]\//
 	ctx.body = api.stack
 		.map((layer) => ({

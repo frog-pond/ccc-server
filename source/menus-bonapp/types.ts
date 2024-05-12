@@ -36,9 +36,7 @@ const CafeInfoSchema = z.object({
 	days: z.array(
 		z.object({
 			date: z.string().date(),
-			status: z
-				.union([z.literal('open'), z.literal('closed'), z.string()])
-				.default(''),
+			status: z.union([z.literal('open'), z.literal('closed'), z.string()]).default(''),
 			message: z.union([z.literal(false), z.string()]).default(false),
 			dayparts: z.array(CafeInfoDayPartSchema),
 		}),

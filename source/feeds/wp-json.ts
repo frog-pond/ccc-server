@@ -14,16 +14,12 @@ const WpJsonFeedEntrySchema = z.object({
 					id: z.unknown(),
 					media_type: z.union([z.literal('image'), z.string()]),
 					media_details: z.object({
-						sizes: z.optional(
-							z.record(z.object({source_url: z.string().url()})),
-						),
+						sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
 					}),
 					source_url: z.string().url(),
 				}),
 			),
-			'wp:term': z.array(
-				z.array(z.object({taxonomy: z.string(), name: z.string()})),
-			),
+			'wp:term': z.array(z.array(z.object({taxonomy: z.string(), name: z.string()}))),
 		}),
 	),
 	/** this is "author ID," not "author name" */
@@ -42,9 +38,7 @@ export async function fetchWpJson(
 	url: string | URL,
 	query: SearchParamsOption = {},
 ): Promise<FeedItemType[]> {
-	const feed = WpJsonFeedResponseSchema.parse(
-		await get(url, {searchParams: query}).json(),
-	)
+	const feed = WpJsonFeedResponseSchema.parse(await get(url, {searchParams: query}).json())
 	return feed.map(convertWpJsonItemToStory)
 }
 
@@ -54,9 +48,7 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 			category.flatMap((c) => (c.taxonomy === 'category' ? [c.name] : [])),
 		) ?? []
 
-	let author =
-		item._embedded?.author?.find((a) => a.id === item.author)?.name ??
-		'Unknown Author'
+	let author = item._embedded?.author?.find((a) => a.id === item.author)?.name ?? 'Unknown Author'
 
 	let featuredImage = null
 	if (item._embedded?.['wp:featuredmedia']) {

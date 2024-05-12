@@ -1,15 +1,17 @@
 import {get} from '../../ccc-lib/http.js'
 import {ONE_DAY} from '../../ccc-lib/constants.js'
-import {cleanTextBlock, findHtmlKey, getDetailMap} from '../../ccc-lib/html.js'
+import {cleanTextBlock, findHtmlKey, buildDetailMap} from '../../ccc-lib/html.js'
 import mem from 'memoize'
 import pMap from 'p-map'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
+import type {Context} from '../../ccc-server/context.js'
+import {z} from 'zod'
 
 const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
 const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})
 
-const jobsUrl = 'https://wp.stolaf.edu/student-jobs/wp-json/wp/v2/pages/80'
+const getJobsUrl = () => new URL('https://wp.stolaf.edu/student-jobs/wp-json/wp/v2/pages/80')
 
 /**
  * Set of keys in the html to target when looking at long-form content
@@ -22,65 +24,67 @@ const PARAGRAPHICAL_KEYS = [
 	'Additional Comments',
 	'How to Apply',
 	'Hiring Timeline',
-]
+] as const
 
 /**
  * Builds a json response suitable for the client to render
  *
  * @param {*} url  the canonical url for the job detail page
  * @param {*} dom  the JSDOM used for extracting one-off selectors
- * @param {*} findKey  a function for extracting mapped job data
+ * @param {*} detailMap  the parsed information
  * @returns a cleaned, parsed, and formatted version of the data as JSON
  */
-function buildJobDetailResponse(url, dom, findKey) {
-	const id = url.replace(/\D/g, '')
-	const titleText = dom.window.document.querySelector(
-		'.gv-list-view-title > h3',
-	).textContent
+function buildJobDetailResponse(url: URL, dom: JSDOM, detailMap: Map<string, string>) {
+	const id = url.pathname.replace(/\D/g, '')
+	const title = cleanTextBlock(
+		dom.window.document.querySelector('.gv-list-view-title > h3')?.textContent ?? '',
+	)
 
-	const [contactFirstName, contactLastName] =
-		findKey('Contact Person').split(' ')
+	const [contactFirstName = '', contactLastName = ''] = findHtmlKey(
+		'Contact Person',
+		detailMap,
+	).split(' ')
 	const contactName = `${contactFirstName} ${contactLastName}`.trim()
 
-	const description = cleanTextBlock(findKey('Job Description'))
-	const comments = cleanTextBlock(findKey('Additional Comments'))
-	const skills = cleanTextBlock(findKey('Skills Needed'))
-	const howToApply = cleanTextBlock(findKey('How to Apply'))
-	const timeline = cleanTextBlock(findKey('Hiring Timeline'))
-
-	const links = getLinksFromJob({description, comments, skills, howToApply})
+	const description = cleanTextBlock(findHtmlKey('Job Description', detailMap))
+	const comments = cleanTextBlock(findHtmlKey('Additional Comments', detailMap))
+	const skills = cleanTextBlock(findHtmlKey('Skills Needed', detailMap))
+	const howToApply = cleanTextBlock(findHtmlKey('How to Apply', detailMap))
+	const links = getLinksFromJob(description, comments, skills, howToApply)
 
 	return {
-		comments: comments,
-		contactEmail: fixupEmailFormat(findKey('Contact Email')),
+		comments,
+		contactEmail: fixupEmailFormat(findHtmlKey('Contact Email', detailMap)),
 		contactName: contactName,
-		contactPhone: fixupPhoneFormat(findKey('Phone Extension')),
-		description: description,
+		contactPhone: fixupPhoneFormat(findHtmlKey('Phone Extension', detailMap)),
+		description,
 		goodForIncomingStudents: Boolean(
-			findKey('Appropriate for incoming/first-year students'),
+			findHtmlKey('Appropriate for incoming/first-year students', detailMap),
 		),
-		hoursPerWeek: findKey('Hours/week'),
-		howToApply: howToApply,
+		hoursPerWeek: findHtmlKey('Hours/week', detailMap),
+		howToApply,
 		id: id,
-		lastModified: findKey('Date Posted'),
+		lastModified: findHtmlKey('Date Posted', detailMap),
 		links: links,
-		office: findKey('Office'),
-		openPositions: findKey('Number of Available Positions'),
-		skills: skills,
-		timeline: timeline,
-		timeOfHours: findKey('Time of Hours'),
-		title: titleText,
-		type: findKey('Job Type'),
-		url: url,
-		year: findKey('Job Year'),
+		office: findHtmlKey('Office', detailMap),
+		openPositions: findHtmlKey('Number of Available Positions', detailMap),
+		skills,
+		timeline: cleanTextBlock(findHtmlKey('Hiring Timeline', detailMap)),
+		timeOfHours: findHtmlKey('Time of Hours', detailMap),
+		title,
+		type: findHtmlKey('Job Type', detailMap),
+		url: url.toString(),
+		year: findHtmlKey('Job Year', detailMap),
 	}
 }
 
-async function fetchDetail(url) {
+async function fetchDetail(url: URL) {
 	const body = await GET_TWO_DAYS(url).text()
 
-	// run-scripts value is needed to properly evaluate javascript to display an email address.
-	// see the jsdom documentation for more details https://github.com/jsdom/jsdom#executing-scripts
+	/**
+	 * run-scripts value is needed to properly evaluate javascript to display an email address.
+	 * see the jsdom documentation for more details https://github.com/jsdom/jsdom#executing-scripts
+	 */
 	const dom = new JSDOM(body, {
 		contentType: 'text/html',
 		runScripts: 'dangerously',
@@ -88,46 +92,30 @@ async function fetchDetail(url) {
 
 	/**
 	 * Details is a node list of HTMLDivElement. It is a scoped version of the webpage containing
-	 * all the text elements we need to parse (both keys and values) via `getDetailMap`.
+	 * all the text elements we need to parse (both keys and values) via `buildDetailMap`.
 	 */
 	const details = dom.window.document.querySelectorAll('div')
 
-	/**
-	 * A key-value Map for querying text elements from html data.
-	 */
-	const detailMap = getDetailMap(details, PARAGRAPHICAL_KEYS)
+	/** A key-value Map for querying text elements from html data. */
+	const detailMap = buildDetailMap(details, {paragraphs: PARAGRAPHICAL_KEYS})
 
-	/**
-	 * Wrapper function to simplify the api for calling `findHtmlKey` by centralizing where
-	 * the datastructure `detailMap` is passed-in to one place.
-	 */
-	const findKey = (key) => findHtmlKey(key, detailMap)
-
-	return buildJobDetailResponse(url, dom, findKey)
+	return buildJobDetailResponse(url, dom, detailMap)
 }
 
-export function getLinksFromJob({description, comments, skills, howToApply}) {
-	// Clean up returns, newlines, tabs, and misc symbols...
-	// ...and search for application links in the text
-	return Array.from(
-		new Set([
-			...getUrls(description),
-			...getUrls(comments),
-			...getUrls(skills),
-			...getUrls(howToApply),
-		]),
-	)
+/** Clean up carriage returns, newlines, tabs, and misc symbols, and search for application links in the text */
+export function getLinksFromJob(...texts: string[]) {
+	return Array.from(new Set(texts.map((text) => getUrls(text))))
 }
 
-function fixupPhoneFormat(phoneNumber) {
+function fixupPhoneFormat(phoneNumber: string) {
 	return phoneNumber.length === 4 ? `507-786-${phoneNumber}` : phoneNumber
 }
 
-function fixupEmailFormat(email) {
-	if (!/@/.test(email)) {
+function fixupEmailFormat(email: string) {
+	if (!email.includes('@')) {
 		// No @ in address ... e.g. smith
 		return `${email}@stolaf.edu`
-	} else if (/@$/.test(email)) {
+	} else if (email.endsWith('@')) {
 		// @ at end ... e.g. smith@
 		return `${email}stolaf.edu`
 	} else {
@@ -145,27 +133,21 @@ function fixupEmailFormat(email) {
  * of trying to keep tracking of the amount of items we can opt to check the dom for the presence
  * of the button.
  */
-function nextPageExists(dom) {
-	if (dom === undefined) {
-		return false
-	}
-
-	const elements = dom.window.document.querySelectorAll('.next.page-numbers')
-	return elements.length > 0
+function nextPageExists(dom: JSDOM) {
+	return Boolean(dom.window.document.querySelector('.next.page-numbers'))
 }
 
 /**
  * The top-level results html provides a bunch of html with links to each posting. We can gather
  * each link's href from these pages.
- *
- * @returns {string[]}
  */
-export function findPageUrls(dom) {
+export function findPageUrls(dom: JSDOM) {
 	return Array.from(
-		dom.window.document.querySelectorAll(
-			'.gv-list-view > .gv-list-view-title > h3 > a',
-		),
-	).map((anchor) => anchor.getAttribute('href'))
+		dom.window.document.querySelectorAll('.gv-list-view > .gv-list-view-title > h3 > a'),
+	).flatMap((anchor) => {
+		let href = anchor.getAttribute('href')
+		return href ? [new URL(href)] : []
+	})
 }
 
 /**
@@ -183,8 +165,7 @@ export function findPageUrls(dom) {
  * all job posting urls, and finally request each url we find to build our data.
  */
 async function _getJobs() {
-	/**  @type {string[]} */
-	let allUrls = []
+	let allUrls: URL[] = []
 
 	/**
 	 * The top-level wp-json endpoint which provides the list of job postings responds to a query
@@ -196,16 +177,19 @@ async function _getJobs() {
 	let previousDom = undefined
 
 	do {
-		// eslint-disable-next-line no-await-in-loop
-		const body = await GET_ONE_DAY(`${jobsUrl}?pagenum=${pageNumber}`).json()
-		const {rendered} = body.content
+		let jobsUrl = getJobsUrl()
+		jobsUrl.searchParams.set('pagenum', pageNumber.toString())
+
+		const rendered = z
+			.object({content: z.object({rendered: z.string()})})
+			// eslint-disable-next-line no-await-in-loop
+			.parse(await GET_ONE_DAY(jobsUrl).json()).content.rendered
 
 		const dom = new JSDOM(rendered, {contentType: 'text/html'})
 		previousDom = dom
 		pageNumber += 1
 
-		const fetchedUrls = findPageUrls(dom)
-		allUrls.push(...fetchedUrls)
+		allUrls.push(...findPageUrls(dom))
 	} while (nextPageExists(previousDom))
 
 	return pMap(allUrls, fetchDetail, {concurrency: 4})
@@ -213,7 +197,7 @@ async function _getJobs() {
 
 export const getJobs = mem(_getJobs, {maxAge: ONE_DAY})
 
-export async function jobs(ctx) {
+export async function jobs(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 
 	ctx.body = await getJobs()
