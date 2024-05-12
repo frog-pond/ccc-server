@@ -3,6 +3,7 @@ import {JSDOM} from 'jsdom'
 import {FeedItemSchema, type FeedItemType} from './types.js'
 import type {SearchParamsOption} from 'ky'
 import {z} from 'zod'
+import moment from 'moment'
 
 type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
 const WpJsonFeedEntrySchema = z.object({
@@ -76,12 +77,15 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 }
 
 export function deprecatedWpJson() {
-	return FeedItemSchema.array().parse([
-		{
-			content: '',
-			excerpt: 'This news source is no longer being updated.',
-			url: 'https://github.com/frog-pond/ccc-server/discussions/564',
-			title: 'Deprecated endpoint',
-		},
-	])
+	const item: FeedItemType = {
+		authors: [],
+		categories: [],
+		datePublished: moment().toISOString(),
+		content: '',
+		excerpt: 'This news source is no longer being updated.',
+		link: 'https://github.com/frog-pond/ccc-server/discussions/564',
+		title: 'Deprecated endpoint',
+		featuredImage: null,
+	}
+	return FeedItemSchema.array().parse([item])
 }
