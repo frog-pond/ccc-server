@@ -12,6 +12,7 @@ RUN npm ci --omit=dev
 FROM modules_dev AS build
 COPY --link tsconfig.json .
 COPY --link ./source ./source
+COPY --link ./types ./types
 RUN npm run build
 
 
