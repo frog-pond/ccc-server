@@ -1,7 +1,8 @@
 import zodRouter from 'koa-zod-router'
 
-/*import * as calendar from './calendar.js'
+import * as calendar from './calendar.js'
 import * as contacts from './contacts.js'
+/*
 import * as convocations from './convos.js'
 import * as dictionary from './dictionary.js'
 import * as faqs from './faqs.js'
@@ -14,7 +15,8 @@ import * as menus from './menu.js'
 import * as orgs from './orgs.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
-import * as webcams from './webcams.js'*/
+import * as webcams from './webcams.js'
+*/
 
 export const api = zodRouter({
 	zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
@@ -28,19 +30,15 @@ api.register(menus.getBonAppCafeRoute)
 api.register(menus.getNamedMenuRoute)
 api.register(menus.getNamedCafeRoute)
 
-/*
 // calendar
-api.get('/calendar/google', calendar.google)
-api.get('/calendar/ics', calendar.ics)
-api.get('/calendar/named/carleton', calendar.carleton)
-api.get('/calendar/named/the-cave', calendar.cave)
-api.get('/calendar/named/stolaf', calendar.stolaf)
-api.get('/calendar/named/northfield', calendar.northfield)
-api.get('/calendar/named/krlx-schedule', calendar.krlx)
-api.get('/calendar/named/ksto-schedule', calendar.ksto)
-api.get('/calendar/named/upcoming-convos', calendar.convos)
-api.get('/calendar/named/sumo-schedule', calendar.sumo)
+api.register(calendar.getGoogleCalendarRoute)
+api.register(calendar.getInternetCalendarRoute)
+api.register(calendar.getKnownCalendarRoute)
 
+// important contacts
+api.register(contacts.getContactsRoute)
+
+/*
 // dictionary
 api.get('/dictionary', dictionary.dictionary)
 
@@ -48,9 +46,6 @@ api.get('/dictionary', dictionary.dictionary)
 api.get('/convos/upcoming', calendar.convos)
 api.get('/convos/upcoming/:id', convocations.upcomingDetail)
 api.get('/convos/archived', convocations.archived)
-
-// important contacts
-api.get('/contacts', contacts.contacts)
 
 // help tools
 api.get('/tools/help', help.help)

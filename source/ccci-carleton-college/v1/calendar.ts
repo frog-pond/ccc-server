@@ -2,80 +2,89 @@ import {googleCalendar} from '../../calendar/google.js'
 import {ical} from '../../calendar/ical.js'
 import {ONE_MINUTE} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
-import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {z} from 'zod'
+import {EventSchema} from '../../calendar/types.js'
 
 export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})
 export const getInternetCalendar = mem(ical, {maxAge: ONE_MINUTE})
 
-export async function google(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
+export const getGoogleCalendarRoute = createRouteSpec({
+	method: 'get',
+	path: '/calendar/google',
+	validate: {
+		query: z.object({id: z.string()}),
+		response: EventSchema.array(),
+	},
+	handler: async (ctx) => {
+		ctx.body = await getGoogleCalendar(ctx.request.query.id)
+	},
+})
 
-	let calendarId = ctx.URL.searchParams.get('id')
-	ctx.assert(calendarId, 400, '?id is required')
-	ctx.body = await getGoogleCalendar(calendarId)
-}
+export const getInternetCalendarRoute = createRouteSpec({
+	method: 'get',
+	path: '/calendar/google',
+	validate: {
+		query: z.object({url: z.string().url()}),
+		response: EventSchema.array(),
+	},
+	handler: async (ctx) => {
+		ctx.body = await getInternetCalendar(ctx.request.query.url)
+	},
+})
 
-export async function ics(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
+const KnownCalendars = z.enum([
+	'carleton',
+	'the-cave',
+	'stolaf',
+	'northfield',
+	'krlx-schedule',
+	'ksto-schedule',
+	'upcoming-convos',
+	'sumo-schedule',
+])
 
-	let calendarUrl = ctx.URL.searchParams.get('url')
-	ctx.assert(calendarUrl, 400, '?id is required')
-	ctx.body = await getInternetCalendar(new URL(calendarUrl))
-}
-
-export async function carleton(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let url = 'https://www.carleton.edu/calendar/?loadFeed=calendar&stamp=1714843628'
-	ctx.body = await getInternetCalendar(url)
-}
-
-export async function cave(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let url = 'https://www.carleton.edu/student/orgs/cave/calendar/?loadFeed=calendar'
-	ctx.body = await getInternetCalendar(url)
-}
-
-export async function stolaf(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let id = '5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com'
-	ctx.body = await getGoogleCalendar(id)
-}
-
-export async function northfield(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let id = 'thisisnorthfield@gmail.com'
-	ctx.body = await getGoogleCalendar(id)
-}
-
-export async function krlx(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let id = 'krlxradio88.1@gmail.com'
-	ctx.body = await getGoogleCalendar(id)
-}
-
-export async function ksto(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let id = 'kstonarwhal@gmail.com'
-	ctx.body = await getGoogleCalendar(id)
-}
-
-export async function convos(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let url = 'https://www.carleton.edu/convocations/calendar/?loadFeed=calendar&stamp=1714843936'
-	ctx.body = await getInternetCalendar(url)
-}
-
-export async function sumo(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-
-	let url =
-		'https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar&stamp=1714840383'
-	ctx.body = await getInternetCalendar(url)
-}
+export const getKnownCalendarRoute = createRouteSpec({
+	method: 'get',
+	path: '/calendar/named/:calendar',
+	validate: {
+		params: z.object({calendar: KnownCalendars}),
+		response: EventSchema.array(),
+	},
+	handler: async (ctx) => {
+		switch (ctx.request.params.calendar) {
+			case 'carleton':
+				ctx.body = await getInternetCalendar('https://www.carleton.edu/calendar/?loadFeed=calendar')
+				break
+			case 'the-cave':
+				ctx.body = await getInternetCalendar(
+					'https://www.carleton.edu/student/orgs/cave/calendar/?loadFeed=calendar',
+				)
+				break
+			case 'stolaf':
+				ctx.body = await getGoogleCalendar(
+					'5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com',
+				)
+				break
+			case 'northfield':
+				ctx.body = await getGoogleCalendar('thisisnorthfield@gmail.com')
+				break
+			case 'ksto-schedule':
+				ctx.body = await getGoogleCalendar('kstonarwhal@gmail.com')
+				break
+			case 'krlx-schedule':
+				ctx.body = await getGoogleCalendar('krlxradio88.1@gmail.com')
+				break
+			case 'upcoming-convos':
+				ctx.body = await getInternetCalendar(
+					'https://www.carleton.edu/convocations/calendar/?loadFeed=calendar',
+				)
+				break
+			case 'sumo-schedule':
+				ctx.body = await getInternetCalendar(
+					'https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar',
+				)
+				break
+		}
+	},
+})

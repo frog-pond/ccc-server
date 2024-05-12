@@ -1,19 +1,30 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {z} from 'zod'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
+type ContactType = z.infer<typeof ContactSchema>
+const ContactSchema = z.array(
+	z.object({
+		title: z.string(),
+		phoneNumber: z.string(),
+		buttonText: z.string(),
+		category: z.string(),
+		image: z.string().optional(),
+		synopsis: z.string(),
+		text: z.string(),
+	}),
+)
 
-let url = GH_PAGES('contact-info.json')
-
-export function getContacts() {
-	return GET(url).json()
+export async function getContacts(): Promise<ContactType> {
+	return ContactSchema.parse(await get(GH_PAGES('contact-info.json')).json())
 }
 
-export async function contacts(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await getContacts()
-}
+export const getContactsRoute = createRouteSpec({
+	method: 'get',
+	path: '/contacts',
+	validate: {response: ContactSchema},
+	handler: async (ctx) => {
+		ctx.body = await getContacts()
+	},
+})

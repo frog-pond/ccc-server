@@ -8,8 +8,10 @@ import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {extendZodWithOpenApi} from '@asteasolutions/zod-to-openapi'
 import {z} from 'zod'
+import {errorMap} from 'zod-validation-error'
 
 extendZodWithOpenApi(z)
+z.setErrorMap(errorMap)
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
