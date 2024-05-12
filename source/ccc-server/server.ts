@@ -3,9 +3,8 @@ import etag from 'koa-etag'
 import compress from 'koa-compress'
 import logger from 'koa-logger'
 import responseTime from 'koa-response-time'
-import bodyParser from 'koa-bodyparser'
 import cacheControl from 'koa-ctx-cache-control'
-import Router from 'koa-router'
+import zodRouter from 'koa-zod-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {z} from 'zod'
@@ -25,7 +24,7 @@ async function main() {
 	}
 	const institution = institutionResult.data
 
-	let v1: Router<RouterState, ContextState>
+	let v1: typeof zodRouter
 	switch (institution) {
 		case 'carleton-college':
 			v1 = (await import('../ccci-carleton-college/index.js')).v1
@@ -40,15 +39,36 @@ async function main() {
 	//
 	// set up the routes
 	//
-	const router = new Router<RouterState, ContextState>()
-	router.use(v1.routes())
-
-	router.get('/', (ctx) => {
-		ctx.body = 'Hello world!'
+	const router = zodRouter({
+		zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
 	})
 
-	router.get('/ping', (ctx) => {
-		ctx.body = 'pong'
+	router.use(v1.routes())
+
+	router.get({
+		name: 'hello-world',
+		path: '/',
+		validate: {
+			query: z
+				.object({
+					greeting: z.string().default('Hello').describe('foo'),
+					subject: z.string().default('world').describe('bar'),
+				})
+				.default({}),
+			response: z.string(),
+		},
+		handler: (ctx) => {
+			ctx.body = `${ctx.request.query.greeting} ${ctx.request.query.subject}`
+		},
+	})
+
+	router.get({
+		name: 'ping',
+		path: '/ping',
+		validate: {response: z.string()},
+		handler: (ctx) => {
+			ctx.body = 'pong'
+		},
 	})
 
 	//
@@ -62,14 +82,10 @@ async function main() {
 	app.use(etag())
 	// support adding cache-control headers
 	cacheControl(app)
-	// parse request bodies
-	app.use(bodyParser())
 	// hook in the router
 	app.use(router.routes())
 	app.use(router.allowedMethods())
-
-	// I'm not sure why typescript-eslint was complaining about this...
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+	// activate Sentry
 	Sentry.setupKoaErrorHandler(app)
 
 	//
