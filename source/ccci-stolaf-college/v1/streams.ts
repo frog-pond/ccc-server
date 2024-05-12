@@ -5,7 +5,21 @@ import type {Context} from '../../ccc-server/context.js'
 import {z} from 'zod'
 
 const StreamEntry = z.object({
-	starttime: z.string().datetime(),
+	starttime: z.string(),
+	location: z.string(),
+	eid: z.unknown(),
+	performer: z.string(),
+	subtitle: z.string(),
+	poster: z.string().url(),
+	player: z.string().url(),
+	status: z.string(),
+	category: z.string(),
+	hptitle: z.string(),
+	category_textcolor: z.string(),
+	category_color: z.string(),
+	thumb: z.string().url(),
+	title: z.string(),
+	iframesrc: z.string().url(),
 })
 
 const StreamEntryCollection = z.object({
