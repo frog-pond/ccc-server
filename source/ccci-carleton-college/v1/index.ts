@@ -1,57 +1,31 @@
-import Router from 'koa-router'
-import * as calendar from './calendar.js'
+import zodRouter from 'koa-zod-router'
+
+/*import * as calendar from './calendar.js'
 import * as contacts from './contacts.js'
-import * as convos from './convos.js'
+import * as convocations from './convos.js'
 import * as dictionary from './dictionary.js'
 import * as faqs from './faqs.js'
 import * as help from './help.js'
 import * as hours from './hours.js'
 import * as jobs from './jobs.js'
-import * as map from './map.js'
+import * as map from './map.js'*/
 import * as menus from './menu.js'
-import * as news from './news.js'
+/*import * as news from './news.js'
 import * as orgs from './orgs.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
-import * as webcams from './webcams.js'
-import type {ContextState, RouterState} from '../../ccc-server/context.js'
+import * as webcams from './webcams.js'*/
 
-const api = new Router<RouterState, ContextState>({prefix: '/v1'})
+export const api = zodRouter({zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true}})
 
 // food
-api.get('/food/item/:itemId', menus.bonAppNutrition)
-api.get('/food/menu/:cafeId', menus.bonAppMenu)
-api.get('/food/cafe/:cafeId', menus.bonAppCafe)
+api.register(menus.getBonAppItemNutritionRoute)
+api.register(menus.getBonAppMenuRoute)
+api.register(menus.getBonAppCafeRoute)
+api.register(menus.getNamedMenuRoute)
+api.register(menus.getNamedCafeRoute)
 
-api.get('/food/named/menu/the-pause', menus.pauseMenu)
-
-api.get('/food/named/cafe/stav-hall', menus.stavCafe)
-api.get('/food/named/menu/stav-hall', menus.stavMenu)
-
-api.get('/food/named/cafe/the-cage', menus.cageCafe)
-api.get('/food/named/menu/the-cage', menus.cageMenu)
-
-api.get('/food/named/cafe/kings-room', menus.kingsRoomCafe)
-api.get('/food/named/menu/kings-room', menus.kingsRoomMenu)
-
-api.get('/food/named/cafe/the-cave', menus.caveCafe)
-api.get('/food/named/menu/the-cave', menus.caveMenu)
-
-api.get('/food/named/cafe/burton', menus.burtonCafe)
-api.get('/food/named/menu/burton', menus.burtonMenu)
-
-api.get('/food/named/cafe/ldc', menus.ldcCafe)
-api.get('/food/named/menu/ldc', menus.ldcMenu)
-
-api.get('/food/named/cafe/sayles', menus.saylesCafe)
-api.get('/food/named/menu/sayles', menus.saylesMenu)
-
-api.get('/food/named/cafe/weitz', menus.weitzCafe)
-api.get('/food/named/menu/weitz', menus.weitzMenu)
-
-api.get('/food/named/cafe/schulze', menus.schulzeCafe)
-api.get('/food/named/menu/schulze', menus.schulzeMenu)
-
+/*
 // calendar
 api.get('/calendar/google', calendar.google)
 api.get('/calendar/ics', calendar.ics)
@@ -69,8 +43,8 @@ api.get('/dictionary', dictionary.dictionary)
 
 // convos
 api.get('/convos/upcoming', calendar.convos)
-api.get('/convos/upcoming/:id', convos.upcomingDetail)
-api.get('/convos/archived', convos.archived)
+api.get('/convos/upcoming/:id', convocations.upcomingDetail)
+api.get('/convos/archived', convocations.archived)
 
 // important contacts
 api.get('/contacts', contacts.contacts)
@@ -124,5 +98,4 @@ api.get('/routes', (ctx) => {
 		}))
 		.sort((a, b) => a.path.localeCompare(b.path))
 })
-
-export {api}
+*/

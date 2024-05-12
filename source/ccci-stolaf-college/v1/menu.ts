@@ -16,7 +16,7 @@ const getNutrition = mem(bonapp.nutrition, {maxAge: ONE_HOUR})
 export const CAFE_URLS = {
 	stav: 'https://stolaf.cafebonappetit.com/cafe/stav-hall/',
 	cage: 'https://stolaf.cafebonappetit.com/cafe/the-cage/',
-	kingsRoom: 'https://stolaf.cafebonappetit.com/cafe/the-kings-room/',
+	kings: 'https://stolaf.cafebonappetit.com/cafe/the-kings-room/',
 	cave: 'https://stolaf.cafebonappetit.com/cafe/the-cave/',
 	burton: 'https://carleton.cafebonappetit.com/cafe/burton/',
 	ldc: 'https://carleton.cafebonappetit.com/cafe/east-hall/',
@@ -106,13 +106,13 @@ export async function cageMenu(ctx: Context) {
 export async function kingsRoomCafe(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getInfo(CAFE_URLS.kingsRoom)
+	ctx.body = await getInfo(CAFE_URLS.kings)
 }
 
 export async function kingsRoomMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getMenu(CAFE_URLS.kingsRoom)
+	ctx.body = await getMenu(CAFE_URLS.kings)
 }
 
 export async function caveCafe(ctx: Context) {

@@ -63,6 +63,7 @@ export const getNamedMenuRoute = createRouteSpec({
 		response: CafeMenuResponseSchema,
 	},
 	handler: async (ctx) => {
+		console.log('foo')
 		if (ctx.request.params.cafeName === 'the-pause') {
 			ctx.body = await getPauseMenu()
 		} else {

@@ -3,12 +3,10 @@ import etag from 'koa-etag'
 import compress from 'koa-compress'
 import logger from 'koa-logger'
 import responseTime from 'koa-response-time'
-import cacheControl from 'koa-ctx-cache-control'
 import zodRouter from 'koa-zod-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {z} from 'zod'
-import type {ContextState, RouterState} from './context.js'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -24,16 +22,6 @@ async function main() {
 	}
 	const institution = institutionResult.data
 
-	let v1: typeof zodRouter
-	switch (institution) {
-		case 'carleton-college':
-			v1 = (await import('../ccci-carleton-college/index.js')).v1
-			break
-		case 'stolaf-college':
-			v1 = (await import('../ccci-stolaf-college/index.js')).v1
-			break
-	}
-
 	const app = new Koa()
 
 	//
@@ -43,7 +31,16 @@ async function main() {
 		zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
 	})
 
-	router.use(v1.routes())
+	switch (institution) {
+		case 'carleton-college': {
+			let v1 = (await import('../ccci-carleton-college/index.js')).v1
+			router.use(v1.routes())
+			break
+		}
+		// case 'stolaf-college':
+		// 	v1 = (await import('../ccci-stolaf-college/index.js')).v1
+		// 	break
+	}
 
 	router.get({
 		name: 'hello-world',
@@ -81,7 +78,7 @@ async function main() {
 	app.use(conditional())
 	app.use(etag())
 	// support adding cache-control headers
-	cacheControl(app)
+	// cacheControl(app)
 	// hook in the router
 	app.use(router.routes())
 	app.use(router.allowedMethods())

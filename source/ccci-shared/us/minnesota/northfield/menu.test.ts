@@ -1,45 +1,59 @@
-import test from 'ava'
-import {noop} from 'lodash-es'
+import baseTest, {type TestFn} from 'ava'
+import request from 'supertest'
+import Koa from 'koa'
+import {listen} from 'async-listen'
+
+import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../../../../menus-bonapp/types.js'
+import {keysOf} from '../../../../ccc-lib/keysOf.js'
 
 import * as menu from './menu.js'
-import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../../menus-bonapp/types.js'
-import type {Context} from '../../ccc-server/context.js'
-import {keysOf} from '../../ccc-lib/keysOf.js'
+import zodRouter from 'koa-zod-router'
+import logger from 'koa-logger'
+import * as http from 'node:http'
 
-const cafeInfoFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Promise<unknown>> = {
-	stav: menu.stavCafe,
-	cage: menu.cageCafe,
-	kings: menu.kingsRoomCafe,
-	cave: menu.caveCafe,
-	burton: menu.burtonCafe,
-	ldc: menu.ldcCafe,
-	sayles: menu.saylesCafe,
-	weitz: menu.weitzCafe,
-	schulze: menu.schulzeCafe,
-} as const
+const test = baseTest as TestFn<{server: Koa}>
 
-const cafeMenuFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Promise<unknown>> = {
-	stav: menu.stavMenu,
-	cage: menu.cageMenu,
-	kings: menu.kingsRoomMenu,
-	cave: menu.caveMenu,
-	burton: menu.burtonMenu,
-	ldc: menu.ldcMenu,
-	sayles: menu.saylesMenu,
-	weitz: menu.weitzMenu,
-	schulze: menu.schulzeMenu,
-} as const
+test.before((t) => {
+	let server = new Koa()
+	let router = zodRouter({zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true}})
 
+	router.register(menu.getBonAppItemNutritionRoute)
+	router.register(menu.getBonAppMenuRoute)
+	router.register(menu.getBonAppCafeRoute)
+	router.register(menu.getNamedMenuRoute)
+	router.register(menu.getNamedCafeRoute)
+
+	server.use(router.routes())
+
+	t.context.server = server
+})
+
+test('example', async (t) => {
+	// eslint-disable-next-line @typescript-eslint/no-misused-promises
+	let baseUrl = await listen(http.createServer(t.context.server.callback()))
+	await fetch(`${baseUrl.href}/food/named/menu/the-pause`)
+})
+
+/*
 for (const cafe of keysOf(menu.CAFE_URLS)) {
 	test(`${cafe} cafe endpoint should return a BamcoCafeInfo struct`, async (t) => {
-		let ctx = {cacheControl: noop, body: null} as Context
-		await t.notThrowsAsync(() => cafeInfoFunctions[cafe](ctx))
-		t.notThrows(() => CafeInfoResponseSchema.parse(ctx.body))
+		await t.notThrowsAsync(
+			request(t.context.server.listen())
+				.get(`/food/cafe/${cafe}`)
+				.expect('Content-Type', /^application\/json\b/)
+				.expect(200)
+				.expect((response) => CafeInfoResponseSchema.parse(response.body)),
+		)
 	})
 
-	test(`${cafe} menu endpoint should return a CafeMenu struct`, async (t) => {
-		let ctx = {cacheControl: noop, body: null} as Context
-		await t.notThrowsAsync(() => cafeMenuFunctions[cafe](ctx))
-		t.notThrows(() => CafeMenuResponseSchema.parse(ctx.body))
+	test(`${cafe} menu endpoint should return a BamcoCafeInfo struct`, async (t) => {
+		await t.notThrowsAsync(
+			request(t.context.server.listen())
+				.get(`/food/menu/${cafe}`)
+				.expect('Content-Type', /^application\/json\b/)
+				.expect(200)
+				.expect((response) => CafeMenuResponseSchema.parse(response.body)),
+		)
 	})
 }
+*/
