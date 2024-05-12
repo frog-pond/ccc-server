@@ -6,7 +6,10 @@ import responseTime from 'koa-response-time'
 import zodRouter from 'koa-zod-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
+import {extendZodWithOpenApi} from '@asteasolutions/zod-to-openapi'
 import {z} from 'zod'
+
+extendZodWithOpenApi(z)
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 

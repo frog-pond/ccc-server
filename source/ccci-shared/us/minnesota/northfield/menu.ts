@@ -4,20 +4,23 @@ import {z} from 'zod'
 import {get} from '../../../../ccc-lib/http.js'
 import {ONE_DAY, ONE_HOUR} from '../../../../ccc-lib/constants.js'
 import * as bonapp from '../../../../menus-bonapp/index.js'
-import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../../../../menus-bonapp/types.js'
+import {
+	CafeInfoResponseSchema,
+	CafeMenuResponseSchema,
+	PauseMenuSchema,
+} from '../../../../menus-bonapp/types.js'
 import {GH_PAGES} from '../../../../ccci-stolaf-college/v1/gh-pages.js'
 
 const pauseMenuUrl = GH_PAGES('pause-menu.json')
 const GET_DAY = mem(get, {maxAge: ONE_DAY})
-export const getPauseMenu = async () =>
-	CafeMenuResponseSchema.parse(await GET_DAY(pauseMenuUrl).json())
+export const getPauseMenu = async () => PauseMenuSchema.parse(await GET_DAY(pauseMenuUrl).json())
 
 const getMenu = mem(bonapp.menu, {maxAge: ONE_HOUR})
 const getInfo = mem(bonapp.cafe, {maxAge: ONE_HOUR})
 const getNutrition = mem(bonapp.nutrition, {maxAge: ONE_HOUR})
 
-type BONAPP_CAFE_NAMES_TYPE = z.infer<typeof BONAPP_CAFE_NAMES>
-export const BONAPP_CAFE_NAMES = z.union([
+type BamcoCafeSlugs = z.infer<typeof BamcoCafeSlugs>
+export const BamcoCafeSlugs = z.union([
 	z.literal('stav-hall'),
 	z.literal('the-cage'),
 	z.literal('kings-room'),
@@ -30,44 +33,58 @@ export const BONAPP_CAFE_NAMES = z.union([
 	z.literal('schulze'),
 ])
 
-export const CAFE_NAMES = BONAPP_CAFE_NAMES.or(z.literal('the-pause'))
+export const AllKnownCafeSlugs = BamcoCafeSlugs.or(z.literal('the-pause'))
 
-export const CAFE_URLS: Record<BONAPP_CAFE_NAMES_TYPE, string> = {
+export const BamcoSlugToUrl = {
 	'stav-hall': 'https://stolaf.cafebonappetit.com/cafe/stav-hall/',
 	'the-cage': 'https://stolaf.cafebonappetit.com/cafe/the-cage/',
 	'kings-room': 'https://stolaf.cafebonappetit.com/cafe/the-kings-room/',
 	'the-cave': 'https://stolaf.cafebonappetit.com/cafe/the-cave/',
-	'c-store': 'https://stolaf.cafebonappetit.com/cafe/the-cave/', // alias for "cave"
+	'c-store': 'https://stolaf.cafebonappetit.com/cafe/the-cave/', // alias for "the-cave"
 	burton: 'https://carleton.cafebonappetit.com/cafe/burton/',
 	ldc: 'https://carleton.cafebonappetit.com/cafe/east-hall/',
 	sayles: 'https://carleton.cafebonappetit.com/cafe/sayles-cafe/',
 	weitz: 'https://carleton.cafebonappetit.com/cafe/weitz-cafe/',
 	schulze: 'https://carleton.cafebonappetit.com/cafe/schulze-cafe/',
-} as const
+} as const satisfies Record<BamcoCafeSlugs, string>
 
-export const CAFE_ID_TO_URL: Record<number, keyof typeof CAFE_URLS> = {
-	261: 'stav-hall',
-	262: 'the-cage',
-	263: 'kings-room',
-	35: 'burton',
-	36: 'ldc',
-	34: 'sayles',
-	458: 'weitz',
+// I don't like having to maintain this lookup table twice, but this way TS guarantees
+// that both copies of the table have the same entries.
+const BamcoSlugToId = {
+	'stav-hall': '261',
+	'the-cage': '262',
+	'kings-room': '263',
+	sayles: '34',
+	burton: '35',
+	ldc: '36',
+	weitz: '458',
+} as const satisfies Partial<Record<BamcoCafeSlugs, number>>
+
+const KnownCafeIdEnum = z.nativeEnum(BamcoSlugToId)
+type KnownCafeIdEnum = z.infer<typeof KnownCafeIdEnum> // "apple" | "banana" | 3
+
+export const BamcoIdToSlug: Record<KnownCafeIdEnum, BamcoCafeSlugs> = {
+	'261': 'stav-hall',
+	'262': 'the-cage',
+	'263': 'kings-room',
+	'35': 'burton',
+	'36': 'ldc',
+	'34': 'sayles',
+	'458': 'weitz',
 } as const
 
 export const getNamedMenuRoute = createRouteSpec({
 	method: 'get',
 	path: '/food/named/menu/:cafeName',
 	validate: {
-		params: z.object({cafeName: CAFE_NAMES}),
-		response: CafeMenuResponseSchema,
+		params: z.object({cafeName: AllKnownCafeSlugs}),
+		response: CafeMenuResponseSchema.or(PauseMenuSchema),
 	},
 	handler: async (ctx) => {
-		console.log('foo')
 		if (ctx.request.params.cafeName === 'the-pause') {
 			ctx.body = await getPauseMenu()
 		} else {
-			ctx.body = await getMenu(CAFE_URLS[ctx.request.params.cafeName])
+			ctx.body = await getMenu(BamcoSlugToUrl[ctx.request.params.cafeName])
 		}
 	},
 })
@@ -76,11 +93,11 @@ export const getNamedCafeRoute = createRouteSpec({
 	method: 'get',
 	path: '/food/named/cafe/:cafeName',
 	validate: {
-		params: z.object({cafeName: BONAPP_CAFE_NAMES}),
+		params: z.object({cafeName: BamcoCafeSlugs}),
 		response: CafeInfoResponseSchema,
 	},
 	handler: async (ctx) => {
-		ctx.body = await getInfo(CAFE_URLS[ctx.request.params.cafeName])
+		ctx.body = await getInfo(BamcoSlugToUrl[ctx.request.params.cafeName])
 	},
 })
 
@@ -88,15 +105,11 @@ export const getBonAppMenuRoute = createRouteSpec({
 	method: 'get',
 	path: '/food/menu/:cafeId',
 	validate: {
-		params: z.object({cafeId: z.coerce.number()}),
+		params: z.object({cafeId: KnownCafeIdEnum}),
 	},
 	handler: async (ctx) => {
-		let cafeName = CAFE_ID_TO_URL[ctx.request.params.cafeId]
-		if (!cafeName) {
-			ctx.throw()
-			return
-		}
-		ctx.body = await getMenu(CAFE_URLS[cafeName])
+		let cafeName = BamcoIdToSlug[ctx.request.params.cafeId]
+		ctx.body = await getMenu(BamcoSlugToUrl[cafeName])
 	},
 })
 
@@ -104,15 +117,11 @@ export const getBonAppCafeRoute = createRouteSpec({
 	method: 'get',
 	path: '/food/cafe/:cafeId',
 	validate: {
-		params: z.object({cafeId: z.coerce.number()}),
+		params: z.object({cafeId: KnownCafeIdEnum}),
 	},
 	handler: async (ctx) => {
-		let cafeName = CAFE_ID_TO_URL[ctx.request.params.cafeId]
-		if (!cafeName) {
-			ctx.throw()
-			return
-		}
-		ctx.body = await getInfo(CAFE_URLS[cafeName])
+		let cafeName = BamcoIdToSlug[ctx.request.params.cafeId]
+		ctx.body = await getInfo(BamcoSlugToUrl[cafeName])
 	},
 })
 

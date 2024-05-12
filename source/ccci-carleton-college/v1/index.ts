@@ -16,7 +16,10 @@ import * as transit from './transit.js'
 import * as util from './util.js'
 import * as webcams from './webcams.js'*/
 
-export const api = zodRouter({zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true}})
+export const api = zodRouter({
+	zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
+	koaRouter: {prefix: '/v1'},
+})
 
 // food
 api.register(menus.getBonAppItemNutritionRoute)
