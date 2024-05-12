@@ -15,7 +15,7 @@ const StreamEntryCollection = z.object({
 const GetStreamsParamsSchema = z.object({
 	dateFrom: z.string().date().optional(),
 	dateTo: z.string().date().optional(),
-	sort: z.enum(['ascending', 'descending']),
+	sort: z.enum(['ascending', 'descending']).default('ascending'),
 })
 
 type StOlafStreamsParamsType = z.infer<typeof StOlafStreamsParamsSchema>
