@@ -58,7 +58,7 @@ const BamcoSlugToId = {
 	burton: '35',
 	ldc: '36',
 	weitz: '458',
-} as const satisfies Partial<Record<BamcoCafeSlugs, number>>
+} as const satisfies Partial<Record<BamcoCafeSlugs, string>>
 
 const KnownCafeIdEnum = z.nativeEnum(BamcoSlugToId)
 type KnownCafeIdEnum = z.infer<typeof KnownCafeIdEnum> // "apple" | "banana" | 3

@@ -1,5 +1,4 @@
 import baseTest, {type TestFn} from 'ava'
-import request from 'supertest'
 import Koa from 'koa'
 import {listen} from 'async-listen'
 
@@ -11,10 +10,9 @@ import {
 import {keysOf} from '../../../../ccc-lib/keysOf.js'
 
 import * as menu from './menu.js'
-import zodRouter, {createRouteSpec} from 'koa-zod-router'
+import zodRouter from 'koa-zod-router'
 import * as http from 'node:http'
 import ky from 'ky'
-import {BamcoCafeSlugs} from './menu.js'
 
 const test = baseTest as TestFn<{server: http.Server; prefixUrl: URL}>
 
@@ -27,14 +25,6 @@ test.before(async (t) => {
 	router.register(menu.getBonAppCafeRoute)
 	router.register(menu.getNamedMenuRoute)
 	router.register(menu.getNamedCafeRoute)
-
-	router.register(
-		createRouteSpec({
-			method: 'get',
-			path: '/',
-			handler: (context) => (context.body = 'hello, world!'),
-		}),
-	)
 
 	app.use(router.routes())
 
