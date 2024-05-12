@@ -8,15 +8,11 @@
 
     /* Language and Environment */
     "target": "ESNext", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
-     "lib": ["ESNext"], /* Specify a set of bundled library declaration files that describe the target runtime environment. */
+    "lib": ["ESNext"], /* Specify a set of bundled library declaration files that describe the target runtime environment. */
 
     /* Modules */
     "module": "NodeNext", /* Specify what module code is generated. */
     "rootDir": "./", /* Specify the root folder within your source files. */
-
-    /* JavaScript Support */
-    "allowJs": true, /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */
-    // "checkJs": true, /* Enable error reporting in type-checked JavaScript files. */
 
     /* Emit */
     "sourceMap": true, /* Create source map files for emitted JavaScript files. */
