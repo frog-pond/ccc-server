@@ -31,4 +31,4 @@ ENV INSTITUTION=unknown
 HEALTHCHECK --interval=20s --timeout=1s \
   CMD curl -f http://localhost:80/ping
 
-CMD node ./dist/ccc-server/index.js
+CMD node ./dist/source/ccc-server/index.js
