@@ -9,27 +9,30 @@ type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
 const WpJsonFeedEntrySchema = z.object({
 	_embedded: z.optional(
 		z.object({
-			author: z.array(z.object({id: z.unknown(), name: z.string()})).optional(),
-			'wp:featuredmedia': z.array(
-				z.object({
-					id: z.unknown(),
-					media_type: z.union([z.literal('image'), z.string()]),
-					media_details: z.object({
-						sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
+			author: z.array(z.object({id: z.unknown(), name: z.string().or(z.undefined())})).optional(),
+			'wp:featuredmedia': z
+				.array(
+					z.object({
+						id: z.unknown(),
+						media_type: z.union([z.literal('image'), z.string()]),
+						media_details: z.object({
+							sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
+						}),
+						source_url: z.string().url(),
 					}),
-					source_url: z.string().url(),
-				}),
-			),
+				)
+				.nullable()
+				.optional(),
 			'wp:term': z.array(z.array(z.object({taxonomy: z.string(), name: z.string()}))),
 		}),
 	),
 	/** this is "author ID," not "author name" */
 	author: z.unknown(),
-	featured_media: z.boolean().optional(),
+	featured_media: z.number().optional(),
 	content: z.object({rendered: z.string()}),
 	excerpt: z.object({rendered: z.string()}),
 	title: z.object({rendered: z.string()}),
-	date_gmt: z.string().datetime(),
+	date_gmt: z.string(),
 	link: z.string().url(),
 })
 
@@ -68,7 +71,11 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 		authors: [author],
 		categories: categories,
 		content: item.content.rendered,
-		datePublished: item.date_gmt,
+		datePublished: moment(
+			item.date_gmt.endsWith('Z') || item.date_gmt.includes('+')
+				? item.date_gmt
+				: `${item.date_gmt}Z`,
+		).toISOString(),
 		excerpt: JSDOM.fragment(item.excerpt.rendered).textContent?.trim() ?? '',
 		featuredImage: featuredImage,
 		link: item.link,
