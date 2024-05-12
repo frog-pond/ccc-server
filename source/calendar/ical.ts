@@ -9,8 +9,7 @@ import {sortBy} from 'lodash-es'
 function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	let description =
-		JSDOM.fragment(event.description || '').textContent?.trim() ?? ''
+	let description = JSDOM.fragment(event.description || '').textContent?.trim() ?? ''
 
 	return EventSchema.parse({
 		dataSource: 'ical',
@@ -32,11 +31,7 @@ function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	})
 }
 
-export async function ical(
-	url: string | URL,
-	{onlyFuture = true} = {},
-	now = moment(),
-) {
+export async function ical(url: string | URL, {onlyFuture = true} = {}, now = moment()) {
 	let body = await get(url, {headers: {accept: 'text/calendar'}}).text()
 
 	let comp = InternetCalendar.Component.fromString(body)
@@ -45,9 +40,7 @@ export async function ical(
 		.map((vevent) => new InternetCalendar.Event(vevent))
 
 	if (onlyFuture) {
-		events = events.filter((event) =>
-			moment(event.endDate.toString()).isAfter(now, 'day'),
-		)
+		events = events.filter((event) => moment(event.endDate.toString()).isAfter(now, 'day'))
 	}
 
 	return sortBy(

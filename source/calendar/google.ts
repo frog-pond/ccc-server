@@ -61,9 +61,7 @@ export async function googleCalendar(calendarId: string, now = moment()) {
 		key: process.env['GOOGLE_CALENDAR_API_KEY'] ?? '',
 	}
 
-	let body = GoogleCalendarResultSchema.parse(
-		await get(calendarUrl, {searchParams: params}).json(),
-	)
+	let body = GoogleCalendarResultSchema.parse(await get(calendarUrl, {searchParams: params}).json())
 
 	return convertGoogleEvents(body.items)
 }

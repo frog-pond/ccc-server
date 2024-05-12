@@ -5,10 +5,7 @@ interface TurndownOptions {
 	baseUrl?: string
 }
 
-function turndown(
-	content: string,
-	{baseUrl = ''}: TurndownOptions = {},
-): string {
+function turndown(content: string, {baseUrl = ''}: TurndownOptions = {}): string {
 	let t = new Turndown({
 		headingStyle: 'atx',
 		hr: '---',
@@ -46,6 +43,6 @@ function turndown(
 	return t.turndown(content)
 }
 
-export function htmlToMarkdown(htmlStr: string, opts: TurndownOptions) {
+export function htmlToMarkdown(htmlStr: string, opts?: TurndownOptions) {
 	return turndown(htmlStr, opts)
 }

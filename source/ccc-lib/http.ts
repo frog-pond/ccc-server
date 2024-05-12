@@ -14,13 +14,9 @@ const traceAfterHook: AfterResponseHook = (_request, _, response) => {
 	console.log(`got ${response.url}`)
 }
 
-const beforeRequestHooks: BeforeRequestHook[] = IS_DEBUG_KY
-	? [traceBeforeHook]
-	: []
+const beforeRequestHooks: BeforeRequestHook[] = IS_DEBUG_KY ? [traceBeforeHook] : []
 
-const afterResponseHooks: AfterResponseHook[] = IS_DEBUG_KY
-	? [traceAfterHook]
-	: []
+const afterResponseHooks: AfterResponseHook[] = IS_DEBUG_KY ? [traceAfterHook] : []
 
 export const http = ky.extend({
 	headers: {'User-Agent': USER_AGENT},
