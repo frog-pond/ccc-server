@@ -36,10 +36,7 @@ export default [
 			'no-div-regex': 'error',
 			'no-eq-null': 'warn',
 			'no-extra-label': 'error',
-			'no-implicit-coercion': [
-				'error',
-				{boolean: true, number: true, string: true},
-			],
+			'no-implicit-coercion': ['error', {boolean: true, number: true, string: true}],
 			'no-implicit-globals': 'error',
 			'no-multi-assign': 'error',
 			'no-new-symbol': 'error',
@@ -49,10 +46,7 @@ export default [
 			'no-undef-init': 'off',
 			'no-underscore-dangle': 'off',
 			'no-unmodified-loop-condition': 'error',
-			'@typescript-eslint/no-unused-vars': [
-				'warn',
-				{args: 'after-used', argsIgnorePattern: '^_'},
-			],
+			'@typescript-eslint/no-unused-vars': ['warn', {args: 'after-used', argsIgnorePattern: '^_'}],
 			'no-useless-constructor': 'error',
 			'no-var': 'error',
 			'prefer-const': 'off',
@@ -63,14 +57,14 @@ export default [
 			semi: 'off',
 
 			// conflicts with the noPropertyAccessFromIndexSignature tsconfig rule
-			'@typescript-eslint/dot-notation': [
-				'error',
-				{allowIndexSignaturePropertyAccess: true},
-			],
+			'@typescript-eslint/dot-notation': ['error', {allowIndexSignaturePropertyAccess: true}],
 		},
 	},
 	{
 		files: ['**/*.js'],
 		...ts.configs.disableTypeChecked,
+	},
+	{
+		ignores: ['dist/*'],
 	},
 ]
