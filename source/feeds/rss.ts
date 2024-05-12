@@ -1,6 +1,7 @@
 import {get} from '../ccc-lib/http.js'
 import {JSDOM} from 'jsdom'
 import {FeedItemSchema, type FeedItemType} from './types.js'
+import moment from 'moment'
 
 export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedItemType[]> {
 	let body = await get(url, {searchParams: query}).text()
@@ -24,6 +25,9 @@ export function convertRssItemToStory(item: Element) {
 	title = JSDOM.fragment(title).textContent?.trim() || '(no title)' // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing
 
 	let datePublished = item.querySelector('pubDate')?.textContent ?? null
+	if (datePublished) {
+		datePublished = moment(datePublished).toISOString()
+	}
 
 	let descriptionEl = item.querySelector('description')
 
