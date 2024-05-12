@@ -9,7 +9,7 @@ import {keysOf} from '../../ccc-lib/keysOf.js'
 const cafeInfoFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Promise<unknown>> = {
 	stav: menu.stavCafe,
 	cage: menu.cageCafe,
-	kingsRoom: menu.kingsRoomCafe,
+	kings: menu.kingsRoomCafe,
 	cave: menu.caveCafe,
 	burton: menu.burtonCafe,
 	ldc: menu.ldcCafe,
@@ -21,7 +21,7 @@ const cafeInfoFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Pro
 const cafeMenuFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Promise<unknown>> = {
 	stav: menu.stavMenu,
 	cage: menu.cageMenu,
-	kingsRoom: menu.kingsRoomMenu,
+	kings: menu.kingsRoomMenu,
 	cave: menu.caveMenu,
 	burton: menu.burtonMenu,
 	ldc: menu.ldcMenu,
