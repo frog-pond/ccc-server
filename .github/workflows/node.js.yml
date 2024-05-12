@@ -40,6 +40,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
+    - run: npm run build
     - run: npm test
 
   smoke-test-stolaf:
@@ -56,6 +57,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm ci
+      - run: npm run build
       - run: npm run test-stolaf-college
 
   smoke-test-carleton:
@@ -72,6 +74,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm ci
+      - run: npm run build
       - run: npm run test-carleton-college
 
   lint:
