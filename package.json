@@ -26,7 +26,7 @@
   "dependencies": {
     "@sentry/node": "^7.113.0",
     "@sentry/profiling-node": "^7.113.0",
-    "@sentry/utils": "^7.113.0",
+    "@sentry/utils": "^8.2.1",
     "dotenv": "16.4.5",
     "get-urls": "12.1.0",
     "html-entities": "2.5.2",
