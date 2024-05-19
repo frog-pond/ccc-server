@@ -40,7 +40,7 @@ async function getBonAppReportWebpage(url) {
 		virtualConsole,
 		beforeParse(window) {
 			window.fetch = global.fetch
-		}
+		},
 	})
 }
 
@@ -51,7 +51,7 @@ async function getBonAppReportWebpage(url) {
 async function _report(reportUrl) {
 	let dom = await getBonAppReportWebpage(reportUrl)
 
-	dom.window.console.error = ((error) => { 
+	dom.window.console.error = (error) => {
 		let errorMessagesToSkip = [
 			"Failed to create chart: can't acquire context from the given item",
 		]
@@ -59,9 +59,9 @@ async function _report(reportUrl) {
 			return
 		}
 		console.error(error)
-	})
+	}
 
-	dom.window.console.info = ((info) => { 
+	dom.window.console.info = (info) => {
 		let infoMessagesToSkip = [
 			'Initialized global navigation scripts',
 			'Initialized mobile menu script scripts',
@@ -72,7 +72,7 @@ async function _report(reportUrl) {
 			return
 		}
 		console.info(info)
-	})
+	}
 
 	return new Promise((resolve, reject) => {
 		dom.window.onload = () => {
@@ -89,7 +89,7 @@ async function _report(reportUrl) {
 
 			const payload = []
 
-			for(let i=0; i<NUMBER_OF_CHARTS_TO_PARSE; ++i) {
+			for (let i = 0; i < NUMBER_OF_CHARTS_TO_PARSE; ++i) {
 				try {
 					payload.push(parse(charts[i]))
 				} catch (err) {
@@ -97,7 +97,7 @@ async function _report(reportUrl) {
 				}
 			}
 
-			resolve(StavReportType.parse(payload));
+			resolve(StavReportType.parse(payload))
 		}
 	})
 }
