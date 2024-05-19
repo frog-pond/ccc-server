@@ -8,7 +8,7 @@ import {StavReportType} from '../../reports-bonapp/types.js'
 const {noop} = lodash
 
 const reportFunctions = {
-	stav: reports.REPORT_URLS.stav,
+	stav: reports.stavMealtimeReport,
 }
 
 suite('sanity checks', () => {
