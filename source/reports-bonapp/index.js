@@ -74,7 +74,7 @@ async function _report(reportUrl) {
 		console.info(info)
 	}
 
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve, _reject) => {
 		dom.window.onload = () => {
 			const charts = dom.window.Chart.instances
 
