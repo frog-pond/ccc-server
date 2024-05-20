@@ -6,17 +6,18 @@ import mem from 'memoize'
 import * as Sentry from '@sentry/node'
 
 import {CustomReportType} from './helpers.js'
-import {StavReportType} from './types.js'
+import {
+	ChartJsInstance,
+	type ChartJsInstanceType,
+	StavReportInstanceSchema,
+	type StavReportInstanceType,
+	StavReportSchema,
+	type StavReportType,
+} from './types.js'
 
 const getBonAppPage = mem(get, {maxAge: ONE_MINUTE})
 
-const NUMBER_OF_CHARTS_TO_PARSE = 7
-
-/**
- * @param {string|URL} url
- * @return {Promise<JSDOM>}
- */
-async function getBonAppReportWebpage(url) {
+async function getBonAppReportWebpage(url: string | URL) {
 	const virtualConsole = new VirtualConsole()
 	virtualConsole.sendTo(console, {omitJSDOMErrors: true})
 	virtualConsole.on('jsdomError', (err) => {
@@ -44,74 +45,69 @@ async function getBonAppReportWebpage(url) {
 	})
 }
 
-/**
- * @param {string|URL} reportUrl
- * @returns {Promise<StavReportType>}
- */
-async function _report(reportUrl) {
+async function _report(reportUrl: string | URL): Promise<StavReportType> {
 	let dom = await getBonAppReportWebpage(reportUrl)
 
-	dom.window.console.error = (error) => {
-		let errorMessagesToSkip = [
-			"Failed to create chart: can't acquire context from the given item",
-		]
+	let domConsole = dom.window['console'] as typeof console
+	domConsole.error = (error: string) => {
+		let errorMessagesToSkip = ["Failed to create chart: can't acquire context from the given item"]
 		if (errorMessagesToSkip.includes(error)) {
 			return
 		}
 		console.error(error)
 	}
 
-	dom.window.console.info = (info) => {
+	domConsole.info = (info: unknown) => {
 		let infoMessagesToSkip = [
 			'Initialized global navigation scripts',
 			'Initialized mobile menu script scripts',
 			'Initialized tools navigation scripts',
 			'Initialized all javascript that targeted document ready.',
 		]
-		if (infoMessagesToSkip.includes(info)) {
+		if (
+			(typeof info === 'string' && info.startsWith('Initialized ')) ||
+			infoMessagesToSkip.includes(info as string)
+		) {
 			return
 		}
 		console.info(info)
 	}
 
+	const parse = (chart: ChartJsInstanceType): StavReportInstanceType => {
+		const {labels, datasets} = chart.data
+		return StavReportInstanceSchema.parse({
+			title: datasets[0].label,
+			times: labels,
+			data: datasets[0].data,
+		})
+	}
+
 	return new Promise((resolve, _reject) => {
 		dom.window.onload = () => {
-			const charts = dom.window.Chart.instances
-
-			const parse = (chart) => {
-				const {labels, datasets} = chart.data
-				return {
-					title: datasets[0].label,
-					times: labels,
-					data: datasets[0].data,
-				}
+			const {instances: charts} = dom.window['Chart'] as {
+				instances: {labels: string[]; datasets: {label: string; data: number[]}[]}[]
 			}
 
-			const payload = []
-
-			for (let i = 0; i < NUMBER_OF_CHARTS_TO_PARSE; ++i) {
+			const payload: StavReportInstanceType[] = Object.values(charts).flatMap((chart) => {
 				try {
-					payload.push(parse(charts[i]))
+					return [parse(ChartJsInstance.parse(chart))]
 				} catch (err) {
-					console.warn({error: err.message})
+					console.warn(err)
+					return []
 				}
-			}
+			})
 
-			resolve(StavReportType.parse(payload))
+			resolve(StavReportSchema.parse(payload))
 		}
 	})
 }
 
-/**
- * @param {string|URL} reportUrl
- * @returns {Promise<StavReportType>}
- */
-export function report(reportUrl) {
+export function report(reportUrl: string | URL): Promise<StavReportType> {
 	try {
 		return _report(reportUrl)
 	} catch (err) {
 		console.error(err)
 		Sentry.isInitialized() && Sentry.captureException(err)
-		return CustomReportType({message: 'Could not load BonApp report'})
+		return Promise.resolve(CustomReportType('Could not load BonApp report'))
 	}
 }
