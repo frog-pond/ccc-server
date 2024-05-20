@@ -37,9 +37,11 @@
     "watch": "echo \"npm run build-watch\" and \"npm run start-watch\""
   },
   "dependencies": {
+    "@aleclarson/swagger-typescript-api": "^13.0.3",
     "@sentry/node": "^8.0.0-rc.1",
     "@sentry/profiling-node": "^8.0.0-rc.1",
     "@sentry/utils": "^8.0.0-rc.1",
+    "@supabase/supabase-js": "^2.43.2",
     "get-urls": "12.1.0",
     "html-entities": "2.5.2",
     "ical.js": "^2.0.1",
@@ -88,6 +90,7 @@
     "eslint-config-prettier": "^9.1.0",
     "globals": "^15.2.0",
     "prettier": "^3.2.5",
+    "supabase": "^1.167.4",
     "typed-query-selector": "^2.11.2",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.0.0"

@@ -67,6 +67,8 @@ api.get('/calendar/named/ksto-schedule', calendar.ksto)
 
 // a-to-z
 api.get('/a-to-z', atoz.atoz)
+api.get('/a-to-z/supa', atoz.atozSupabase)
+api.get('/a-to-z/ingest', atoz.ingest)
 
 // dictionary
 api.get('/dictionary', dictionary.dictionary)
