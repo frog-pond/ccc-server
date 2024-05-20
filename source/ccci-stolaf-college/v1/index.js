@@ -13,6 +13,7 @@ import * as menus from './menu.js'
 import * as news from './news.js'
 import * as orgs from './orgs.js'
 import * as printing from './printing.js'
+import * as reports from './reports.js'
 import * as streams from './streams.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
@@ -114,6 +115,9 @@ api.get('/streams/upcoming', streams.upcoming)
 
 // stoprint
 api.get('/printing/color-printers', printing.colorPrinters)
+
+// reports
+api.get('/reports/stav', reports.stavMealtimeReport)
 
 // utilities
 api.get('/util/html-to-md', util.htmlToMarkdown)
