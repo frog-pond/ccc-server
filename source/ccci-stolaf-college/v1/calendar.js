@@ -23,34 +23,46 @@ export async function ics(ctx) {
 export async function stolaf(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
-	let id = '5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com'
-	ctx.body = await getGoogleCalendar(id)
+	let id = 'https://www.stolaf.edu/apps/calendar/ical.cfm'
+	ctx.body = await getInternetCalendar(id)
 }
 
 export async function oleville(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
-	let id = 'opha089fhthpchc0pkdqinca44nl7svk@import.calendar.google.com'
-	ctx.body = await getGoogleCalendar(id)
+	let id =
+		'https://calendar.google.com/calendar/ical/opha089fhthpchc0pkdqinca44nl7svk%40import.calendar.google.com/public/basic.ics'
+	ctx.body = await getInternetCalendar(id)
+}
+
+export async function thePause(ctx) {
+	ctx.cacheControl(ONE_MINUTE)
+
+	let id =
+		'https://calendar.google.com/calendar/ical/stolaf.edu_qkrej5rm8c8582dlnc28nreboc%40group.calendar.google.com/public/basic.ics'
+	ctx.body = await getInternetCalendar(id)
 }
 
 export async function northfield(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
-	let id = 'thisisnorthfield@gmail.com'
-	ctx.body = await getGoogleCalendar(id)
+	let id =
+		'https://calendar.google.com/calendar/ical/thisisnorthfield%40gmail.com/public/basic.ics'
+	ctx.body = await getInternetCalendar(id)
 }
 
 export async function krlx(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
-	let id = 'krlxradio88.1@gmail.com'
-	ctx.body = await getGoogleCalendar(id)
+	let id =
+		'https://calendar.google.com/calendar/ical/krlxradio88.1%40gmail.com/public/basic.ics'
+	ctx.body = await getInternetCalendar(id)
 }
 
 export async function ksto(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
-	let id = 'stolaf.edu_7u3lgo4rr3o9dchr50q982ribk@group.calendar.google.com'
-	ctx.body = await getGoogleCalendar(id)
+	let id =
+		'https://calendar.google.com/calendar/ical/stolaf.edu_7u3lgo4rr3o9dchr50q982ribk%40group.calendar.google.com/public/basic.ics'
+	ctx.body = await getInternetCalendar(id)
 }
