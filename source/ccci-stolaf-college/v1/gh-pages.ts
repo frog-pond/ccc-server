@@ -1,4 +1,4 @@
-const BASE_URL = `https://stodevx.github.io`
+const BASE_URL = 'https://stodevx.github.io'
 
 export const GH_PAGES = (filename: string) => {
 	const url = new URL(BASE_URL)
