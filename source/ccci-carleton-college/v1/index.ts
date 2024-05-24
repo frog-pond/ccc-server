@@ -4,9 +4,9 @@ import * as calendar from './calendar.js'
 import * as contacts from './contacts.js'
 import * as dictionary from './dictionary.js'
 import * as convocations from './convos.js'
-/*
 import * as faqs from './faqs.js'
 import * as help from './help.js'
+/*
 import * as hours from './hours.js'
 import * as jobs from './jobs.js'
 import * as map from './map.js'*/
@@ -46,13 +46,13 @@ api.register(convocations.getUpcomingConvocations)
 api.register(convocations.getConvocationDetail)
 api.register(convocations.getArchivedConvocations)
 
-/*
 // help tools
-api.get('/tools/help', help.help)
+api.register(help.getHelpRoute)
 
 // faqs
 api.get('/faqs', faqs.faqs)
 
+/*
 // webcams
 api.get('/webcams', webcams.webcams)
 
