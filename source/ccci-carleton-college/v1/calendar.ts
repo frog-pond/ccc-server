@@ -6,6 +6,8 @@ import {createRouteSpec} from 'koa-zod-router'
 import {z} from 'zod'
 import {EventSchema} from '../../calendar/types.js'
 
+export const CARLETON_UPCOMING_CONVOCATIONS_URL = 'https://www.carleton.edu/convocations/calendar/?loadFeed=calendar'
+
 export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})
 export const getInternetCalendar = mem(ical, {maxAge: ONE_MINUTE})
 
@@ -72,7 +74,7 @@ export const getKnownCalendarRoute = createRouteSpec({
 				ctx.body = await getGoogleCalendar('krlxradio88.1@gmail.com')
 				break
 			case 'upcoming-convos':
-				ctx.body = await getInternetCalendar('https://www.carleton.edu/convocations/calendar/?loadFeed=calendar')
+				ctx.body = await getInternetCalendar(CARLETON_UPCOMING_CONVOCATIONS_URL)
 				break
 			case 'sumo-schedule':
 				ctx.body = await getInternetCalendar('https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar')

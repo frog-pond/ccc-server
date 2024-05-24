@@ -1,22 +1,43 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import {makeAbsoluteUrl} from '../../ccc-lib/url.js'
 import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.js'
-import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import moment from 'moment'
-import type {Context} from '../../ccc-server/context.js'
 import assert from 'node:assert/strict'
+import {z} from 'zod'
+import {createRouteSpec} from 'koa-zod-router'
+import {EventSchema} from '../../calendar/types.js'
+import {CARLETON_UPCOMING_CONVOCATIONS_URL, getInternetCalendar} from './calendar.js'
 
 const archiveBase = 'https://feed.podbean.com/carletonconvos/feed.xml'
 
-function processConvo(event: Element) {
-	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent?.trim()
+type ConvocationEpisodeType = z.infer<typeof ConvocationEpisodeSchema>
+const ConvocationEpisodeSchema = z.object({
+	title: z.string(),
+	description: z.string(),
+	pubDate: z.string().datetime(),
+	enclosure: z.nullable(
+		z.object({
+			url: z.string().url(),
+			length: z.string(),
+			type: z.string(),
+		}),
+	),
+})
 
-	let description =
-		JSDOM.fragment(event.querySelector('description')?.textContent ?? '').textContent?.trim() ?? ''
+type UpcomingConvocationEventType = z.infer<typeof UpcomingConvocationEventSchema>
+const UpcomingConvocationEventSchema = z.object({
+	sponsor: z.string(),
+	content: z.string(),
+	images: z.string().url().array(),
+})
 
-	let pubDate = moment(event.querySelector('pubDate')?.textContent)
+function processConvocation(event: Element): ConvocationEpisodeType {
+	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent?.trim() ?? ''
+
+	let description = JSDOM.fragment(event.querySelector('description')?.textContent ?? '').textContent?.trim() ?? ''
+
+	let pubDate = moment(event.querySelector('pubDate')?.textContent).toISOString()
 
 	let enclosureEl = event.querySelector('enclosure')
 	let enclosure = enclosureEl
@@ -30,7 +51,7 @@ function processConvo(event: Element) {
 	return {title, description, pubDate, enclosure}
 }
 
-async function fetchUpcoming(eventId: string) {
+async function fetchUpcomingDetail(eventId: string): Promise<UpcomingConvocationEventType> {
 	let baseUrl = 'https://www.carleton.edu/convocations/calendar/'
 	let url = 'https://www.carleton.edu/convocations/calendar/'
 	let body = await get(url, {searchParams: {eId: eventId}}).text()
@@ -55,36 +76,46 @@ async function fetchUpcoming(eventId: string) {
 		baseUrl,
 	})
 
-	return {
+	return UpcomingConvocationEventSchema.parse({
 		images,
 		content: descText,
 		sponsor: sponsorText,
-	}
-}
-
-export const getUpcoming = mem(fetchUpcoming, {maxAge: ONE_HOUR * 6})
-
-export async function upcomingDetail(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-
-	let detailId = ctx.URL.searchParams.get('id')
-	ctx.assert(detailId, 400, '?id is required')
-	ctx.body = await getUpcoming(detailId)
+	})
 }
 
 async function fetchArchived() {
 	let body = await get(archiveBase).text()
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	let convos = Array.from(dom.window.document.querySelectorAll('rss channel item')).map(
-		processConvo,
-	)
-	convos = convos.slice(0, 100)
-	return Promise.all(convos)
+	let convos = Array.from(dom.window.document.querySelectorAll('rss channel item')).map(processConvocation)
+	return Promise.all(convos.slice(0, 100))
 }
 
-export const getArchived = mem(fetchArchived, {maxAge: ONE_HOUR * 6})
+export const getConvocationDetail = createRouteSpec({
+	method: 'get',
+	path: '/convos/upcoming/:id',
+	validate: {
+		params: z.object({id: z.string()}),
+		response: UpcomingConvocationEventSchema,
+	},
+	handler: async (ctx) => {
+		ctx.body = await fetchUpcomingDetail(ctx.request.params.id)
+	},
+})
 
-export async function archived(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-	ctx.body = await getArchived()
-}
+export const getArchivedConvocations = createRouteSpec({
+	method: 'get',
+	path: '/convos/archived',
+	validate: {response: z.array(ConvocationEpisodeSchema)},
+	handler: async (ctx) => {
+		ctx.body = await fetchArchived()
+	},
+})
+
+export const getUpcomingConvocations = createRouteSpec({
+	method: 'get',
+	path: '/convos/upcoming',
+	validate: {response: EventSchema.array()},
+	handler: async (ctx) => {
+		ctx.body = await getInternetCalendar(CARLETON_UPCOMING_CONVOCATIONS_URL)
+	},
+})
