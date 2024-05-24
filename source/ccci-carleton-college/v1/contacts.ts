@@ -4,17 +4,19 @@ import {createRouteSpec} from 'koa-zod-router'
 import {z} from 'zod'
 
 type ContactType = z.infer<typeof ContactSchema>
-const ContactSchema = z.array(
-	z.object({
-		title: z.string(),
-		phoneNumber: z.string(),
-		buttonText: z.string(),
-		category: z.string(),
-		image: z.string().optional(),
-		synopsis: z.string(),
-		text: z.string(),
-	}),
-)
+const ContactSchema = z.object({
+	data: z.array(
+		z.object({
+			title: z.string(),
+			phoneNumber: z.string(),
+			buttonText: z.string(),
+			category: z.string(),
+			image: z.string().optional(),
+			synopsis: z.string(),
+			text: z.string(),
+		}),
+	),
+})
 
 export async function getContacts(): Promise<ContactType> {
 	return ContactSchema.parse(await get(GH_PAGES('contact-info.json')).json())

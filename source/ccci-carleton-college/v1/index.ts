@@ -2,9 +2,9 @@ import zodRouter from 'koa-zod-router'
 
 import * as calendar from './calendar.js'
 import * as contacts from './contacts.js'
+import * as dictionary from './dictionary.js'
 /*
 import * as convocations from './convos.js'
-import * as dictionary from './dictionary.js'
 import * as faqs from './faqs.js'
 import * as help from './help.js'
 import * as hours from './hours.js'
@@ -38,10 +38,10 @@ api.register(calendar.getKnownCalendarRoute)
 // important contacts
 api.register(contacts.getContactsRoute)
 
-/*
 // dictionary
-api.get('/dictionary', dictionary.dictionary)
+api.register(dictionary.getDictionaryRoute)
 
+/*
 // convos
 api.get('/convos/upcoming', calendar.convos)
 api.get('/convos/upcoming/:id', convocations.upcomingDetail)
