@@ -57,14 +57,10 @@ export const getKnownCalendarRoute = createRouteSpec({
 				ctx.body = await getInternetCalendar('https://www.carleton.edu/calendar/?loadFeed=calendar')
 				break
 			case 'the-cave':
-				ctx.body = await getInternetCalendar(
-					'https://www.carleton.edu/student/orgs/cave/calendar/?loadFeed=calendar',
-				)
+				ctx.body = await getInternetCalendar('https://www.carleton.edu/student/orgs/cave/calendar/?loadFeed=calendar')
 				break
 			case 'stolaf':
-				ctx.body = await getGoogleCalendar(
-					'5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com',
-				)
+				ctx.body = await getGoogleCalendar('5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com')
 				break
 			case 'northfield':
 				ctx.body = await getGoogleCalendar('thisisnorthfield@gmail.com')
@@ -76,14 +72,10 @@ export const getKnownCalendarRoute = createRouteSpec({
 				ctx.body = await getGoogleCalendar('krlxradio88.1@gmail.com')
 				break
 			case 'upcoming-convos':
-				ctx.body = await getInternetCalendar(
-					'https://www.carleton.edu/convocations/calendar/?loadFeed=calendar',
-				)
+				ctx.body = await getInternetCalendar('https://www.carleton.edu/convocations/calendar/?loadFeed=calendar')
 				break
 			case 'sumo-schedule':
-				ctx.body = await getInternetCalendar(
-					'https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar',
-				)
+				ctx.body = await getInternetCalendar('https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar')
 				break
 		}
 	},
