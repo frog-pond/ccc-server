@@ -79,7 +79,7 @@ api.get('/transit/bus', transit.bus)
 api.get('/transit/modes', transit.modes)
 
 // utilities
-api.get('/util/html-to-md', util.htmlToMarkdown)
+api.register(util.htmlToMarkdownRoute)
 
 // sitemap
 api.get('/routes', (ctx) => {
