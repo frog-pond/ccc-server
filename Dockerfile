@@ -1,20 +1,19 @@
-FROM docker.io/node:12-alpine
+FROM node:22-alpine
 
 RUN apk add -U curl
 
 WORKDIR /app
-ADD ./package.json /app
-ADD ./yarn.lock /app
+COPY ./package.json ./package-lock.json ./
 
-RUN yarn install --production
+RUN npm ci --omit=dev
 
 HEALTHCHECK --interval=20s --timeout=1s \
   CMD curl -f http://localhost:80/ping
 
-ADD . /app
+COPY ./source ./source
 
 ENV NODE_ENV=production
 ENV NODE_PORT=80
 ENV INSTITUTION=unknown
 
-CMD node -r esm -r dotenv/config ./modules/node_modules/@frogpond/ccc-server/index.js
+CMD node -r dotenv/config ./source/ccc-server/index.js
