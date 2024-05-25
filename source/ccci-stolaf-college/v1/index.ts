@@ -84,7 +84,7 @@ api.register(streams.getUpcomingRoute)
 api.register(printing.getColorPrintersRoute)
 
 // reports
-api.get('/reports/stav', reports.stavMealtimeReport)
+api.register(reports.getStavMealtimeReportRoute)
 
 // utilities
 api.register(util.htmlToMarkdownRoute)
