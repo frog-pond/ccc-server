@@ -15,7 +15,10 @@ const BasicPresenceOrgSchema = z.object({
 	hasCoverImage: z.boolean(),
 	photoUri: z.string(),
 	photoUriWithVersion: z.string(),
-	photoType: z.union([z.literal('default'), z.literal('search'), z.literal('upload'), z.literal('')]).optional().nullable(),
+	photoType: z
+		.union([z.literal('default'), z.literal('search'), z.literal('upload'), z.literal('')])
+		.optional()
+		.nullable(),
 	memberCount: z.number(),
 	categories: z.string().array(),
 	newOrg: z.boolean().optional(),
