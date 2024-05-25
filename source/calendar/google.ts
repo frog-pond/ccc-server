@@ -9,11 +9,11 @@ type GoogleCalendarEventType = z.infer<typeof GoogleCalendarEventSchema>
 const GoogleCalendarEventSchema = z.object({
 	start: z.object({
 		date: z.string().date().optional(),
-		dateTime: z.string().datetime(),
+		dateTime: z.string().datetime().optional(),
 	}),
 	end: z.object({
 		date: z.string().date().optional(),
-		dateTime: z.string().datetime(),
+		dateTime: z.string().datetime().optional(),
 	}),
 	description: z.string().optional(),
 	summary: z.string().optional(),
