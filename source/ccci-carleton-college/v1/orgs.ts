@@ -1,13 +1,8 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import {sortBy} from 'lodash-es'
 import {z} from 'zod'
-import type {Context} from '../../ccc-server/context.js'
 import {createRouteSpec} from 'koa-zod-router'
-import {EventSchema} from '../../calendar/types.js'
-import {getGoogleCalendar} from './calendar.js'
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
