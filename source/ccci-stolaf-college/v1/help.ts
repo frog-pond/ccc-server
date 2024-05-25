@@ -1,19 +1,17 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_DAY} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {HelpResponseSchema} from '../../ccc-frog-pond/help.js'
 
-const GET = mem(get, {maxAge: ONE_DAY})
-
-let url = GH_PAGES('help.json')
-
-export function getHelp() {
-	return GET(url).json()
+export async function getHelp() {
+	return HelpResponseSchema.parse(await get(GH_PAGES('help.json')).json())
 }
 
-export async function help(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-
-	ctx.body = await getHelp()
-}
+export const getHelpRoute = createRouteSpec({
+	method: 'get',
+	path: '/tools/help',
+	validate: {response: HelpResponseSchema},
+	handler: async (ctx) => {
+		ctx.body = await getHelp()
+	},
+})

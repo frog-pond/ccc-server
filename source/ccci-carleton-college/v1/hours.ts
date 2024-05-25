@@ -1,19 +1,17 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {BuildingHoursResponseSchema} from '../../ccc-frog-pond/building-hours.js'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
-
-let url = GH_PAGES('building-hours.json')
-
-export function getBuildingHours() {
-	return GET(url).json()
+export async function getBuildingHours() {
+	return BuildingHoursResponseSchema.parse(await get(GH_PAGES('building-hours.json')).json())
 }
 
-export async function buildingHours(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await getBuildingHours()
-}
+export const getBuildingHoursRoute = createRouteSpec({
+	method: 'get',
+	path: '/spaces/hours',
+	validate: {response: BuildingHoursResponseSchema},
+	handler: async (ctx) => {
+		ctx.body = await getBuildingHours()
+	},
+})

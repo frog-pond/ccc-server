@@ -1,28 +1,33 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
-import type {Context} from '../../ccc-server/context.js'
+import {MAP_DATA} from './gh-pages.js'
+import {z} from 'zod'
+import {createRouteSpec} from 'koa-zod-router'
+import {GeoJSONSchema} from 'zod-geojson'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
+const MapSchema = z.record(z.string(), z.unknown())
 
-let url = 'https://carls-app.github.io/map-data/'
-
-export function getMap() {
-	return GET(url + 'map.json').json()
+export async function getMap() {
+	return MapSchema.parse(await get(MAP_DATA('map.json')).json())
 }
 
-export async function map(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
+export const getMapRoute = createRouteSpec({
+	method: 'get',
+	path: '/map',
+	validate: {response: MapSchema},
+	handler: async (ctx) => {
+		ctx.body = await getMap()
+	},
+})
 
-	ctx.body = await getMap()
+export async function getGeoJson() {
+	return GeoJSONSchema.parse(await get(MAP_DATA('map.geojson')).json())
 }
 
-export function getGeojsonMap() {
-	return GET(url + 'map.geojson').json()
-}
-
-export async function geojson(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await getGeojsonMap()
-}
+export const getMapGeoJsonRoute = createRouteSpec({
+	method: 'get',
+	path: '/map/geojson',
+	validate: {response: GeoJSONSchema},
+	handler: async (ctx) => {
+		ctx.body = await getGeoJson()
+	},
+})

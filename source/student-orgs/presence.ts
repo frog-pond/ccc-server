@@ -3,7 +3,7 @@ import {sortBy} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 import {z} from 'zod'
-import {SortableStudentOrgSchema, type SortableStudentOrgType} from './types.js'
+import {SortableStudentOrgSchema} from './types.js'
 
 const BasicPresenceOrgSchema = z.object({
 	subdomain: z.string(),
@@ -58,10 +58,13 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 	})
 }
 
+export type StudentOrgResponseType = z.infer<typeof StudentOrgResponseSchema>
+export const StudentOrgResponseSchema = z.array(SortableStudentOrgSchema)
+
 const fetchOrg = async (base: string, orgUri: string) =>
 	DetailedPresenceOrgSchema.parse(await get(`${base}/${orgUri}`).json())
 
-export async function presence(school: string): Promise<SortableStudentOrgType[]> {
+export async function presence(school: string): Promise<StudentOrgResponseType> {
 	let orgsUrl = `https://api.presence.io/${school}/v1/organizations`
 
 	let body = BasicPresenceOrgSchema.array().parse(await http.get(orgsUrl).json())

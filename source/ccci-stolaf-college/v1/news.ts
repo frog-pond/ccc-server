@@ -1,62 +1,68 @@
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {z} from 'zod'
+import {FeedItemSchema} from '../../feeds/types.js'
 import {fetchRssFeed} from '../../feeds/rss.js'
-import {fetchWpJson, deprecatedWpJson} from '../../feeds/wp-json.js'
-import mem from 'memoize'
-import type {Context} from '../../ccc-server/context.js'
+import {deprecatedWpJson, fetchWpJson} from '../../feeds/wp-json.js'
 
-const cachedRssFeed = mem(fetchRssFeed, {maxAge: ONE_HOUR})
-const cachedWpJsonFeed = mem(fetchWpJson, {maxAge: ONE_HOUR})
+export const getRssFeedRoute = createRouteSpec({
+	method: 'get',
+	path: '/news/rss',
+	validate: {
+		query: z.object({url: z.string().url()}),
+		response: FeedItemSchema.array(),
+	},
+	handler: async (ctx) => {
+		ctx.body = await fetchRssFeed(ctx.request.query.url)
+	},
+})
 
-export async function rss(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
+export const getWpJsonFeedRoute = createRouteSpec({
+	method: 'get',
+	path: '/news/wpjson',
+	validate: {
+		query: z.object({url: z.string().url()}),
+		response: FeedItemSchema.array(),
+	},
+	handler: async (ctx) => {
+		ctx.body = await fetchWpJson(ctx.request.query.url)
+	},
+})
 
-	let urlToFetch = ctx.URL.searchParams.get('url')
-	ctx.assert(urlToFetch, 400, '?url is required')
-	ctx.body = await cachedRssFeed(urlToFetch)
-}
+const KnownFeeds = z.enum(['stolaf', 'oleville', 'politicole', 'mess', 'ksto', 'krlx'])
 
-export async function wpJson(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	let urlToFetch = ctx.URL.searchParams.get('url')
-	ctx.assert(urlToFetch, 400, '?url is required')
-	ctx.body = await cachedWpJsonFeed(urlToFetch)
-}
-
-export async function stolaf(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await cachedWpJsonFeed(new URL('https://wp.stolaf.edu/wp-json/wp/v2/posts'), {
-		per_page: 10,
-		_embed: true,
-	})
-}
-
-export async function oleville(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await cachedRssFeed(new URL('https://www.oleville.com/blog-feed.xml'))
-}
-
-export function politicole(ctx: Context) {
-	ctx.body = deprecatedWpJson()
-}
-
-export async function mess(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await cachedWpJsonFeed(
-		new URL('https://www.theolafmessenger.com/wp-json/wp/v2/posts/'),
-		{per_page: 10, _embed: true},
-	)
-}
-
-export function ksto(ctx: Context) {
-	ctx.body = deprecatedWpJson()
-}
-
-export async function krlx(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await cachedRssFeed(new URL('https://content.krlx.org/feed/'))
-}
+export const getKnownFeedRoute = createRouteSpec({
+	method: 'get',
+	path: '/news/named/:feed',
+	validate: {
+		params: z.object({feed: KnownFeeds}),
+		response: FeedItemSchema.array(),
+	},
+	handler: async (ctx) => {
+		switch (ctx.request.params.feed) {
+			case 'stolaf':
+				ctx.body = await fetchWpJson(new URL('https://wp.stolaf.edu/wp-json/wp/v2/posts'), {
+					per_page: 10,
+					_embed: true,
+				})
+				break
+			case 'krlx':
+				ctx.body = await fetchRssFeed(new URL('https://content.krlx.org/feed/'))
+				break
+			case 'ksto':
+				ctx.body = deprecatedWpJson()
+				break
+			case 'oleville':
+				ctx.body = await fetchRssFeed(new URL('https://www.oleville.com/blog-feed.xml'))
+				break
+			case 'politicole':
+				ctx.body = deprecatedWpJson()
+				break
+			case 'mess':
+				ctx.body = await fetchWpJson(new URL('https://www.theolafmessenger.com/wp-json/wp/v2/posts/'), {
+					per_page: 10,
+					_embed: true,
+				})
+				break
+		}
+	},
+})

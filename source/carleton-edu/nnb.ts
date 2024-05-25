@@ -1,8 +1,22 @@
-import {get} from '../../../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.js'
 import {JSDOM} from 'jsdom'
-import {groupBy, toPairs} from 'lodash-es'
+import {groupBy} from 'lodash-es'
+import {z} from 'zod'
 
-export async function noonNewsBulletin() {
+export type NnbResponseType = z.infer<typeof NnbResponseSchema>
+export const NnbResponseSchema = z.array(
+	z.object({
+		title: z.string(),
+		data: z.array(
+			z.object({
+				description: z.string(),
+				category: z.string(),
+			}),
+		),
+	}),
+)
+
+export async function noonNewsBulletin(): Promise<NnbResponseType> {
 	let body = await get('https://apps.carleton.edu/campact/nnb/show.php3', {
 		searchParams: {style: 'rss'},
 	}).text()
@@ -18,5 +32,5 @@ export async function noonNewsBulletin() {
 	})
 
 	const grouped = groupBy(bulletins, (m) => m.category)
-	return toPairs(grouped).map(([key, value]) => ({title: key, data: value}))
+	return NnbResponseSchema.parse(Object.entries(grouped).map(([key, value]) => ({title: key, data: value})))
 }

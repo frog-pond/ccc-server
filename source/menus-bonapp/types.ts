@@ -159,3 +159,18 @@ export const CafeMenuResponseSchema = z.object({
 	days: z.array(z.object({date: z.string().date(), cafe: CafeMenuSchema})),
 	items: z.record(CafeMenuItemSchema),
 })
+
+export const PauseMenuSchema = z.object({
+	data: z.object({
+		stationMenus: z.object({label: z.string(), note: z.string().optional()}).array(),
+		foodItems: z
+			.object({
+				label: z.string(),
+				station: z.string(),
+				description: z.string().optional(),
+				special: z.boolean().optional(),
+			})
+			.array(),
+		corIcons: z.record(CorIconSchema),
+	}),
+})

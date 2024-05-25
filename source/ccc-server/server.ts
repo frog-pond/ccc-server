@@ -3,13 +3,15 @@ import etag from 'koa-etag'
 import compress from 'koa-compress'
 import logger from 'koa-logger'
 import responseTime from 'koa-response-time'
-import bodyParser from 'koa-bodyparser'
-import cacheControl from 'koa-ctx-cache-control'
-import Router from 'koa-router'
+import zodRouter from 'koa-zod-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
+import {extendZodWithOpenApi} from '@asteasolutions/zod-to-openapi'
 import {z} from 'zod'
-import type {ContextState, RouterState} from './context.js'
+import {errorMap} from 'zod-validation-error'
+
+extendZodWithOpenApi(z)
+z.setErrorMap(errorMap)
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -18,37 +20,57 @@ async function main() {
 
 	const institutionResult = InstitutionSchema.safeParse(process.env['INSTITUTION'])
 	if (institutionResult.error) {
-		console.error(
-			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
-		)
+		console.error(`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`)
 		process.exit(1)
 	}
 	const institution = institutionResult.data
-
-	let v1: Router<RouterState, ContextState>
-	switch (institution) {
-		case 'carleton-college':
-			v1 = (await import('../ccci-carleton-college/index.js')).v1
-			break
-		case 'stolaf-college':
-			v1 = (await import('../ccci-stolaf-college/index.js')).v1
-			break
-	}
 
 	const app = new Koa()
 
 	//
 	// set up the routes
 	//
-	const router = new Router<RouterState, ContextState>()
-	router.use(v1.routes())
-
-	router.get('/', (ctx) => {
-		ctx.body = 'Hello world!'
+	const router = zodRouter({
+		zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
 	})
 
-	router.get('/ping', (ctx) => {
-		ctx.body = 'pong'
+	switch (institution) {
+		case 'carleton-college': {
+			let {v1} = await import('../ccci-carleton-college/index.js')
+			router.use(v1.routes())
+			break
+		}
+		case 'stolaf-college': {
+			let {v1} = await import('../ccci-stolaf-college/index.js')
+			router.use(v1.routes())
+			break
+		}
+	}
+
+	router.get({
+		name: 'hello-world',
+		path: '/',
+		validate: {
+			query: z
+				.object({
+					greeting: z.string().default('Hello').describe('foo'),
+					subject: z.string().default('world').describe('bar'),
+				})
+				.default({}),
+			response: z.string(),
+		},
+		handler: (ctx) => {
+			ctx.body = `${ctx.request.query.greeting} ${ctx.request.query.subject}`
+		},
+	})
+
+	router.get({
+		name: 'ping',
+		path: '/ping',
+		validate: {response: z.string()},
+		handler: (ctx) => {
+			ctx.body = 'pong'
+		},
 	})
 
 	//
@@ -61,15 +83,11 @@ async function main() {
 	app.use(conditional())
 	app.use(etag())
 	// support adding cache-control headers
-	cacheControl(app)
-	// parse request bodies
-	app.use(bodyParser())
+	// cacheControl(app)
 	// hook in the router
 	app.use(router.routes())
 	app.use(router.allowedMethods())
-
-	// I'm not sure why typescript-eslint was complaining about this...
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+	// activate Sentry
 	Sentry.setupKoaErrorHandler(app)
 
 	//

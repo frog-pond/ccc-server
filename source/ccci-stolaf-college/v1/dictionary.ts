@@ -1,19 +1,17 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_DAY} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {DictionaryResponseSchema} from '../../ccc-frog-pond/dictionary.js'
 
-const GET = mem(get, {maxAge: ONE_DAY})
-
-let url = GH_PAGES('dictionary.json')
-
-export function getDictionary() {
-	return GET(url).json()
+export async function getDictionary() {
+	return DictionaryResponseSchema.parse(await get(GH_PAGES('dictionary-carls.json')).json())
 }
 
-export async function dictionary(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-
-	ctx.body = await getDictionary()
-}
+export const getDictionaryRoute = createRouteSpec({
+	method: 'get',
+	path: '/dictionary',
+	validate: {response: DictionaryResponseSchema},
+	handler: async (ctx) => {
+		ctx.body = await getDictionary()
+	},
+})
