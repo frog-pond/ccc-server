@@ -20,9 +20,7 @@ async function main() {
 
 	const institutionResult = InstitutionSchema.safeParse(process.env['INSTITUTION'])
 	if (institutionResult.error) {
-		console.error(
-			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
-		)
+		console.error(`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`)
 		process.exit(1)
 	}
 	const institution = institutionResult.data
@@ -38,13 +36,15 @@ async function main() {
 
 	switch (institution) {
 		case 'carleton-college': {
-			let v1 = (await import('../ccci-carleton-college/index.js')).v1
+			let {v1} = await import('../ccci-carleton-college/index.js')
 			router.use(v1.routes())
 			break
 		}
-		// case 'stolaf-college':
-		// 	v1 = (await import('../ccci-stolaf-college/index.js')).v1
-		// 	break
+		case 'stolaf-college': {
+			let {v1} = await import('../ccci-stolaf-college/index.js')
+			router.use(v1.routes())
+			break
+		}
 	}
 
 	router.get({

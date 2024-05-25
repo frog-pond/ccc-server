@@ -3,7 +3,7 @@ import {sortBy} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 import {z} from 'zod'
-import {SortableStudentOrgSchema, type SortableStudentOrgType} from './types.js'
+import {SortableStudentOrgSchema} from './types.js'
 
 const BasicPresenceOrgSchema = z.object({
 	subdomain: z.string(),
