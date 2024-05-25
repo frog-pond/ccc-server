@@ -24,7 +24,7 @@
   "scripts": {
     "build": "rm -rf ./dist ./.tsbuildinfo && tsc",
     "build-watch": "tsc --watch",
-    "p": "npm run pretty -- --no-write --check",
+    "p": "npm run pretty -- --no-writess",
     "pretty": "prettier --write source",
     "lint": "eslint --cache --max-warnings=0 .",
     "start": "node dist/source/ccc-server/index.js",

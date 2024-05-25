@@ -10,6 +10,9 @@ import {extendZodWithOpenApi} from '@asteasolutions/zod-to-openapi'
 import {z} from 'zod'
 import {errorMap} from 'zod-validation-error'
 
+import koaCash from 'koa-cash'
+import { LRUCache } from 'lru-cache'
+
 extendZodWithOpenApi(z)
 z.setErrorMap(errorMap)
 
@@ -84,6 +87,53 @@ async function main() {
 	app.use(etag())
 	// support adding cache-control headers
 	// cacheControl(app)
+
+	//
+	// set up caching
+	//
+	const cache = new LRUCache({ max: 500 })
+
+	app.use(koaCash({
+		get(key, maxAge) {
+		  return Promise.resolve(cache.get(key))
+		},
+		set(key, value: string) {
+			cache.set(key, value)
+			return Promise.resolve()
+		}
+	  }))
+
+	app.use(async (ctx, next) => {
+		if (await ctx.cashed()) {
+			return
+		}
+		await next()
+	})
+
+	//
+	// set up cache flushing per-endpoint
+	//
+	router.post('/flush', async (ctx) => {
+		try {
+			const {query} = ctx.request
+			const endpoint = query['endpoint'] as string
+	
+			if (!endpoint) {
+				ctx.status = 400
+				ctx.body = { error: 'valid endpoint is required' }
+				return
+			}
+	
+			ctx.cashClear(endpoint)
+			cache.delete(endpoint)
+	
+			ctx.status = 200
+			ctx.body = { message: `cache cleared for ${endpoint}` }
+		} catch(err: unknown) {
+			ctx.body = { message: `error while trying to clear cache` }
+		}
+	})
+
 	// hook in the router
 	app.use(router.routes())
 	app.use(router.allowedMethods())
