@@ -33,7 +33,7 @@ const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
 export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 	let name = org.name.trim()
 	let category = org.categories.join(', ')
-	let meetings = (org.regularMeetingLocation || '').trim() + (org.regularMeetingTime || '').trim()
+	let meetings = (org.regularMeetingLocation ?? '').trim() + (org.regularMeetingTime ?? '').trim()
 	let description = JSDOM.fragment(org.description).textContent?.trim() ?? ''
 	let website = org.website?.trim() ?? ''
 	if (website && !/^https?:\/\//.test(website)) {
