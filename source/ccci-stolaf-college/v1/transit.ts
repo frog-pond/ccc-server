@@ -1,27 +1,34 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {BusTimesResponseSchema, TransitModesResponseSchema} from '../../ccc-frog-pond/transit.js'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
-
-export function getBus() {
-	return GET(GH_PAGES('bus-times.json')).json()
+export async function getBus() {
+	return BusTimesResponseSchema.parse(await get(GH_PAGES('bus-times.json')).json())
 }
 
-export async function bus(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
+export const getBusTimesRoute = createRouteSpec({
+	method: 'get',
+	path: '/transit/bus',
+	validate: {
+		response: BusTimesResponseSchema,
+	},
+	handler: async (ctx) => {
+		ctx.body = await getBus()
+	},
+})
 
-	ctx.body = await getBus()
+export async function getTransitModes() {
+	return TransitModesResponseSchema.parse(await get(GH_PAGES('transportation.json')).json())
 }
 
-export function getModes() {
-	return GET(GH_PAGES('transportation.json')).json()
-}
-
-export async function modes(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await getModes()
-}
+export const getTransitModesRoute = createRouteSpec({
+	method: 'get',
+	path: '/transit/modes',
+	validate: {
+		response: TransitModesResponseSchema,
+	},
+	handler: async (ctx) => {
+		ctx.body = await getTransitModes()
+	},
+})

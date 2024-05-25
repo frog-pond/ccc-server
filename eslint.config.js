@@ -58,6 +58,7 @@ export default [
 
 			// conflicts with the noPropertyAccessFromIndexSignature tsconfig rule
 			'@typescript-eslint/dot-notation': ['error', {allowIndexSignaturePropertyAccess: true}],
+			'@typescript-eslint/switch-exhaustiveness-check': 'error',
 		},
 	},
 	{
