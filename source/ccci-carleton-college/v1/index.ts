@@ -15,8 +15,6 @@ import * as orgs from './orgs.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
 import * as webcams from './webcams.js'
-import {getJobsRoute} from './jobs.js'
-import {getStudentOrgsRoute} from './orgs.js'
 
 export const api = zodRouter({
 	zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
@@ -75,8 +73,8 @@ api.register(news.getKnownFeedRoute)
 api.register(hours.getBuildingHoursRoute)
 
 // transit
-api.get('/transit/bus', transit.bus)
-api.get('/transit/modes', transit.modes)
+api.register(transit.getBusTimesRoute)
+api.register(transit.getTransitModesRoute)
 
 // utilities
 api.register(util.htmlToMarkdownRoute)
