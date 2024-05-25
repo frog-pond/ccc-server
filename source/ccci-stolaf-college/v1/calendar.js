@@ -1,12 +1,10 @@
 import {googleCalendar} from '../../calendar/google.js'
-import {reasonCalendar} from '../../calendar/reason.js'
 import {ical} from '../../calendar/ical.js'
 import {theEventsCalendar} from '@frogpond/ccc-tec'
 import {ONE_MINUTE} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 
 export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})
-export const getReasonCalendar = mem(reasonCalendar, {maxAge: ONE_MINUTE})
 export const getInternetCalendar = mem(ical, {maxAge: ONE_MINUTE})
 export const getTheEventsCalendar = mem(theEventsCalendar, {maxAge: ONE_MINUTE})
 
