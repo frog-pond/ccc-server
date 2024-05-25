@@ -6,17 +6,15 @@ import * as dictionary from './dictionary.js'
 import * as convocations from './convos.js'
 import * as faqs from './faqs.js'
 import * as help from './help.js'
-/*
 import * as hours from './hours.js'
 import * as jobs from './jobs.js'
-import * as map from './map.js'*/
+import * as map from './map.js'
 import * as menus from './menu.js'
-/*import * as news from './news.js'
+import * as news from './news.js'
 import * as orgs from './orgs.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
 import * as webcams from './webcams.js'
-*/
 
 export const api = zodRouter({
 	zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
@@ -50,33 +48,29 @@ api.register(convocations.getArchivedConvocations)
 api.register(help.getHelpRoute)
 
 // faqs
-api.get('/faqs', faqs.faqs)
+api.register(faqs.getFaqsRoute)
 
-/*
 // webcams
-api.get('/webcams', webcams.webcams)
+api.register(webcams.getWebcamsRoute)
 
 // jobs
 api.get('/jobs', jobs.jobs)
 
 // map
-api.get('/map', map.map)
-api.get('/map/geojson', map.geojson)
+api.register(map.getMapRoute)
+api.register(map.getMapGeoJsonRoute)
 
 // orgs
 api.get('/orgs', orgs.orgs)
 
 // news
-api.get('/news/rss', news.rss)
-api.get('/news/wpjson', news.wpJson)
-api.get('/news/named/nnb', news.nnb)
-api.get('/news/named/carleton-now', news.carletonNow)
-api.get('/news/named/carletonian', news.carletonian)
-api.get('/news/named/krlx', news.krlxNews)
-api.get('/news/named/covid', news.covidNews)
+api.register(news.getRssFeedRoute)
+api.register(news.getWpJsonFeedRoute)
+api.register(news.getNoonNewsBulletinRoute)
+api.register(news.getKnownFeedRoute)
 
 // hours
-api.get('/spaces/hours', hours.buildingHours)
+api.register(hours.getBuildingHoursRoute)
 
 // transit
 api.get('/transit/bus', transit.bus)
@@ -96,4 +90,3 @@ api.get('/routes', (ctx) => {
 		}))
 		.sort((a, b) => a.path.localeCompare(b.path))
 })
-*/

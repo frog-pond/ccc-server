@@ -3,24 +3,23 @@ import {GH_PAGES} from './gh-pages.js'
 import {z} from 'zod'
 import {createRouteSpec} from 'koa-zod-router'
 
-type DictionaryType = z.infer<typeof DictionarySchema>
 const DictionarySchema = z.object({
-	data: z.array(
-		z.object({
-			word: z.string(),
-			definition: z.string(),
-		}),
-	),
+	word: z.string(),
+	definition: z.string(),
 })
 
-export async function getDictionary(): Promise<DictionaryType> {
-	return DictionarySchema.parse(await get(GH_PAGES('dictionary-carls.json')).json())
+const ResponseSchema = z.object({
+	data: DictionarySchema.array(),
+})
+
+export async function getDictionary() {
+	return ResponseSchema.parse(await get(GH_PAGES('dictionary-carls.json')).json())
 }
 
 export const getDictionaryRoute = createRouteSpec({
 	method: 'get',
 	path: '/dictionary',
-	validate: {response: DictionarySchema},
+	validate: {response: ResponseSchema},
 	handler: async (ctx) => {
 		ctx.body = await getDictionary()
 	},

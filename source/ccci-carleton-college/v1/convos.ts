@@ -105,7 +105,7 @@ export const getConvocationDetail = createRouteSpec({
 export const getArchivedConvocations = createRouteSpec({
 	method: 'get',
 	path: '/convos/archived',
-	validate: {response: z.array(ConvocationEpisodeSchema)},
+	validate: {response: ConvocationEpisodeSchema.array()},
 	handler: async (ctx) => {
 		ctx.body = await fetchArchived()
 	},

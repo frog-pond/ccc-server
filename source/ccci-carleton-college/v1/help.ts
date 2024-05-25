@@ -1,12 +1,8 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
 import {z} from 'zod'
 import {createRouteSpec} from 'koa-zod-router'
 
-export type SendEmailButtonType = z.infer<typeof SendEmailButtonSchema>
 export const SendEmailButtonSchema = z.object({
 	action: z.literal('send-email'),
 	title: z.string(),
@@ -21,7 +17,6 @@ export const SendEmailButtonSchema = z.object({
 	}),
 })
 
-export type OpenUrlButtonType = z.infer<typeof OpenUrlButtonSchema>
 export const OpenUrlButtonSchema = z.object({
 	action: z.literal('open-url'),
 	title: z.string(),
@@ -30,7 +25,6 @@ export const OpenUrlButtonSchema = z.object({
 	params: z.object({url: z.string().url()}),
 })
 
-export type CallPhoneButtonType = z.infer<typeof CallPhoneButtonSchema>
 export const CallPhoneButtonSchema = z.object({
 	action: z.literal('call-phone'),
 	title: z.string(),
@@ -39,7 +33,6 @@ export const CallPhoneButtonSchema = z.object({
 	params: z.object({number: z.string().min(1)}),
 })
 
-export type CustomButtonType = z.infer<typeof CustomButtonSchema>
 export const CustomButtonSchema = z.object({
 	action: z.literal('custom'),
 	title: z.string(),
@@ -47,7 +40,6 @@ export const CustomButtonSchema = z.object({
 	params: z.record(z.string(), z.unknown()),
 })
 
-export type ToolButtonType = z.infer<typeof ToolButtonSchema>
 export const ToolButtonSchema = z.union([
 	SendEmailButtonSchema,
 	OpenUrlButtonSchema,
@@ -55,7 +47,6 @@ export const ToolButtonSchema = z.union([
 	CustomButtonSchema,
 ])
 
-export type ToolType = z.infer<typeof ToolSchema>
 export const ToolSchema = z.object({
 	key: z.string(),
 	title: z.string(),
