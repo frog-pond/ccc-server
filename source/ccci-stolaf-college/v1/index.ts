@@ -3,13 +3,12 @@ import zodRouter from 'koa-zod-router'
 import * as atoz from './a-z.js'
 import * as calendar from './calendar.js'
 import * as contacts from './contacts.js'
-import * as departments from './departments.js'
+import * as directory from './directory.js'
 import * as dictionary from './dictionary.js'
 import * as faqs from './faqs.js'
 import * as help from './help.js'
 import * as hours from './hours.js'
 import * as jobs from './jobs.js'
-import * as majors from './majors.js'
 import * as menus from './menu.js'
 import * as news from './news.js'
 import * as orgs from './orgs.js'
@@ -38,14 +37,14 @@ api.register(calendar.getInternetCalendarRoute)
 api.register(calendar.getKnownCalendarRoute)
 
 // a-to-z
-api.get('/a-to-z', atoz.atoz)
+api.register(atoz.getAToZRoute)
 
 // dictionary
 api.register(dictionary.getDictionaryRoute)
 
 // directory
-api.get('/directory/departments', departments.departments)
-api.get('/directory/majors', majors.majors)
+api.register(directory.getDepartmentsRoute)
+api.register(directory.getMajorsRoute)
 
 // important contacts
 api.register(contacts.getContactsRoute)
@@ -60,10 +59,10 @@ api.register(faqs.getFaqsRoute)
 api.register(webcams.getWebcamsRoute)
 
 // jobs
-api.get('/jobs', jobs.jobs)
+api.register(jobs.getJobsRoute)
 
 // orgs
-api.get('/orgs', orgs.orgs)
+api.register(orgs.getStudentOrgsRoute)
 
 // news
 api.register(news.getRssFeedRoute)
@@ -78,11 +77,11 @@ api.register(transit.getBusTimesRoute)
 api.register(transit.getTransitModesRoute)
 
 // streams
-api.get('/streams/archived', streams.archived)
-api.get('/streams/upcoming', streams.upcoming)
+api.register(streams.getArchivedRoute)
+api.register(streams.getUpcomingRoute)
 
 // stoprint
-api.get('/printing/color-printers', printing.colorPrinters)
+api.register(printing.getColorPrintersRoute)
 
 // reports
 api.get('/reports/stav', reports.stavMealtimeReport)

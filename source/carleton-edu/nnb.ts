@@ -1,4 +1,4 @@
-import {get} from '../../../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.js'
 import {JSDOM} from 'jsdom'
 import {groupBy} from 'lodash-es'
 import {z} from 'zod'

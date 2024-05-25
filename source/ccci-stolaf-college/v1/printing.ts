@@ -1,19 +1,23 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_DAY} from '../../ccc-lib/constants.js'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {z} from 'zod'
 
-const GET = mem(get, {maxAge: ONE_DAY})
+export const ColorPrintersResponseSchema = z.object({
+	data: z.object({
+		colorPrinters: z.array(z.string()),
+	}),
+})
 
-let url = GH_PAGES('color-printers.json')
-
-export function getColorPrinters() {
-	return GET(url).json()
+export async function getColorPrinters() {
+	return ColorPrintersResponseSchema.parse(await get(GH_PAGES('color-printers.json')).json())
 }
 
-export async function colorPrinters(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-
-	ctx.body = await getColorPrinters()
-}
+export const getColorPrintersRoute = createRouteSpec({
+	method: 'get',
+	path: '/printing/color-printers',
+	validate: {response: ColorPrintersResponseSchema},
+	handler: async (ctx) => {
+		ctx.body = await getColorPrinters()
+	},
+})

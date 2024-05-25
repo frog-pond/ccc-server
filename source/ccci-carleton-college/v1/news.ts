@@ -3,7 +3,7 @@ import {z} from 'zod'
 import {FeedItemSchema} from '../../feeds/types.js'
 import {fetchRssFeed} from '../../feeds/rss.js'
 import {deprecatedWpJson, fetchWpJson} from '../../feeds/wp-json.js'
-import {NnbResponseSchema, noonNewsBulletin} from './news/nnb.js'
+import {NnbResponseSchema, noonNewsBulletin} from '../../carleton-edu/nnb.js'
 
 export const getRssFeedRoute = createRouteSpec({
 	method: 'get',
