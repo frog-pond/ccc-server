@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import {spawn} from 'child_process'
 
 const buildWatch = spawn('npm', ['run', 'build-watch'], {stdio: 'inherit'})
 const startWatch = spawn('npm', ['run', 'start-watch'], {stdio: 'inherit'})
