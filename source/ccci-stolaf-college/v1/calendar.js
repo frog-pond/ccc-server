@@ -1,6 +1,6 @@
 import {googleCalendar} from '../../calendar/google.js'
 import {ical} from '../../calendar/ical.js'
-import {theEventsCalendar} from '@frogpond/ccc-tec'
+import {theEventsCalendar} from '../../calendar/tec.js'
 import {ONE_MINUTE} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 
