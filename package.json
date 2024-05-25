@@ -34,7 +34,7 @@
     "test-stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test-carleton-college": "./scripts/smoke-test.sh carleton-college",
     "test": "ava",
-    "watch": "echo \"npm run build-watch\" and \"npm run start-watch\""
+    "watch": "node ./scripts/watch.js"
   },
   "dependencies": {
     "@sentry/node": "^8.0.0-rc.1",
