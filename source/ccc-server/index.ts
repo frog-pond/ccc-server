@@ -24,4 +24,5 @@ function setupSentry() {
 
 setupSentry()
 
+await import('dotenv/config')
 await import('./server.js')
