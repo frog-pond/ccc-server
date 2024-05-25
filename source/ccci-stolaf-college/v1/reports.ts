@@ -6,7 +6,7 @@ import {createRouteSpec} from 'koa-zod-router'
 const MealTimeSchema = z.array(
 	z.object({
 		date: z.string().date(),
-		times: z.record(z.string().time(), z.number()),
+		times: z.record(z.string().regex(/^[0-2]\d:[0-5]\d$/), z.number()),
 	}),
 )
 
