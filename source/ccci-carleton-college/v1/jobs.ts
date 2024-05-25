@@ -1,23 +1,36 @@
 import {get} from '../../ccc-lib/http.js'
-import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.js'
+import {ONE_DAY} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
-import type {Context} from '../../ccc-server/context.js'
 import assert from 'node:assert/strict'
 import {buildDetailMap} from '../../ccc-lib/html.js'
+import {z} from 'zod'
+import {createRouteSpec} from 'koa-zod-router'
 
 const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
-const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})
 
 const jobsUrl = 'https://apps.carleton.edu/campus/sfs/employment/feeds/jobs'
 
 const BOOLEAN_KEYS = ['Position available during term', 'Position available during break']
 
-const PARAGRAPHICAL_KEYS = ['Description']
+const PARAGRAPH_KEYS = ['Description']
 
-export async function fetchJob(link: URL) {
+type JobType = z.infer<typeof JobSchema>
+const JobSchema = z.object({
+	dateOpen: z.string(),
+	department: z.string().nullable(),
+	description: z.string(),
+	duringBreak: z.boolean(),
+	duringTerm: z.boolean(),
+	id: z.string(),
+	links: z.string().url().array(),
+	offCampus: z.boolean(),
+	title: z.string(),
+})
+
+export async function fetchJob(link: URL): Promise<JobType> {
 	let id = link.searchParams.get('job_id')
 	assert(id)
 
@@ -25,7 +38,7 @@ export async function fetchJob(link: URL) {
 		link.protocol = 'https:'
 	}
 
-	const body = await GET_TWO_DAYS(link).text()
+	const body = await GET_ONE_DAY(link).text()
 	const dom = new JSDOM(body)
 
 	const jobs = dom.window.document.querySelector('#jobs')
@@ -40,40 +53,51 @@ export async function fetchJob(link: URL) {
 	}
 
 	let details = jobs.querySelectorAll('ul:first-of-type > li')
-	let detailMap = buildDetailMap(details, {paragraphs: PARAGRAPHICAL_KEYS, boolean: BOOLEAN_KEYS})
+	let detailMap = buildDetailMap(details, {paragraphs: PARAGRAPH_KEYS, boolean: BOOLEAN_KEYS})
 
 	const description = detailMap.get('Description') ?? ''
-	const links = Array.from(getUrls(description === true ? '' : description))
+	assert(typeof description === 'string')
+	const links = Array.from(getUrls(description))
 
-	return {
+	const department = detailMap.get('Department or Office')
+	assert(typeof department === 'string')
+
+	const dateOpen = detailMap.get('Date Open') ?? 'Unknown'
+	assert(typeof dateOpen === 'string')
+
+	return JobSchema.parse({
 		id: id,
 		title: titleText,
 		offCampus: offCampus,
-		department: detailMap.get('Department or Office'),
-		dateOpen: detailMap.get('Date Open') ?? 'Unknown',
+		department,
+		dateOpen,
 		duringTerm: Boolean(detailMap.get('Position available during term')),
 		duringBreak: Boolean(detailMap.get('Position available during break')),
-		description: detailMap.get('Description') ?? '',
+		description,
 		links: links,
-	}
+	})
 }
 
-async function _getAllJobs() {
+type ResponseType = z.infer<typeof ResponseSchema>
+const ResponseSchema = z.array(JobSchema)
+
+async function getAllJobs(): Promise<ResponseType> {
 	let body = await GET_ONE_DAY(jobsUrl).text()
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
-		(link) => {
-			let href = link.textContent?.trim() ?? ''
-			return URL.canParse(href) ? [new URL(href)] : []
-		},
-	)
+	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap((link) => {
+		let href = link.textContent?.trim() ?? ''
+		return URL.canParse(href) ? [new URL(href)] : []
+	})
 	return pMap(jobLinks, fetchJob, {concurrency: 4})
 }
 
-export const getJobs = mem(_getAllJobs, {maxAge: ONE_HOUR})
-
-export async function jobs(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-
-	ctx.body = await getJobs()
-}
+export const getJobsRoute = createRouteSpec({
+	method: 'get',
+	path: '/jobs',
+	validate: {
+		response: ResponseSchema,
+	},
+	handler: async (ctx) => {
+		ctx.body = await getAllJobs()
+	},
+})

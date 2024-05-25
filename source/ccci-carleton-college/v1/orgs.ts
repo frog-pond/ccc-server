@@ -5,6 +5,9 @@ import {JSDOM} from 'jsdom'
 import {sortBy} from 'lodash-es'
 import {z} from 'zod'
 import type {Context} from '../../ccc-server/context.js'
+import {createRouteSpec} from 'koa-zod-router'
+import {EventSchema} from '../../calendar/types.js'
+import {getGoogleCalendar} from './calendar.js'
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
@@ -82,7 +85,7 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 	return SortableCarletonStudentOrgSchema.parse(orgObj)
 }
 
-async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
+async function getAllOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let orgsUrl = 'https://apps.carleton.edu/student/orgs/'
 	let body = await get(orgsUrl).text()
 	let dom = new JSDOM(body)
@@ -115,10 +118,13 @@ async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	return sortBy(Array.from(allOrgs.values()), '$sortableName')
 }
 
-export const getOrgs = mem(_getOrgs, {maxAge: ONE_HOUR * 6})
-
-export async function orgs(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-
-	ctx.body = await getOrgs()
-}
+export const getStudentOrgsRoute = createRouteSpec({
+	method: 'get',
+	path: '/orgs',
+	validate: {
+		response: SortableCarletonStudentOrgSchema.array(),
+	},
+	handler: async (ctx) => {
+		ctx.body = await getAllOrgs()
+	},
+})

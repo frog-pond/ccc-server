@@ -15,6 +15,8 @@ import * as orgs from './orgs.js'
 import * as transit from './transit.js'
 import * as util from './util.js'
 import * as webcams from './webcams.js'
+import {getJobsRoute} from './jobs.js'
+import {getStudentOrgsRoute} from './orgs.js'
 
 export const api = zodRouter({
 	zodRouter: {exposeRequestErrors: true, exposeResponseErrors: true},
@@ -54,14 +56,14 @@ api.register(faqs.getFaqsRoute)
 api.register(webcams.getWebcamsRoute)
 
 // jobs
-api.get('/jobs', jobs.jobs)
+api.register(jobs.getJobsRoute)
 
 // map
 api.register(map.getMapRoute)
 api.register(map.getMapGeoJsonRoute)
 
 // orgs
-api.get('/orgs', orgs.orgs)
+api.register(orgs.getStudentOrgsRoute)
 
 // news
 api.register(news.getRssFeedRoute)
@@ -84,8 +86,8 @@ api.get('/routes', (ctx) => {
 	const leadingVersionRegex = /\/v[0-9]\//
 	ctx.body = api.stack
 		.map((layer) => ({
-			path: layer.path,
-			displayName: layer.path.split(leadingVersionRegex).slice(1).join(),
+			path: layer.path.toString(),
+			displayName: layer.path.toString().split(leadingVersionRegex).slice(1).join(),
 			params: layer.paramNames.map((param) => param.name),
 		}))
 		.sort((a, b) => a.path.localeCompare(b.path))
