@@ -37,7 +37,7 @@
     "watch": "node ./scripts/watch.js"
   },
   "dependencies": {
-    "@sentry/node": "^8.0.0-rc.1",
+    "@sentry/node": "^8.4.0",
     "@sentry/profiling-node": "^8.0.0-rc.1",
     "@sentry/utils": "^8.0.0-rc.1",
     "dotenv": "^16.4.5",
