@@ -32,7 +32,8 @@ export async function stolaf(ctx) {
 export async function eventsCalendar(ctx) {
 	ctx.cacheControl(ONE_MINUTE)
 
-	let calendarUrl = 'https://wp.stolaf.edu/calendar/wp-json/tribe/events/v1/events'
+	let calendarUrl =
+		'https://wp.stolaf.edu/calendar/wp-json/tribe/events/v1/events'
 	ctx.body = await getTheEventsCalendar(calendarUrl)
 }
 
