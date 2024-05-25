@@ -5,7 +5,7 @@ import {DayOfWeekSchema} from './day-of-week.js'
 const CoordinateSchema = z.tuple([z.number(), z.number()])
 
 const BusScheduleSchema = z.object({
-	days: DayOfWeekSchema,
+	days: DayOfWeekSchema.array(),
 	coordinates: z.record(z.string(), CoordinateSchema),
 	stops: z.array(z.string()),
 	times: z.array(z.array(z.string())),

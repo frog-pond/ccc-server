@@ -17,7 +17,12 @@ const StOlafAzResponseSchema = z.object({
 export const AToZResponseSchema = z.array(
 	z.object({
 		title: z.string(),
-		data: z.object({}).array(),
+		data: z
+			.object({
+				url: z.string().url(),
+				label: z.string(),
+			})
+			.array(),
 	}),
 )
 

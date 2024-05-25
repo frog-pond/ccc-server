@@ -8,7 +8,7 @@ const LinkSchema = z.object({
 })
 
 const ScheduleBlockSchema = z.object({
-	days: DayOfWeekSchema,
+	days: DayOfWeekSchema.array(),
 	from: AmPmTimeSchema,
 	to: AmPmTimeSchema,
 })
@@ -30,7 +30,7 @@ export const BuildingHoursSchema = z.object({
 	isNotice: z.boolean().optional(),
 	noticeMessage: z.string().optional(),
 	schedule: ScheduleSchema.array(),
-	links: LinkSchema.array(),
+	links: LinkSchema.array().optional(),
 })
 
 export const BuildingHoursResponseSchema = z.object({

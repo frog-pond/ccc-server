@@ -1,11 +1,3 @@
 import {z} from 'zod'
 
-export const DayOfWeekSchema = z.union([
-	z.literal('Mo'),
-	z.literal('Tu'),
-	z.literal('We'),
-	z.literal('Th'),
-	z.literal('Fr'),
-	z.literal('Sa'),
-	z.literal('Su'),
-])
+export const DayOfWeekSchema = z.enum(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'])
