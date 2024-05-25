@@ -10,23 +10,23 @@ const BasicPresenceOrgSchema = z.object({
 	campusName: z.string(),
 	name: z.string(),
 	uri: z.string(),
-	regularMeetingTime: z.string(),
-	regularMeetingLocation: z.string(),
+	regularMeetingTime: z.string().optional(),
+	regularMeetingLocation: z.string().optional(),
 	hasCoverImage: z.boolean(),
 	photoUri: z.string(),
 	photoUriWithVersion: z.string(),
-	photoType: z.union([z.literal('upload'), z.string()]),
+	photoType: z.union([z.literal('default'), z.literal('search'), z.literal('upload'), z.literal('')]).optional().nullable(),
 	memberCount: z.number(),
 	categories: z.string().array(),
-	newOrg: z.boolean(),
-	hasUpcomingEvents: z.boolean(),
+	newOrg: z.boolean().optional(),
+	hasUpcomingEvents: z.boolean().optional(),
 })
 
 type DetailedPresenceOrgType = z.infer<typeof DetailedPresenceOrgSchema>
 const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
 	z.object({
 		description: z.string(),
-		website: z.string().optional(),
+		website: z.string().optional().nullable(),
 	}),
 )
 

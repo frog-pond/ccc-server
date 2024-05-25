@@ -21,8 +21,8 @@ export const StudentOrgSchema = z.object({
 	advisors: AdvisorSchema.array(),
 	description: z.string(),
 	category: z.string(),
-	lastUpdated: z.string().datetime(),
-	website: z.string().url(),
+	lastUpdated: z.string(),
+	website: z.string().optional().nullable(),
 	name: z.string().min(1),
 })
 
