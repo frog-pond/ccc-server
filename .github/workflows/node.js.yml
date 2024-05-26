@@ -137,4 +137,3 @@ jobs:
         with:
           name: ${{ steps.sanitize_branch.outputs.sanitized }}
           path: bundle.zip
-          overwrite: true
