@@ -35,9 +35,7 @@ export async function ical(url: string | URL, {onlyFuture = true} = {}, now = mo
 	let body = await get(url, {headers: {accept: 'text/calendar'}}).text()
 
 	let comp = InternetCalendar.Component.fromString(body)
-	let events = comp
-		.getAllSubcomponents('vevent')
-		.map((vevent) => new InternetCalendar.Event(vevent))
+	let events = comp.getAllSubcomponents('vevent').map((vevent) => new InternetCalendar.Event(vevent))
 
 	if (onlyFuture) {
 		events = events.filter((event) => moment(event.endDate.toString()).isAfter(now, 'day'))

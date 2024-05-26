@@ -1,9 +1,4 @@
-import {
-	CafeInfoResponseSchema,
-	CafeMenuDayPartSchema,
-	CafeMenuResponseSchema,
-	CafeMenuItemSchema,
-} from './types.js'
+import {CafeInfoResponseSchema, CafeMenuDayPartSchema, CafeMenuResponseSchema, CafeMenuItemSchema} from './types.js'
 
 export function CustomCafe(message: string) {
 	let today = new Date()

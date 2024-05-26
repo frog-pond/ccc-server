@@ -38,10 +38,7 @@ const WpJsonFeedEntrySchema = z.object({
 
 const WpJsonFeedResponseSchema = z.array(WpJsonFeedEntrySchema)
 
-export async function fetchWpJson(
-	url: string | URL,
-	query: SearchParamsOption = {},
-): Promise<FeedItemType[]> {
+export async function fetchWpJson(url: string | URL, query: SearchParamsOption = {}): Promise<FeedItemType[]> {
 	const feed = WpJsonFeedResponseSchema.parse(await get(url, {searchParams: query}).json())
 	return feed.map(convertWpJsonItemToStory)
 }
@@ -62,8 +59,7 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 
 		if (featuredMediaInfo) {
 			featuredImage =
-				featuredMediaInfo.media_details.sizes?.['medium_large']?.source_url ??
-				featuredMediaInfo.source_url
+				featuredMediaInfo.media_details.sizes?.['medium_large']?.source_url ?? featuredMediaInfo.source_url
 		}
 	}
 
@@ -72,9 +68,7 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 		categories: categories,
 		content: item.content.rendered,
 		datePublished: moment(
-			item.date_gmt.endsWith('Z') || item.date_gmt.includes('+')
-				? item.date_gmt
-				: `${item.date_gmt}Z`,
+			item.date_gmt.endsWith('Z') || item.date_gmt.includes('+') ? item.date_gmt : `${item.date_gmt}Z`,
 		).toISOString(),
 		excerpt: JSDOM.fragment(item.excerpt.rendered).textContent?.trim() ?? '',
 		featuredImage: featuredImage,

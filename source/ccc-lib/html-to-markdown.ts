@@ -14,11 +14,7 @@ function turndown(content: string, {baseUrl = ''}: TurndownOptions = {}): string
 
 	t.addRule('absolute-urls', {
 		filter(node, options) {
-			return (
-				options.linkStyle === 'inlined' &&
-				node.nodeName === 'A' &&
-				Boolean(node.getAttribute('href'))
-			)
+			return options.linkStyle === 'inlined' && node.nodeName === 'A' && Boolean(node.getAttribute('href'))
 		},
 
 		replacement(content, node) {

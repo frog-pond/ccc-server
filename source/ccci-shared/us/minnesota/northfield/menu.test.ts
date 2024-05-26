@@ -2,11 +2,7 @@ import baseTest, {type TestFn} from 'ava'
 import Koa from 'koa'
 import {listen} from 'async-listen'
 
-import {
-	CafeInfoResponseSchema,
-	CafeMenuResponseSchema,
-	PauseMenuSchema,
-} from '../../../../menus-bonapp/types.js'
+import {CafeInfoResponseSchema, CafeMenuResponseSchema, PauseMenuSchema} from '../../../../menus-bonapp/types.js'
 import {keysOf} from '../../../../ccc-lib/keysOf.js'
 
 import * as menu from './menu.js'

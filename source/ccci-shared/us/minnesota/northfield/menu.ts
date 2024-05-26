@@ -4,11 +4,7 @@ import {z} from 'zod'
 import {get} from '../../../../ccc-lib/http.js'
 import {ONE_DAY, ONE_HOUR} from '../../../../ccc-lib/constants.js'
 import * as bonapp from '../../../../menus-bonapp/index.js'
-import {
-	CafeInfoResponseSchema,
-	CafeMenuResponseSchema,
-	PauseMenuSchema,
-} from '../../../../menus-bonapp/types.js'
+import {CafeInfoResponseSchema, CafeMenuResponseSchema, PauseMenuSchema} from '../../../../menus-bonapp/types.js'
 import {GH_PAGES} from '../../../../ccci-stolaf-college/v1/gh-pages.js'
 
 const pauseMenuUrl = GH_PAGES('pause-menu.json')

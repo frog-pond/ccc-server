@@ -51,15 +51,13 @@ export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType
 			days: [
 				{
 					date: today.toISOString().split('T')[0],
-					dayparts: Object.values(bamco.dayparts).map(
-						({id, label, message, starttime, endtime}) => ({
-							id,
-							label,
-							message,
-							starttime,
-							endtime,
-						}),
-					),
+					dayparts: Object.values(bamco.dayparts).map(({id, label, message, starttime, endtime}) => ({
+						id,
+						label,
+						message,
+						starttime,
+						endtime,
+					})),
 				},
 			],
 		},

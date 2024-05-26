@@ -67,7 +67,9 @@ async function main() {
 	router.get({
 		name: 'ping',
 		path: '/ping',
-		validate: {response: z.string()},
+		validate: {
+			response: z.string(),
+		},
 		handler: (ctx) => {
 			ctx.body = 'pong'
 		},
