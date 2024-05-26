@@ -133,7 +133,7 @@ jobs:
         run: echo "sanitized=$(echo ${{ github.head_ref }} | tr '/-' '_')" >> $GITHUB_OUTPUT
 
       - name: Publish Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.sanitize_branch.outputs.sanitized }}
           path: bundle.zip
