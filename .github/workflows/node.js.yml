@@ -124,8 +124,15 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+      - run: cd ./dist/source && zip -r bundle.zip .
+
+      - name: Set sanitized branch name
+        id: sanitize_branch
+        run: echo "::set-output name=sanitized::$(echo ${{ github.head_ref }} | tr '/-' '_')"
+
       - name: Publish Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.ref_name }}
-          path: dist/
+          name: ${{ steps.sanitize_branch.outputs.sanitized }}
+          path: bundle.zip
+          overwrite: true
