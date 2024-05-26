@@ -40,7 +40,7 @@ const cleanBundle = ({startup}) => {
 
 // Transform the files
 const transformFiles = () => {
-	runCommand(`esbuild dist/source/**/**/*.js --bundle --outdir=dist/bundle ${commonArgs}`)
+	runCommand(`npx esbuild dist/source/**/**/*.js --bundle --outdir=dist/bundle ${commonArgs}`)
 	console.log('Files transformed.')
 }
 
@@ -58,7 +58,7 @@ const createEntryFile = () => {
 
 // Combine the bundles
 const combineBundles = () => {
-	runCommand(`esbuild dist/bundle/entry.js --bundle --outfile=dist/bundle.js ${commonArgs}`)
+	runCommand(`npx esbuild dist/bundle/entry.js --bundle --outfile=dist/bundle.js ${commonArgs}`)
 	console.log('Final bundle has been created successfully.')
 }
 
