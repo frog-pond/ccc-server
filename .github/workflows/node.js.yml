@@ -124,7 +124,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-      - run: cd ./dist/source && zip -r bundle.zip .
+      - run: |
+          cd ./dist/source && zip -r bundle.zip .
+          mv bundle.zip ../../ && cd ../../
 
       - name: Set sanitized branch name
         id: sanitize_branch
