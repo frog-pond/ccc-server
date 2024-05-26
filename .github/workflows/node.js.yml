@@ -124,9 +124,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-      - run: |
-          cd ./dist/source && zip -r bundle.zip .
-          mv bundle.zip ../../ && cd ../../
+      - run: npm run bundle
 
       - name: Set sanitized branch name
         id: sanitize_branch
@@ -136,5 +134,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.sanitize_branch.outputs.sanitized }}
-          path: bundle.zip
+          path: dist/bundle.js
           overwrite: true

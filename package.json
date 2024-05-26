@@ -24,6 +24,7 @@
   "scripts": {
     "build": "rm -rf ./dist ./.tsbuildinfo && tsc",
     "build:watch": "tsc --watch",
+    "bundle": "node ./scripts/bundle.js",
     "p": "npm run pretty -- --no-write --check",
     "pretty": "prettier --write source",
     "lint": "eslint --cache --max-warnings=0 .",
