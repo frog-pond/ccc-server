@@ -31,8 +31,8 @@
     "start:watch": "node --watch dist/source/ccc-server/index.js",
     "stolaf-college": "env INSTITUTION=stolaf-college npm start",
     "carleton-college": "env INSTITUTION=carleton-college npm start",
-    "test-stolaf-college": "./scripts/smoke-test.sh stolaf-college",
-    "test-carleton-college": "./scripts/smoke-test.sh carleton-college",
+    "test:stolaf-college": "./scripts/smoke-test.sh stolaf-college",
+    "test:carleton-college": "./scripts/smoke-test.sh carleton-college",
     "test": "ava",
     "watch": "node ./scripts/watch.js"
   },
