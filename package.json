@@ -39,7 +39,7 @@
   "dependencies": {
     "@sentry/node": "^8.0.0-rc.1",
     "@sentry/profiling-node": "^8.4.0",
-    "@sentry/utils": "^8.0.0-rc.1",
+    "@sentry/utils": "^8.18.0",
     "dotenv": "^16.4.5",
     "get-urls": "12.1.0",
     "html-entities": "2.5.2",
