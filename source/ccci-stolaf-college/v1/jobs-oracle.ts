@@ -30,11 +30,12 @@ export async function fetchJobs(): Promise<JobType[]> {
 	const url = getJobsUrl()
 	url.searchParams.set('onlyData', 'true')
 	url.searchParams.set('expand', ['requisitionList.secondaryLocations', 'flexFieldsFacet.values', 'requisitionList.requisitionFlexFields'].join(','))
-	url.searchParams.set('finder', [
-		['findReqs', 'siteNumber=CX_1'].join(';'),
-		['facetsList=LOCATIONS', 'WORK_LOCATION', 'WORKPLACE_TYPES', 'TITLES', 'DESCRIPTION', 'CATEGORIES', 'ORGANIZATIONS', 'POSTING_DATES', 'FLEX_FIELDS'].join('%3B'),
-	].join(','))
+	url.searchParams.set('finder', 
+		[
+			['findReqs', 'siteNumber=CX_1'].join(';'),
+			['facetsList=LOCATIONS', 'WORK_LOCATION', 'WORKPLACE_TYPES', 'TITLES', 'DESCRIPTION', 'CATEGORIES', 'ORGANIZATIONS', 'POSTING_DATES', 'FLEX_FIELDS'].join('%3B'),
 			['limit=200', 'selectedPostingDatesFacet=30', 'sortBy=POSTING_DATES_DESC'].join(','),
+		].join(','))
 
 	try {
 		const data = await get(url, {
