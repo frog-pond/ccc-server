@@ -11,6 +11,10 @@ import {z} from 'zod'
 const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
 const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})
 
+const baseJobsUrl = 'https://fa-ewur-saasfaprod1.fa.ocs.oraclecloud.com'
+const getJobsUrl = () => new URL(`${baseJobsUrl}/hcmRestApi/resources/latest/recruitingCEJobRequisitions`)
+const getShareUrl = (jobId: string) => `${baseJobsUrl}/hcmUI/CandidateExperience/en/sites/CX_1/requisitions/preview/${jobId}`
+
 export async function jobs(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 
@@ -23,7 +27,7 @@ export async function getJobs(): Promise<JobType[]> {
 }
 
 export async function fetchJobs(): Promise<JobType[]> {
-	const url = new URL('https://fa-ewur-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions')
+	const url = getJobsUrl()
 	url.searchParams.set('onlyData', 'true')
 	url.searchParams.set('expand', ['requisitionList.secondaryLocations', 'flexFieldsFacet.values', 'requisitionList.requisitionFlexFields'].join(','))
 	url.searchParams.set('finder', [
@@ -37,7 +41,7 @@ export async function fetchJobs(): Promise<JobType[]> {
 			headers: {
 				'Content-Type': 'application/vnd.oracle.adf.resourceitem+json;charset=utf-8',
 				'Ora-Irc-Language': 'en',
-				'Referer': 'https://fa-ewur-saasfaprod1.fa.ocs.oraclecloud.com',
+				'Referer': baseJobsUrl,
 			}
 		})
 		.then(data => rootSchema.parse(data.json()))
@@ -56,7 +60,7 @@ export async function fetchJobs(): Promise<JobType[]> {
 			links: [],
 			// type: job.Category || 'Student Work',
 			type: 'Student Work',
-			url: `https://fa-ewur-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/requisitions/preview/${job.Id}`,
+			url: getShareUrl(job.Id),
 			// contactEmail: job.ExternalContactEmail ?? '',
 			contactEmail: '',
 			// contactName: job.ExternalContactName ?? '',
