@@ -44,7 +44,8 @@ export async function fetchJobs(): Promise<JobType[]> {
 				'Referer': baseJobsUrl,
 			}
 		})
-		.then(data => rootSchema.parse(data.json()))
+		.then(response => response.json())
+		.then(data => rootSchema.parse(data))
 
 		if (data.items.length === 0) {
 			console.error('No job data found in response')
