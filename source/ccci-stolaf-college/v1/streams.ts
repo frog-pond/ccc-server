@@ -3,6 +3,7 @@ import {ONE_HOUR} from '../../ccc-lib/constants.js'
 import moment from 'moment-timezone'
 import type {Context} from '../../ccc-server/context.js'
 import {z} from 'zod'
+import mem from 'memoize'
 
 const StreamEntry = z.object({
 	starttime: z.string(),
@@ -40,18 +41,25 @@ const StOlafStreamsParamsSchema = z.object({
 	class: z.enum(['current', 'archived']),
 })
 
-export async function getStreams(params: StOlafStreamsParamsType) {
-	const url = 'https://www.stolaf.edu/multimedia/api/collection'
-	const data = StreamEntryCollection.parse(await get(url, {searchParams: params}).json())
+const getStreams = mem(
+	async (params: StOlafStreamsParamsType) => {
+		const url = 'https://www.stolaf.edu/multimedia/api/collection'
+		const response = await get(url, {searchParams: params})
+		const json = (await response.clone().json()) as Promise<
+			(z.infer<typeof StreamEntry> & {starttime: string})[]
+		>
+		const data = StreamEntryCollection.parse(json)
 
-	return data.results.map((stream) => {
-		let {starttime} = stream
-		return {
-			...stream,
-			starttime: moment.tz(starttime, 'YYYY-MM-DD HH:mm', 'America/Chicago').toISOString(),
-		}
-	})
-}
+		return data.results.map((stream) => {
+			let {starttime} = stream
+			return {
+				...stream,
+				starttime: moment.tz(starttime, 'YYYY-MM-DD HH:mm', 'America/Chicago').toISOString(),
+			}
+		})
+	},
+	{maxAge: ONE_HOUR},
+)
 
 export async function upcoming(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
