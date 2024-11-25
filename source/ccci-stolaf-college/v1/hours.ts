@@ -4,13 +4,10 @@ import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
 import type {Context} from '../../ccc-server/context.js'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
-
-let url = GH_PAGES('building-hours.json')
-
-export function getBuildingHours() {
-	return GET(url).json()
-}
+const getBuildingHours = mem(async () => {
+	const response = await get(GH_PAGES('building-hours.json'))
+	return response.json()
+}, {maxAge: ONE_HOUR})
 
 export async function buildingHours(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
