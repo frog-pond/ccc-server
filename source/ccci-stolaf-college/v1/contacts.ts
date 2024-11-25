@@ -4,10 +4,13 @@ import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
 import type {Context} from '../../ccc-server/context.js'
 
-const getContacts = mem(async () => {
-	const response = await get(GH_PAGES('contact-info.json'))
-	return response.json()
-}, {maxAge: ONE_DAY})
+const getContacts = mem(
+	async () => {
+		const response = await get(GH_PAGES('contact-info.json'))
+		return response.json()
+	},
+	{maxAge: ONE_DAY},
+)
 
 export async function contacts(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)

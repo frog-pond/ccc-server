@@ -27,16 +27,22 @@ const AllAboutOlafExtraAzResponseSchema = z.object({
 	),
 })
 
-const getOlafAtoZ = mem(async () => {
-	let url = 'https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z'
-	const response = await get(url)
-	return StOlafAzResponseSchema.parse(await response.json())
-}, {maxAge: ONE_DAY})
+const getOlafAtoZ = mem(
+	async () => {
+		let url = 'https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z'
+		const response = await get(url)
+		return StOlafAzResponseSchema.parse(await response.json())
+	},
+	{maxAge: ONE_DAY},
+)
 
-const getPagesAtoZ = mem(async () => {
-	const response = await get(GH_PAGES('a-to-z.json'))
-	return AllAboutOlafExtraAzResponseSchema.parse(await response.json())
-}, {maxAge: ONE_DAY})
+const getPagesAtoZ = mem(
+	async () => {
+		const response = await get(GH_PAGES('a-to-z.json'))
+		return AllAboutOlafExtraAzResponseSchema.parse(await response.json())
+	},
+	{maxAge: ONE_DAY},
+)
 
 // merge custom entries defined on GH pages with the fetched WP-JSON
 function combineResponses(
