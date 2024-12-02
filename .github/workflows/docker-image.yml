@@ -5,11 +5,13 @@ on:
   push:
     branches:
       - 'master'
+      - 'drew/fix-response-streams'
     tags:
       - 'v*'
   pull_request:
     branches:
       - 'master'
+      - 'drew/fix-response-streams'
 
 jobs:
   build:
