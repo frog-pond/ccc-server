@@ -26,13 +26,3 @@ services:
       INSTITUTION: stolaf-college
     volumes:
       - ./.env:/app/.env:ro
-
-  stolaf-test:
-    image: frogpond/ccc-server:drew-fix-response-streams
-    restart: unless-stopped
-    environment:
-      INSTITUTION: stolaf-college
-    volumes:
-      - ./.env:/app/.env:ro
-    ports:
-      - '8080:80'
