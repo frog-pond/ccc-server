@@ -4,13 +4,13 @@ import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.js'
 import type {Context} from '../../ccc-server/context.js'
 
-const GET = mem(get, {maxAge: ONE_DAY})
-
-let url = GH_PAGES('dictionary.json')
-
-export function getDictionary() {
-	return GET(url).json()
-}
+const getDictionary = mem(
+	async () => {
+		const response = await get(GH_PAGES('dictionary.json'))
+		return response.json()
+	},
+	{maxAge: ONE_DAY},
+)
 
 export async function dictionary(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)

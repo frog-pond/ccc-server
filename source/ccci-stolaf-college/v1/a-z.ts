@@ -5,8 +5,6 @@ import {GH_PAGES} from './gh-pages.js'
 import type {Context} from '../../ccc-server/context.js'
 import {z} from 'zod'
 
-const GET = mem(get, {maxAge: ONE_DAY})
-
 type StOlafAzResponseType = z.infer<typeof StOlafAzResponseSchema>
 const StOlafAzResponseSchema = z.object({
 	az_nav: z.object({
@@ -29,14 +27,22 @@ const AllAboutOlafExtraAzResponseSchema = z.object({
 	),
 })
 
-async function getOlafAtoZ() {
-	let url = 'https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z'
-	return StOlafAzResponseSchema.parse(await GET(url).json())
-}
+const getOlafAtoZ = mem(
+	async () => {
+		let url = 'https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z'
+		const response = await get(url)
+		return StOlafAzResponseSchema.parse(await response.json())
+	},
+	{maxAge: ONE_DAY},
+)
 
-async function getPagesAtoZ() {
-	return AllAboutOlafExtraAzResponseSchema.parse(await GET(GH_PAGES('a-to-z.json')).json())
-}
+const getPagesAtoZ = mem(
+	async () => {
+		const response = await get(GH_PAGES('a-to-z.json'))
+		return AllAboutOlafExtraAzResponseSchema.parse(await response.json())
+	},
+	{maxAge: ONE_DAY},
+)
 
 // merge custom entries defined on GH pages with the fetched WP-JSON
 function combineResponses(
