@@ -34,6 +34,7 @@ const GetStreamsParamsSchema = z.object({
 })
 
 type StOlafStreamsParamsType = z.infer<typeof StOlafStreamsParamsSchema>
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const StOlafStreamsParamsSchema = z.object({
 	date_from: z.string().date(),
 	date_to: z.string().date(),
