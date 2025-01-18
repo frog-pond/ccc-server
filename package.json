@@ -65,7 +65,7 @@
     "normalize-url": "8.0.1",
     "p-map": "^7.0.3",
     "turndown": "7.2.0",
-    "zod": "^3.23.8"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@ava/typescript": "^5.0.0",
