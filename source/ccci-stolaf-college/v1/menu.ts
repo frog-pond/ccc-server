@@ -7,7 +7,10 @@ import type {Context} from '../../ccc-server/context.js'
 
 const pauseMenuUrl = GH_PAGES('pause-menu.json')
 const GET_DAY = mem(get, {maxAge: ONE_DAY})
-export const getPauseMenu = () => GET_DAY(pauseMenuUrl).json()
+export const getPauseMenu = async () => {
+  const response = await GET_DAY(pauseMenuUrl)
+  return response.clone().json()
+}
 
 const getMenu = mem(bonapp.menu, {maxAge: ONE_HOUR})
 const getInfo = mem(bonapp.cafe, {maxAge: ONE_HOUR})

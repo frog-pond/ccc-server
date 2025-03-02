@@ -8,8 +8,9 @@ const GET = mem(get, {maxAge: ONE_HOUR})
 
 let url = GH_PAGES('faqs.json')
 
-export function getFaqs() {
-	return GET(url).json()
+export async function getFaqs() {
+	const response = await GET(url)
+	return response.clone().json()
 }
 
 export async function faqs(ctx: Context) {

@@ -42,7 +42,8 @@ export async function fetchWpJson(
 	url: string | URL,
 	query: SearchParamsOption = {},
 ): Promise<FeedItemType[]> {
-	const feed = WpJsonFeedResponseSchema.parse(await get(url, {searchParams: query}).json())
+	const response = await get(url, {searchParams: query})	
+	const feed = WpJsonFeedResponseSchema.parse(await response.clone().json())
 	return feed.map(convertWpJsonItemToStory)
 }
 

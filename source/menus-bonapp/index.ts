@@ -76,9 +76,10 @@ export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	}
 }
 
-export function nutrition(itemId: string) {
+export async function nutrition(itemId: string) {
 	let url = 'https://legacy.cafebonappetit.com/api/2/items'
-	return get(url, {searchParams: {item: itemId}}).json()
+	const response = await get(url, {searchParams: {item: itemId}})
+	return response.clone().json()
 }
 
 export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {

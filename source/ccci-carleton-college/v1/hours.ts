@@ -8,8 +8,9 @@ const GET = mem(get, {maxAge: ONE_HOUR})
 
 let url = GH_PAGES('building-hours.json')
 
-export function getBuildingHours() {
-	return GET(url).json()
+export async function getBuildingHours() {
+	const response = await GET(url)
+	return response.clone().json()
 }
 
 export async function buildingHours(ctx: Context) {

@@ -1,6 +1,6 @@
 import ky, {type AfterResponseHook, type BeforeRequestHook} from 'ky'
-import memoize from 'memoize'
 import {ONE_MINUTE} from './constants.js'
+import {safeResponse} from '../ccc-server/instrument.js'
 
 export const USER_AGENT = 'ccc-server/0.2.0'
 
@@ -27,4 +27,5 @@ export const http = ky.extend({
 	},
 })
 
-export const get = memoize(http.get, {maxAge: ONE_MINUTE})
+// ensures Response objects are properly handled when memoized and consumed multiple times
+export const get = safeResponse(http.get, {maxAge: ONE_MINUTE})

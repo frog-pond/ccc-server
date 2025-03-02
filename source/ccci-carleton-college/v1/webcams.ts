@@ -8,8 +8,9 @@ const GET = mem(get, {maxAge: ONE_HOUR})
 
 let url = GH_PAGES('webcams.json')
 
-export function getWebcams() {
-	return GET(url).json()
+export async function getWebcams() {
+	const response = await GET(url)
+	return response.clone().json()
 }
 
 export async function webcams(ctx: Context) {

@@ -8,8 +8,9 @@ const GET = mem(get, {maxAge: ONE_HOUR})
 
 let url = GH_PAGES('dictionary-carls.json')
 
-export function getDictionary() {
-	return GET(url).json()
+export async function getDictionary() {
+	const response = await GET(url)
+	return response.clone().json()
 }
 
 export async function dictionary(ctx: Context) {

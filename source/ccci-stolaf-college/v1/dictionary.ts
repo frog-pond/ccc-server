@@ -7,7 +7,7 @@ import type {Context} from '../../ccc-server/context.js'
 const getDictionary = mem(
 	async () => {
 		const response = await get(GH_PAGES('dictionary.json'))
-		return response.json()
+		return response.clone().json()
 	},
 	{maxAge: ONE_DAY},
 )

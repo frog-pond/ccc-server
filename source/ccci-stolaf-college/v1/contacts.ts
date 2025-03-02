@@ -7,7 +7,7 @@ import type {Context} from '../../ccc-server/context.js'
 const getContacts = mem(
 	async () => {
 		const response = await get(GH_PAGES('contact-info.json'))
-		return response.json()
+		return response.clone().json()
 	},
 	{maxAge: ONE_DAY},
 )

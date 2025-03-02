@@ -8,8 +8,9 @@ const GET = mem(get, {maxAge: ONE_HOUR})
 
 let url = GH_PAGES('contact-info.json')
 
-export function getContacts() {
-	return GET(url).json()
+export async function getContacts() {
+	const response = await GET(url)
+	return response.clone().json()
 }
 
 export async function contacts(ctx: Context) {
