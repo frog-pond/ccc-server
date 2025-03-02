@@ -71,7 +71,9 @@ export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 		return _cafe(cafeUrl)
 	} catch (err) {
 		console.error(err)
-		Sentry.isInitialized() && Sentry.captureException(err)
+		if (Sentry.isInitialized()) {
+			Sentry.captureException(err)
+		}
 		return Promise.resolve(CustomCafe('Could not load café from BonApp'))
 	}
 }
@@ -111,7 +113,9 @@ export function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 		return _menu(cafeUrl)
 	} catch (err) {
 		console.error(err)
-		Sentry.isInitialized() && Sentry.captureException(err)
+		if (Sentry.isInitialized()) {
+			Sentry.captureException(err)
+		}
 		return Promise.resolve(
 			CafeMenuWithError(
 				err && typeof err === 'object' && 'message' in err && err.message,
