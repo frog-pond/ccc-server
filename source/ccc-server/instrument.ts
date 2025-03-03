@@ -15,27 +15,19 @@ export function safeResponse<T extends (url: Input, options?: RequestOptions) =>
 ): T {
   const wrapped = (async (url: Input, options?: RequestOptions): Promise<Response> => {
     const response = await fn(url, options)
-
-    return new Proxy(response, {
-      get<K extends keyof Response>(
-        target: Response,
-        prop: K,
-      ): Response[K] {
-        const value = Reflect.get(target, prop, target)
-
-        if (
-          typeof value === 'function' && 
-          ['json', 'text', 'blob', 'arrayBuffer', 'formData'].includes(prop as string)
-        ) {
-          return (function(...args: unknown[]) {
-            const clonedResponse = target.clone()
-            return (clonedResponse[prop] as (...args: unknown[]) => unknown).apply(clonedResponse, args)
-          }) as unknown as Response[K]
-        }
-
-        return value as Response[K]
+    
+    // Create a Response-like object with modified methods
+    const enhancedResponse = Object.create(response)
+    
+    // Add body consumption methods that clone before consumption
+    for (const method of ['json', 'text', 'blob', 'arrayBuffer', 'formData']) {
+      enhancedResponse[method] = function(...args: unknown[]) {
+        const clonedResponse = response.clone()
+        return clonedResponse[method](...args)
       }
-    })
+    }
+    
+    return enhancedResponse
   }) as T
 
   return mem(wrapped, {maxAge: options?.maxAge ?? 0})
