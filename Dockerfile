@@ -1,4 +1,4 @@
-FROM node:20-alpine AS modules_dev
+FROM node:20.17-alpine AS modules_dev
 WORKDIR /app
 
 COPY --link ./package.json ./package-lock.json ./
@@ -16,7 +16,7 @@ COPY --link ./types ./types
 RUN npm run build
 
 
-FROM node:20-alpine AS runtime
+FROM node:20.17-alpine AS runtime
 WORKDIR /app
 
 RUN apk add -U curl
