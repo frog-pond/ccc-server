@@ -27,10 +27,10 @@ export function safeResponse<T extends (url: Input, options?: RequestOptions) =>
           typeof value === 'function' && 
           ['json', 'text', 'blob', 'arrayBuffer', 'formData'].includes(prop as string)
         ) {
-          return (function() {
+          return (function(...args: unknown[]) {
             const clonedResponse = target.clone()
-            return (clonedResponse[prop] as (...args: unknown[]) => unknown).call(clonedResponse)
-          }) as Response[K]
+            return (clonedResponse[prop] as (...args: unknown[]) => unknown).apply(clonedResponse, args)
+          }) as unknown as Response[K]
         }
 
         return value as Response[K]
