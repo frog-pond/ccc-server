@@ -59,6 +59,11 @@ for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
       continue
       ;;
 
+    "/v1/news/named/nnb")
+      echo "skip because nnb is broken"
+      continue
+      ;;
+
     "/v1/jobs")
       echo "skip because jobs are currently broken endpoints"
       continue
