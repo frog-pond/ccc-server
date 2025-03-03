@@ -92,5 +92,8 @@
     "typed-query-selector": "^2.11.2",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.13.1"
+  },
+  "engines": {
+    "node": "20.17.0"
   }
 }
