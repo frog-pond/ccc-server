@@ -4,9 +4,15 @@ import {FeedItemSchema, type FeedItemType} from './types.js'
 import moment from 'moment'
 
 export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedItemType[]> {
-	let body = await get(url, {searchParams: query}).text()
-	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	return Array.from(dom.window.document.querySelectorAll('item')).map(convertRssItemToStory)
+	try {
+		const response = await get(url, {searchParams: query})
+		const body = await response.text()
+		const dom = new JSDOM(body, {contentType: 'text/xml'})
+		return Array.from(dom.window.document.querySelectorAll('item')).map(convertRssItemToStory)
+	} catch (error) {
+		console.error(`Failed to fetch RSS feed from ${String(url)}:`, error)
+		return []
+	}
 }
 
 function nodeListTextContent(nodeList: NodeListOf<Element>): string[] {

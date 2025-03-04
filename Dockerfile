@@ -1,4 +1,4 @@
-FROM node:22-alpine AS modules_dev
+FROM node:20.17-alpine AS modules_dev
 WORKDIR /app
 
 COPY --link ./package.json ./package-lock.json ./
@@ -16,7 +16,7 @@ COPY --link ./types ./types
 RUN npm run build
 
 
-FROM node:22-alpine AS runtime
+FROM node:20.17-alpine AS runtime
 WORKDIR /app
 
 RUN apk add -U curl
@@ -32,4 +32,4 @@ ENV INSTITUTION=unknown
 HEALTHCHECK --interval=20s --timeout=1s \
   CMD curl -f http://localhost:80/ping
 
-CMD node ./dist/source/ccc-server/index.js
+CMD ["node", "./dist/source/ccc-server/index.js"]
