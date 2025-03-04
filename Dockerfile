@@ -32,4 +32,4 @@ ENV INSTITUTION=unknown
 HEALTHCHECK --interval=20s --timeout=1s \
   CMD curl -f http://localhost:80/ping
 
-CMD npm run start:prod
+CMD node ./dist/source/ccc-server/index.js
