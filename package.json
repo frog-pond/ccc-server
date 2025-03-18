@@ -47,7 +47,7 @@
     "html-entities": "2.5.2",
     "ical.js": "^2.0.1",
     "is-absolute-url": "4.0.1",
-    "jsdom": "25.0.0",
+    "jsdom": "25.0.1",
     "koa": "2.15.3",
     "koa-bodyparser": "4.4.1",
     "koa-cash": "^4.1.1",
