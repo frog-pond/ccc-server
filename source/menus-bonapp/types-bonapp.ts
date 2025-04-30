@@ -24,7 +24,8 @@ const NutritionContainer = z
 
 const NutritionDetailType = z.object({
 	label: z.string(),
-	value: z.string(),
+	// we've seen strings and numbers, so coerce them all to strings
+	value: z.coerce.string(),
 	unit: z.string(),
 })
 
