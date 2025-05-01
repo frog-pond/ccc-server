@@ -15,7 +15,10 @@ function setupSentry() {
 	Sentry.init({
 		dsn,
 		environment,
-		integrations: [nodeProfilingIntegration(), captureConsoleIntegration()],
+		integrations: [
+			nodeProfilingIntegration(),
+			captureConsoleIntegration({levels: ['warn', 'error']}),
+		],
 		// Performance Monitoring
 		tracesSampleRate: 1.0,
 		profilesSampleRate: 1.0,
