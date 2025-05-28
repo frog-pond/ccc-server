@@ -111,6 +111,6 @@ export async function search(ctx: Context) {
 		date_from: dateFrom,
 		date_to: dateTo,
 		sort,
-		...(query ? { squery: query } : {}),
+		...(query ? {squery: query} : {}),
 	})
 }
