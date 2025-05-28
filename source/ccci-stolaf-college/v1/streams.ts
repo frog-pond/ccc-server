@@ -30,6 +30,7 @@ const GetStreamsParamsSchema = z.object({
 	dateFrom: z.iso.date().optional(),
 	dateTo: z.iso.date().optional(),
 	sort: z.enum(['ascending', 'descending']).default('ascending'),
+	query: z.string().optional(),
 })
 
 const StOlafStreamsParamsSchema = z.object({
@@ -37,6 +38,7 @@ const StOlafStreamsParamsSchema = z.object({
 	date_to: z.iso.date(),
 	sort: z.enum(['ascending', 'descending']),
 	class: z.enum(['current', 'archived']),
+	squery: z.string().optional(),
 })
 type StOlafStreamsParamsType = z.infer<typeof StOlafStreamsParamsSchema>
 
@@ -92,4 +94,23 @@ export async function archived(ctx: Context) {
 	})
 
 	ctx.body = await getStreams(params)
+}
+
+export async function search(ctx: Context) {
+	ctx.cacheControl(ONE_HOUR)
+
+	const {
+		dateFrom = moment().subtract(30, 'year').tz('America/Chicago').format('YYYY-MM-DD'),
+		dateTo = moment().tz('America/Chicago').format('YYYY-MM-DD'),
+		sort,
+		query,
+	} = GetStreamsParamsSchema.parse(Object.fromEntries(ctx.URL.searchParams.entries()))
+
+	ctx.body = await getStreams({
+		class: 'archived',
+		date_from: dateFrom,
+		date_to: dateTo,
+		sort,
+		...(query ? { squery: query } : {}),
+	})
 }
