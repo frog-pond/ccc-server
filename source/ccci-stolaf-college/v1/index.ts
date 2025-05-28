@@ -113,6 +113,7 @@ api.get('/transit/modes', transit.modes)
 // streams
 api.get('/streams/archived', streams.archived)
 api.get('/streams/upcoming', streams.upcoming)
+api.get('/streams/search', streams.search)
 
 // stoprint
 api.get('/printing/color-printers', printing.colorPrinters)
