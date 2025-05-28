@@ -44,7 +44,7 @@ const StOlafStreamsParamsSchema = z.object({
 })
 
 const getStreams = mem(
-	async (params: StOlafStreamsParamsType & { squery?: string }) => {
+	async (params: StOlafStreamsParamsType & {squery?: string}) => {
 		const url = 'https://www.stolaf.edu/multimedia/api/collection'
 		const response = await get(url, {searchParams: params})
 		const json = (await response.clone().json()) as Promise<
@@ -112,6 +112,6 @@ export async function search(ctx: Context) {
 		date_from: dateFrom,
 		date_to: dateTo,
 		sort,
-		...(query ? { squery: query } : {}),
+		...(query ? {squery: query} : {}),
 	})
 }
