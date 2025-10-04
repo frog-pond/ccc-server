@@ -18,3 +18,8 @@ npm-debug.log*
 # Typescript
 /.tsbuildinfo
 /dist/
+
+# Nix
+/result
+/result-*
+.direnv

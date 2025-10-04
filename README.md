@@ -8,6 +8,10 @@ Prerequisites
 - Node.js v20.17
 - npm
 
+**Alternative: Using Nix**
+- [Nix with flakes enabled](https://nixos.org/download.html)
+- See [NIX.md](./NIX.md) for Nix-specific documentation
+
 Install
 
 ```sh
