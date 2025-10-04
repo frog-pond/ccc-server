@@ -79,3 +79,54 @@ nix run
 
 - `devShells.default` - Development shell with Node.js and npm
 - `packages.default` - The compiled ccc-server application
+- `apps.default` - Application runner for `nix run`
+
+## Validation
+
+To validate the flake setup, run:
+
+```bash
+./scripts/validate-nix-flake.sh
+```
+
+This will check:
+- Nix installation
+- Flakes are enabled
+- Flake metadata is valid
+- Available outputs
+
+## Troubleshooting
+
+### Flakes not enabled
+
+If you get an error about flakes not being recognized, ensure experimental features are enabled:
+
+```bash
+mkdir -p ~/.config/nix
+echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+```
+
+### Hash mismatch error
+
+When building for the first time, you'll get an error like:
+
+```
+error: hash mismatch in fixed-output derivation
+  specified: sha256-0000000000000000000000000000000000000000000=
+  got:        sha256-AbCd1234567890...
+```
+
+Copy the hash after "got:" and update the `npmDepsHash` field in `flake.nix`.
+
+### Node version mismatch
+
+This flake uses Node.js 20 from nixpkgs. If you need a different version, update the `nodejs_20` references in `flake.nix` to match your requirements (e.g., `nodejs_18`, `nodejs_22`).
+
+## Integration with Existing Workflow
+
+The Nix flake is designed to complement, not replace, the existing npm-based workflow. You can:
+
+- Continue using `npm install` and `npm run` commands
+- Use Nix for reproducible builds and deployment
+- Use Nix devshell for consistent development environments across teams
+- Mix both approaches as needed
