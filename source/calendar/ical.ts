@@ -9,15 +9,15 @@ import {sortBy} from 'lodash-es'
 function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	let description = JSDOM.fragment(event.description || '').textContent?.trim() ?? ''
+	let description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
 
 	return EventSchema.parse({
 		dataSource: 'ical',
 		startTime: startTime.toISOString(),
 		endTime: endTime.toISOString(),
-		title: event.summary || '',
+		title: event.summary ?? '',
 		description: description,
-		location: event.location || '',
+		location: event.location ?? '',
 		isOngoing: startTime.isBefore(now, 'day'),
 		links: [...getUrls(description)],
 		metadata: {

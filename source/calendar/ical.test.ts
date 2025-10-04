@@ -14,7 +14,7 @@ import {EventSchema} from './types.js'
  * from ical.js when event properties (summary, description, location) are missing.
  *
  * Background: ical.js returns null for missing event properties, but the Zod schema
- * expects strings. The fix uses the || '' operator to convert null to empty string.
+ * expects strings. The fix uses the ?? '' operator to convert null to empty string.
  */
 
 test('ical event with missing location should parse successfully', (t) => {
@@ -39,15 +39,15 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description || '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
 		startTime: startTime.toISOString(),
 		endTime: endTime.toISOString(),
-		title: event.summary || '',
+		title: event.summary ?? '',
 		description: description,
-		location: event.location || '',
+		location: event.location ?? '',
 		isOngoing: startTime.isBefore(now, 'day'),
 		links: [...getUrls(description)],
 		metadata: {uid: event.uid},
@@ -81,15 +81,15 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description || '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
 		startTime: startTime.toISOString(),
 		endTime: endTime.toISOString(),
-		title: event.summary || '',
+		title: event.summary ?? '',
 		description: description,
-		location: event.location || '',
+		location: event.location ?? '',
 		isOngoing: startTime.isBefore(now, 'day'),
 		links: [...getUrls(description)],
 		metadata: {uid: event.uid},
@@ -121,15 +121,15 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description || '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
 		startTime: startTime.toISOString(),
 		endTime: endTime.toISOString(),
-		title: event.summary || '',
+		title: event.summary ?? '',
 		description: description,
-		location: event.location || '',
+		location: event.location ?? '',
 		isOngoing: startTime.isBefore(now, 'day'),
 		links: [...getUrls(description)],
 		metadata: {uid: event.uid},
@@ -164,15 +164,15 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description || '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
 		startTime: startTime.toISOString(),
 		endTime: endTime.toISOString(),
-		title: event.summary || '',
+		title: event.summary ?? '',
 		description: description,
-		location: event.location || '',
+		location: event.location ?? '',
 		isOngoing: startTime.isBefore(now, 'day'),
 		links: [...getUrls(description)],
 		metadata: {uid: event.uid},
