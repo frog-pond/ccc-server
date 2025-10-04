@@ -15,9 +15,9 @@ function convertEvent(event: InternetCalendar.Event, now = moment()) {
 		dataSource: 'ical',
 		startTime: startTime.toISOString(),
 		endTime: endTime.toISOString(),
-		title: event.summary,
+		title: event.summary || '',
 		description: description,
-		location: event.location,
+		location: event.location || '',
 		isOngoing: startTime.isBefore(now, 'day'),
 		links: [...getUrls(description)],
 		metadata: {
