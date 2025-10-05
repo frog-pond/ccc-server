@@ -5,8 +5,6 @@ import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
 import {EventSchema} from './types.js'
 
-/* eslint-disable @typescript-eslint/non-nullable-type-assertion-style */
-
 /**
  * Tests for the ical.js event parser
  *
@@ -34,7 +32,8 @@ END:VCALENDAR`
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
 	t.is(events.length, 1, 'Should have exactly one event')
-	const event = events[0] as InternetCalendar.Event
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	const event = events[0]!
 
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
@@ -76,7 +75,8 @@ END:VCALENDAR`
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
 	t.is(events.length, 1, 'Should have exactly one event')
-	const event = events[0] as InternetCalendar.Event
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	const event = events[0]!
 
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
@@ -116,7 +116,8 @@ END:VCALENDAR`
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
 	t.is(events.length, 1, 'Should have exactly one event')
-	const event = events[0] as InternetCalendar.Event
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	const event = events[0]!
 
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
@@ -159,7 +160,8 @@ END:VCALENDAR`
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
 	t.is(events.length, 1, 'Should have exactly one event')
-	const event = events[0] as InternetCalendar.Event
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	const event = events[0]!
 
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
