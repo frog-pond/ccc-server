@@ -52,6 +52,12 @@ async function main() {
 	})
 
 	//
+	// set up the graphql endpoint
+	//
+	const {graphql} = await import('./graphql.js')
+	router.all('/graphql', graphql)
+
+	//
 	// attach middleware
 	//
 	app.use(responseTime({hrtime: true}))
