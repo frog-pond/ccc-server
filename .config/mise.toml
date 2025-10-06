@@ -1,0 +1,69 @@
+[tools]
+node = "20.17.0"
+
+[tasks.build]
+run = "rm -rf ./dist ./.tsbuildinfo && tsc"
+sources = ["source/**/*.ts", "types/**/*.ts", "tsconfig.json"]
+outputs = ["dist/"]
+
+[tasks."build:watch"]
+run = "tsc --watch"
+
+[tasks.p]
+run = "mise run pretty -- --no-write --check"
+alias = "pretty:check"
+
+[tasks.pretty]
+run = "prettier --write source scripts"
+
+[tasks.lint]
+run = "eslint --cache --max-warnings=0 ."
+
+[tasks.start]
+run = "node dist/source/ccc-server/index.js"
+deps = ["build"]
+
+[tasks."start:watch"]
+run = "node --watch dist/source/ccc-server/index.js"
+env = { NODE_ENV = "development" }
+deps = ["build"]
+
+[tasks."start:dev"]
+run = "mise run start"
+env = { NODE_ENV = "development" }
+
+[tasks."start:prod"]
+run = "mise run start"
+env = { NODE_ENV = "production" }
+
+[tasks."stolaf-college"]
+run = "mise run start:dev"
+env = { INSTITUTION = "stolaf-college" }
+
+[tasks."carleton-college"]
+run = "mise run start:dev"
+env = { INSTITUTION = "carleton-college" }
+
+[tasks."test:stolaf-college"]
+run = "./scripts/smoke-test.sh stolaf-college"
+
+[tasks."test:carleton-college"]
+run = "./scripts/smoke-test.sh carleton-college"
+
+[tasks.test]
+run = "ava"
+deps = ["build"]
+
+[tasks.watch]
+run = "node ./scripts/watch.js"
+
+[tasks.typecheck]
+run = "tsc --noEmit"
+
+[tasks.check]
+run = [
+  "mise run p",
+  "mise run lint",
+  "mise run test",
+  "mise run typecheck",
+]
