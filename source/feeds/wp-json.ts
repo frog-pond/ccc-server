@@ -5,8 +5,8 @@ import type {SearchParamsOption} from 'ky'
 import {z} from 'zod'
 import moment from 'moment'
 
-type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
-const WpJsonFeedEntrySchema = z.object({
+export type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
+export const WpJsonFeedEntrySchema = z.object({
 	_embedded: z.optional(
 		z.object({
 			author: z.array(z.object({id: z.unknown(), name: z.string().or(z.undefined())})).optional(),

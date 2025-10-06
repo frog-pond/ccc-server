@@ -1,40 +1,9 @@
 import {test, expect} from 'vitest'
-import {z} from 'zod'
-import {convertWpJsonItemToStory} from './wp-json.js'
-
-// Import the schema to test it directly
-type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
-const WpJsonFeedEntrySchema = z.object({
-	_embedded: z.optional(
-		z.object({
-			author: z.array(z.object({id: z.unknown(), name: z.string().or(z.undefined())})).optional(),
-			'wp:featuredmedia': z
-				.array(
-					z.object({
-						id: z.unknown(),
-						media_type: z.union([z.literal('image'), z.string()]).optional(),
-						media_details: z
-							.object({
-								sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
-							})
-							.optional(),
-						source_url: z.string().url().optional(),
-					}),
-				)
-				.nullable()
-				.optional(),
-			'wp:term': z.array(z.array(z.object({taxonomy: z.string(), name: z.string()}))),
-		}),
-	),
-	/** this is "author ID," not "author name" */
-	author: z.unknown(),
-	featured_media: z.number().optional(),
-	content: z.object({rendered: z.string()}),
-	excerpt: z.object({rendered: z.string()}),
-	title: z.object({rendered: z.string()}),
-	date_gmt: z.string(),
-	link: z.string().url(),
-})
+import {
+	convertWpJsonItemToStory,
+	WpJsonFeedEntrySchema,
+	type WpJsonFeedEntryType,
+} from './wp-json.js'
 
 test('WpJsonFeedEntrySchema should parse items with missing featuredmedia fields', () => {
 	const itemWithMissingFields = {
