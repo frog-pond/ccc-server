@@ -60,7 +60,7 @@ const getStreams = mem(
 			}
 		})
 	},
-	{maxAge: ONE_HOUR},
+	{maxAge: ONE_HOUR, cacheKey: (arguments_) => JSON.stringify(arguments_[0])},
 )
 
 export async function upcoming(ctx: Context) {
@@ -112,6 +112,6 @@ export async function search(ctx: Context) {
 		date_from: dateFrom,
 		date_to: dateTo,
 		sort,
-		...(query ? {squery: query} : {}),
+		...(query !== undefined ? {squery: query} : {}),
 	})
 }
