@@ -1,7 +1,7 @@
 version: '3'
 services:
   proxy:
-    image: nginx:alpine
+    image: nginx:alpine@sha256:42a516af16b852e33b7682d5ef8acbd5d13fe08fecadc7ed98605ba5e3b26ab8
     restart: unless-stopped
     ports:
       - '80:80'
@@ -12,7 +12,7 @@ services:
       - ./logs:/var/log/nginx
 
   carleton:
-    image: frogpond/ccc-server:master
+    image: frogpond/ccc-server:master@sha256:4eacc0cf64fec3ece8d9f65b02a6567abf2ab997b034ae2406cd80a1225747be
     restart: unless-stopped
     environment:
       INSTITUTION: carleton-college
@@ -20,7 +20,7 @@ services:
       - ./.env:/app/.env:ro
 
   stolaf:
-    image: frogpond/ccc-server:master
+    image: frogpond/ccc-server:master@sha256:4eacc0cf64fec3ece8d9f65b02a6567abf2ab997b034ae2406cd80a1225747be
     restart: unless-stopped
     environment:
       INSTITUTION: stolaf-college
