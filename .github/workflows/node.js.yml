@@ -10,7 +10,9 @@ on:
     branches: ['master']
 
 jobs:
-  check:
+  # This job runs all the primary checks: linting, formatting, type checking, and unit tests.
+  # It is the equivalent of the old `build`, `test`, `lint`, and `format` jobs combined.
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +23,7 @@ jobs:
 
   smoke-test-stolaf:
     runs-on: ubuntu-latest
+    needs: checks
     steps:
       - uses: actions/checkout@v4
       - name: Setup mise
@@ -30,6 +33,7 @@ jobs:
 
   smoke-test-carleton:
     runs-on: ubuntu-latest
+    needs: checks
     steps:
       - uses: actions/checkout@v4
       - name: Setup mise
