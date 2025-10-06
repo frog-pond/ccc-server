@@ -4,7 +4,7 @@ import {z} from 'zod'
 import {get} from '../../../ccc-lib/http.js'
 import {GH_PAGES} from '../../../ccci-stolaf-college/v1/gh-pages.js'
 import DataLoader from 'dataloader'
-import {type NodeTypeInfo, nodeInterface} from '../utils/node-interface.js'
+import {nodeInterface, type NodeTypeInfo} from '../utils/node-interface.js'
 
 const DictionaryDefinitionSchema = z.object({
 	word: z.string(),
