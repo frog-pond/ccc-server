@@ -1,9 +1,23 @@
 import {createHandler} from 'graphql-http/lib/use/koa'
-import {GraphQLSchema, GraphQLObjectType, GraphQLString, GraphQLList, GraphQLNonNull, GraphQLID} from 'graphql'
-import {nodeDefinitions, fromGlobalId, toGlobalId, connectionDefinitions, connectionFromArray} from 'graphql-relay'
+import {
+	GraphQLSchema,
+	GraphQLObjectType,
+	GraphQLString,
+	GraphQLList,
+	GraphQLNonNull,
+	GraphQLID,
+} from 'graphql'
+import {
+	nodeDefinitions,
+	fromGlobalId,
+	toGlobalId,
+	connectionDefinitions,
+	connectionFromArray,
+} from 'graphql-relay'
 import {get} from '../ccc-lib/http.js'
 import {GH_PAGES} from '../ccci-stolaf-college/v1/gh-pages.js'
 import DataLoader from 'dataloader'
+import {URLScalar} from './url-scalar.js'
 
 type Contact = {
 	title: string
@@ -24,9 +38,9 @@ const {nodeInterface, nodeField} = nodeDefinitions(
 	(globalId) => {
 		const {type, id} = fromGlobalId(globalId)
 		if (type === 'Contact') {
-			return contactLoader.load('contact-info.json').then((contacts) =>
-				contacts.find((c) => c.title === id),
-			)
+			return contactLoader
+				.load('contact-info.json')
+				.then((contacts) => contacts.find((c) => c.title === id))
 		}
 		return null
 	},
@@ -49,7 +63,19 @@ const ContactType: GraphQLObjectType = new GraphQLObjectType({
 		phoneNumber: {type: new GraphQLNonNull(GraphQLString)},
 		buttonText: {type: new GraphQLNonNull(GraphQLString)},
 		category: {type: new GraphQLNonNull(GraphQLString)},
-		image: {type: GraphQLString},
+		image: {
+			type: URLScalar,
+			resolve: (contact: Contact) => {
+				if (!contact.image) {
+					return null
+				}
+				try {
+					return new URL(contact.image)
+				} catch {
+					return null
+				}
+			},
+		},
 		synopsis: {type: new GraphQLNonNull(GraphQLString)},
 		text: {type: new GraphQLNonNull(GraphQLString)},
 	},
