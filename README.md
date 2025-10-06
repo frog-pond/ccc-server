@@ -13,7 +13,7 @@ Install
 ```sh
 git clone https://github.com/frog-pond/ccc-server.git
 cd ccc-server
-npm ci
+npm install
 ```
 
 ## Running the Server
@@ -23,21 +23,21 @@ npm ci
 Watch mode (recommended): auto-recompile & restart on changes
 
 ```sh
-mise run watch
+npm run watch
 ```
 
 Institution-specific servers
 
 ```sh
-mise run stolaf-college
-mise run carleton-college
+npm run stolaf-college
+npm run carleton-college
 ```
 
 ### Production
 
 ```sh
-mise run build
-mise run start:prod
+npm run build
+npm run start:prod
 ```
 
 ## Testing
@@ -45,16 +45,12 @@ mise run start:prod
 All tests
 
 ```sh
-mise run test
+npm run test
 ```
 
 Smoke tests
 
 ```sh
-mise run test:stolaf-college
-mise run test:carleton-college
+npm run test:stolaf-college
+npm run test:carleton-college
 ```
-
-TDD workflow
-
-This repository practices TDD for agentic development: write a failing AVA test next to the implementation (`*.test.ts`), run `mise run test`, implement until green, then run smoke tests for integration checks.

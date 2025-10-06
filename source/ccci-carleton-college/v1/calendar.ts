@@ -2,7 +2,6 @@ import {googleCalendar} from '../../calendar/google.js'
 import {ical} from '../../calendar/ical.js'
 import {ONE_MINUTE} from '../../ccc-lib/constants.js'
 import mem from 'memoize'
-import moment from 'moment'
 import type {Context} from '../../ccc-server/context.js'
 
 export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})
@@ -28,16 +27,14 @@ export async function carleton(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 
 	let url = 'https://www.carleton.edu/calendar/?loadFeed=calendar&stamp=1714843628'
-	let maxEndDate = moment().add(1, 'month')
-	ctx.body = await getInternetCalendar(url, {maxEndDate})
+	ctx.body = await getInternetCalendar(url)
 }
 
 export async function cave(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 
 	let url = 'https://www.carleton.edu/student/orgs/cave/calendar/?loadFeed=calendar'
-	let maxEndDate = moment().add(1, 'month')
-	ctx.body = await getInternetCalendar(url, {maxEndDate})
+	ctx.body = await getInternetCalendar(url)
 }
 
 export async function stolaf(ctx: Context) {
@@ -72,8 +69,7 @@ export async function convos(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 
 	let url = 'https://www.carleton.edu/convocations/calendar/?loadFeed=calendar&stamp=1714843936'
-	let maxEndDate = moment().add(1, 'month')
-	ctx.body = await getInternetCalendar(url, {maxEndDate})
+	ctx.body = await getInternetCalendar(url)
 }
 
 export async function sumo(ctx: Context) {
@@ -81,6 +77,5 @@ export async function sumo(ctx: Context) {
 
 	let url =
 		'https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar&stamp=1714840383'
-	let maxEndDate = moment().add(1, 'month')
-	ctx.body = await getInternetCalendar(url, {maxEndDate})
+	ctx.body = await getInternetCalendar(url)
 }

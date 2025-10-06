@@ -54,7 +54,7 @@ async function main() {
 	//
 	// set up the graphql endpoint
 	//
-	const {graphql} = await import('./graphql.js')
+	const {graphql} = await import('./graphql/index.js')
 	router.all('/graphql', graphql)
 
 	//
