@@ -46,9 +46,11 @@ env = { INSTITUTION = "carleton-college" }
 
 [tasks."test:stolaf-college"]
 run = "./scripts/smoke-test.sh stolaf-college"
+deps = ["build"]
 
 [tasks."test:carleton-college"]
 run = "./scripts/smoke-test.sh carleton-college"
+deps = ["build"]
 
 [tasks.test]
 run = "ava"
