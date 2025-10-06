@@ -4,5 +4,13 @@
     "config:best-practices"
   ],
   "prConcurrentLimit": 4,
-  "reviewers": []
+  "reviewers": [],
+  "packageRules": [
+    {
+      "description": "We use this in our production compose file, so we want it to always pull the latest version of the image.",
+      "matchManagers": ["docker-compose"],
+      "matchPackageNames": ["frogpond/ccc-server"],
+      "pinDigests": false
+    }
+  ]
 }
