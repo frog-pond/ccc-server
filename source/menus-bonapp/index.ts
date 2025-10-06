@@ -13,7 +13,7 @@ import {
 
 import {BamcoPageContentsSchema} from './types-bonapp.js'
 
-const _getBamcoPage = mem(get, {maxAge: ONE_MINUTE})
+const _getBamcoPage = mem((url: string) => get(url).text(), {maxAge: ONE_MINUTE})
 
 async function getBonAppWebpage(url: string | URL) {
 	const virtualConsole = new VirtualConsole()
@@ -29,7 +29,7 @@ async function getBonAppWebpage(url: string | URL) {
 		console.error(err)
 	})
 
-	const body = await _getBamcoPage(url.toString()).text()
+	const body = await _getBamcoPage(url.toString())
 	return new JSDOM(body, {
 		runScripts: 'dangerously',
 		virtualConsole,
