@@ -44,11 +44,11 @@ declare module 'ical.js' {
 
 	export class Event {
 		public uid: string
-		public summary: string
+		public summary: string | null
 		public startDate: Time
 		public endDate: Time
-		public description: string
-		public location: string
+		public description: string | null
+		public location: string | null
 		public attendees: Property[]
 
 		public component: Component
