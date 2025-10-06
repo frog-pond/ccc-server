@@ -79,7 +79,7 @@ async function fetchArchived() {
 		processConvo,
 	)
 	convos = convos.slice(0, 100)
-	return Promise.all(convos)
+	return convos
 }
 
 export const getArchived = mem(fetchArchived, {maxAge: ONE_HOUR * 6})

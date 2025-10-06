@@ -19,7 +19,7 @@ declare module 'ical.js' {
 
 		public getAllSubcomponents(name?: string): Component[]
 
-		public getFirstPropertyValue<T = unknown>(name?: string): T
+		public getFirstPropertyValue(name?: string): unknown
 
 		public getFirstProperty(name?: string): Property
 
@@ -72,7 +72,7 @@ declare module 'ical.js' {
 
 		constructor(jCal: unknown[] | string, parent?: Component)
 
-		public getFirstValue<T = unknown>(): T
+		public getFirstValue(): unknown
 
 		public getValues<T = unknown>(): T[]
 
