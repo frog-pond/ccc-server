@@ -29,19 +29,19 @@ env = { NODE_ENV = "development" }
 depends = ["build"]
 
 [tasks."start:dev"]
-run = "mise run start"
+run = {task = "start"}
 env = { NODE_ENV = "development" }
 
 [tasks."start:prod"]
-run = "mise run start"
+run = {task = "start"}
 env = { NODE_ENV = "production" }
 
 [tasks."stolaf-college"]
-run = "mise run start:dev"
+run = {task = "start:dev"}
 env = { INSTITUTION = "stolaf-college" }
 
 [tasks."carleton-college"]
-run = "mise run start:dev"
+run = {task = "start:dev"}
 env = { INSTITUTION = "carleton-college" }
 
 [tasks."test:stolaf-college"]
@@ -57,15 +57,11 @@ run = "./node_modules/.bin/ava"
 depends = ["build"]
 
 [tasks.watch]
-run = "node ./scripts/watch.js"
+depends = "build" # build once, before starting
+run = {tasks = ["build:watch", "start:watch"]}
 
 [tasks.typecheck]
 run = "./node_modules/.bin/tsc --noEmit"
 
 [tasks.check]
-run = [
-  "mise run p",
-  "mise run lint",
-  "mise run test",
-  "mise run typecheck",
-]
+run = {tasks = ["p", "lint", "test", "typecheck"]}
