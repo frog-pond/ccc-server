@@ -29,9 +29,7 @@ interface ContactResponse {
 }
 
 const contactLoader = new DataLoader<string, Contact[]>(async (keys) => {
-	const contacts = await Promise.all(
-		keys.map((key) => get(GH_PAGES(key)).json<ContactResponse>()),
-	)
+	const contacts = await Promise.all(keys.map((key) => get(GH_PAGES(key)).json<ContactResponse>()))
 	return contacts.map((contact) => contact.data)
 })
 

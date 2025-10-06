@@ -101,7 +101,7 @@ test('graphql endpoint can fetch a single contact by its global ID', async (t) =
 		.post(`http://localhost:${String(port)}/graphql`, {
 			json: {query, variables: {id: globalId}},
 		})
-		.json<{data: {node: {title:string} | null}}>()
+		.json<{data: {node: {title: string} | null}}>()
 
 	t.is(response.data.node?.title, contactTitle)
 })
