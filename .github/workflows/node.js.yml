@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup mise
-        uses: jdx/setup-mise@v2
+        uses: jdx/mise-action@v2
       - run: npm ci
       - run: mise run check
 
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup mise
-        uses: jdx/setup-mise@v2
+        uses: jdx/mise-action@v2
       - run: npm ci
       - run: mise run test:stolaf-college
 
@@ -33,6 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup mise
-        uses: jdx/setup-mise@v2
+        uses: jdx/mise-action@v2
       - run: npm ci
       - run: mise run test:carleton-college
