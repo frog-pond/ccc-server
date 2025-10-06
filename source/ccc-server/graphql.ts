@@ -12,17 +12,22 @@ import {
 import {get} from '../ccc-lib/http.js'
 import {GH_PAGES} from '../ccci-stolaf-college/v1/gh-pages.js'
 import DataLoader from 'dataloader'
+import {z} from 'zod'
 import {URLScalar} from './url-scalar.js'
 
-interface Contact {
-	title: string
-	phoneNumber: string
-	buttonText: string
-	category: string
-	image?: string
-	synopsis: string
-	text: string
-}
+type KnownGraphQLTypeNames = 'Contact'
+
+const ContactSchema = z.object({
+	title: z.string(),
+	phoneNumber: z.string(),
+	buttonText: z.string(),
+	category: z.string(),
+	image: z.string().optional(),
+	synopsis: z.string(),
+	text: z.string(),
+})
+
+type Contact = z.infer<typeof ContactSchema>
 
 interface ContactResponse {
 	data: Contact[]
@@ -43,8 +48,9 @@ const {nodeInterface, nodeField} = nodeDefinitions(
 		}
 		return null
 	},
-	(obj: object): string | undefined => {
-		if ('phoneNumber' in obj) {
+	(obj: object): KnownGraphQLTypeNames | undefined => {
+		const result = ContactSchema.safeParse(obj)
+		if (result.success) {
 			return 'Contact'
 		}
 		return undefined
