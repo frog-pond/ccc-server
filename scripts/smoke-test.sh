@@ -39,15 +39,12 @@ for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
       # we can run these, because they're ICS, not GCal
       ;;
 
-    "/v1/news/named/stolaf")
-      # Explicitly test this endpoint to ensure WordPress JSON feed parsing works
-      # This validates that optional wp:featuredmedia fields are handled correctly
-      echo "validating $route with JSON structure check"
+    "/v1/news/named/stolaf" | "/v1/news/named/krlx")
+      # Validate news endpoints with Zod schema
+      echo "validating $route with Zod schema"
       RESPONSE=$(curl --silent --fail "localhost:3000$route")
-      # Verify it's valid JSON and is an array
-      echo "$RESPONSE" | jq -e 'if type == "array" then true else error("Expected array") end' >/dev/null
-      # Verify each item has required fields
-      echo "$RESPONSE" | jq -e '.[0] | if has("title") and has("link") and has("datePublished") then true else error("Missing required fields") end' >/dev/null
+      # Validate against the Zod schema
+      echo "$RESPONSE" | node dist/scripts/validate-schema.js "$route"
       continue
       ;;
 
