@@ -20,35 +20,35 @@ test.before(async () => {
 			detached: true,
 		})
 
-		server.stdout?.on('data', (data) => {
-			if (data.toString().includes(`listening on port ${port}`)) {
+		server.stdout?.on('data', (data: Buffer) => {
+			if (data.toString().includes(`listening on port ${String(port)}`)) {
 				resolve()
 			}
 		})
 
-		server.stderr?.on('data', (data) => {
-			console.error(`server stderr: ${data}`)
+		server.stderr?.on('data', (data: Buffer) => {
+			console.error(`server stderr: ${data.toString()}`)
 		})
 
 		server.on('exit', (code) => {
 			if (code !== 0) {
-				reject(new Error(`Server exited with code ${code}`))
+				reject(new Error(`Server exited with code ${String(code)}`))
 			}
 		})
 	})
 })
 
-test.after.always(async () => {
-	if (server?.pid) {
+test.after.always(() => {
+	if (server.pid) {
 		// Kill the process group to ensure child processes are also killed.
 		process.kill(-server.pid)
 	}
 })
 
 test('graphql endpoint returns a successful response for a basic query', async (t) => {
-	const query = `{ hello }`
+	const query = '{ hello }'
 	const response = await ky
-		.post(`http://localhost:${port}/graphql`, {
+		.post(`http://localhost:${String(port)}/graphql`, {
 			json: {query},
 		})
 		.json<{data: {hello: string}}>()
@@ -70,7 +70,7 @@ test('graphql endpoint returns a list of contacts in a connection', async (t) =>
 		}
 	`
 	const response = await ky
-		.post(`http://localhost:${port}/graphql`, {
+		.post(`http://localhost:${String(port)}/graphql`, {
 			json: {query},
 		})
 		.json<{data: {contacts: {edges: {node: {id: string; title: string}}[]}}}>()
@@ -78,8 +78,10 @@ test('graphql endpoint returns a list of contacts in a connection', async (t) =>
 	const contacts = response.data.contacts.edges
 	t.true(Array.isArray(contacts))
 	t.truthy(contacts.length)
-	t.is(contacts[0]!.node.title, 'St. Olaf Public Safety')
-	t.truthy(contacts[0]!.node.id)
+	if (contacts[0]) {
+		t.is(contacts[0].node.title, 'St. Olaf Public Safety')
+		t.truthy(contacts[0].node.id)
+	}
 })
 
 test('graphql endpoint can fetch a single contact by its global ID', async (t) => {
@@ -96,10 +98,10 @@ test('graphql endpoint can fetch a single contact by its global ID', async (t) =
 		}
 	`
 	const response = await ky
-		.post(`http://localhost:${port}/graphql`, {
+		.post(`http://localhost:${String(port)}/graphql`, {
 			json: {query, variables: {id: globalId}},
 		})
-		.json<{data: {node: {title: string}}}>()
+		.json<{data: {node: {title:string} | null}}>()
 
-	t.is(response.data.node.title, contactTitle)
+	t.is(response.data.node?.title, contactTitle)
 })

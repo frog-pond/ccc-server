@@ -1,25 +1,20 @@
 import {createHandler} from 'graphql-http/lib/use/koa'
+import {GraphQLID, GraphQLNonNull, GraphQLObjectType, GraphQLSchema, GraphQLString} from 'graphql'
 import {
-	GraphQLSchema,
-	GraphQLObjectType,
-	GraphQLString,
-	GraphQLList,
-	GraphQLNonNull,
-	GraphQLID,
-} from 'graphql'
-import {
-	nodeDefinitions,
-	fromGlobalId,
-	toGlobalId,
+	type ConnectionArguments,
+	connectionArgs,
 	connectionDefinitions,
 	connectionFromArray,
+	fromGlobalId,
+	nodeDefinitions,
+	toGlobalId,
 } from 'graphql-relay'
 import {get} from '../ccc-lib/http.js'
 import {GH_PAGES} from '../ccci-stolaf-college/v1/gh-pages.js'
 import DataLoader from 'dataloader'
 import {URLScalar} from './url-scalar.js'
 
-type Contact = {
+interface Contact {
 	title: string
 	phoneNumber: string
 	buttonText: string
@@ -29,9 +24,15 @@ type Contact = {
 	text: string
 }
 
+interface ContactResponse {
+	data: Contact[]
+}
+
 const contactLoader = new DataLoader<string, Contact[]>(async (keys) => {
-	const contacts = await Promise.all(keys.map((key) => get(GH_PAGES(key)).json()))
-	return contacts.map((contact: any) => contact.data)
+	const contacts = await Promise.all(
+		keys.map((key) => get(GH_PAGES(key)).json<ContactResponse>()),
+	)
+	return contacts.map((contact) => contact.data)
 })
 
 const {nodeInterface, nodeField} = nodeDefinitions(
@@ -44,20 +45,20 @@ const {nodeInterface, nodeField} = nodeDefinitions(
 		}
 		return null
 	},
-	(obj) => {
-		if (obj.hasOwnProperty('phoneNumber')) {
+	(obj: object): string | undefined => {
+		if ('phoneNumber' in obj) {
 			return 'Contact'
 		}
 		return undefined
 	},
 )
 
-const ContactType: GraphQLObjectType = new GraphQLObjectType({
+const ContactType = new GraphQLObjectType<Contact, unknown>({
 	name: 'Contact',
 	fields: {
 		id: {
 			type: new GraphQLNonNull(GraphQLID),
-			resolve: (contact: Contact) => toGlobalId('Contact', contact.title),
+			resolve: (contact) => toGlobalId('Contact', contact.title),
 		},
 		title: {type: new GraphQLNonNull(GraphQLString)},
 		phoneNumber: {type: new GraphQLNonNull(GraphQLString)},
@@ -65,7 +66,7 @@ const ContactType: GraphQLObjectType = new GraphQLObjectType({
 		category: {type: new GraphQLNonNull(GraphQLString)},
 		image: {
 			type: URLScalar,
-			resolve: (contact: Contact) => {
+			resolve: (contact) => {
 				if (!contact.image) {
 					return null
 				}
@@ -98,7 +99,8 @@ const schema = new GraphQLSchema({
 			},
 			contacts: {
 				type: ContactConnection,
-				resolve: async (_, args) => {
+				args: connectionArgs,
+				resolve: async (_, args: ConnectionArguments) => {
 					const contacts = await contactLoader.load('contact-info.json')
 					return connectionFromArray(contacts, args)
 				},
