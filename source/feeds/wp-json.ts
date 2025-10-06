@@ -14,11 +14,13 @@ const WpJsonFeedEntrySchema = z.object({
 				.array(
 					z.object({
 						id: z.unknown(),
-						media_type: z.union([z.literal('image'), z.string()]),
-						media_details: z.object({
-							sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
-						}),
-						source_url: z.string().url(),
+						media_type: z.union([z.literal('image'), z.string()]).optional(),
+						media_details: z
+							.object({
+								sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
+							})
+							.optional(),
+						source_url: z.string().url().optional(),
 					}),
 				)
 				.nullable()
@@ -62,8 +64,9 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 
 		if (featuredMediaInfo) {
 			featuredImage =
-				featuredMediaInfo.media_details.sizes?.['medium_large']?.source_url ??
-				featuredMediaInfo.source_url
+				featuredMediaInfo.media_details?.sizes?.['medium_large']?.source_url ??
+				featuredMediaInfo.source_url ??
+				null
 		}
 	}
 

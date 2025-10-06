@@ -13,9 +13,11 @@ const WpJsonFeedEntrySchema = z.object({
 					z.object({
 						id: z.unknown(),
 						media_type: z.union([z.literal('image'), z.string()]).optional(),
-						media_details: z.object({
-							sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
-						}).optional(),
+						media_details: z
+							.object({
+								sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
+							})
+							.optional(),
 						source_url: z.string().url().optional(),
 					}),
 				)
@@ -44,9 +46,7 @@ test('WpJsonFeedEntrySchema should parse items with missing featuredmedia fields
 					// missing media_type, media_details, and source_url
 				},
 			],
-			'wp:term': [
-				[{taxonomy: 'category', name: 'News'}],
-			],
+			'wp:term': [[{taxonomy: 'category', name: 'News'}]],
 		},
 		author: 1,
 		featured_media: 123,
@@ -78,9 +78,7 @@ test('WpJsonFeedEntrySchema should parse items with complete featuredmedia field
 					source_url: 'https://example.com/image.jpg',
 				},
 			],
-			'wp:term': [
-				[{taxonomy: 'category', name: 'News'}],
-			],
+			'wp:term': [[{taxonomy: 'category', name: 'News'}]],
 		},
 		author: 1,
 		featured_media: 123,
@@ -99,9 +97,7 @@ test('WpJsonFeedEntrySchema should parse items with null wp:featuredmedia', () =
 		_embedded: {
 			author: [{id: 1, name: 'Test Author'}],
 			'wp:featuredmedia': null,
-			'wp:term': [
-				[{taxonomy: 'category', name: 'News'}],
-			],
+			'wp:term': [[{taxonomy: 'category', name: 'News'}]],
 		},
 		author: 1,
 		content: {rendered: '<p>Test content</p>'},
@@ -124,9 +120,7 @@ test('convertWpJsonItemToStory should handle missing featuredmedia fields', () =
 					// missing media_type, media_details, and source_url
 				},
 			],
-			'wp:term': [
-				[{taxonomy: 'category', name: 'News'}],
-			],
+			'wp:term': [[{taxonomy: 'category', name: 'News'}]],
 		},
 		author: 1,
 		featured_media: 123,
@@ -160,9 +154,7 @@ test('convertWpJsonItemToStory should handle complete featuredmedia fields', () 
 					source_url: 'https://example.com/image.jpg',
 				},
 			],
-			'wp:term': [
-				[{taxonomy: 'category', name: 'News'}],
-			],
+			'wp:term': [[{taxonomy: 'category', name: 'News'}]],
 		},
 		author: 1,
 		featured_media: 123,
@@ -182,9 +174,7 @@ test('convertWpJsonItemToStory should handle null wp:featuredmedia', () => {
 		_embedded: {
 			author: [{id: 1, name: 'Test Author'}],
 			'wp:featuredmedia': null,
-			'wp:term': [
-				[{taxonomy: 'category', name: 'News'}],
-			],
+			'wp:term': [[{taxonomy: 'category', name: 'News'}]],
 		},
 		author: 1,
 		content: {rendered: '<p>Test content</p>'},
@@ -196,4 +186,36 @@ test('convertWpJsonItemToStory should handle null wp:featuredmedia', () => {
 
 	const result = convertWpJsonItemToStory(itemWithNullFeaturedMedia)
 	expect(result.featuredImage).toBe(null)
+})
+
+test('WpJsonFeedEntrySchema parsing should work with real-world incomplete data', () => {
+	// This simulates what WordPress might return when a featured media
+	// entry exists but has incomplete information
+	const incompleteData = {
+		_embedded: {
+			author: [{id: 1, name: 'Test Author'}],
+			'wp:featuredmedia': [
+				{
+					id: 123,
+					// All other fields missing
+				},
+			],
+			'wp:term': [[{taxonomy: 'category', name: 'News'}]],
+		},
+		author: 1,
+		featured_media: 123,
+		content: {rendered: '<p>Test content</p>'},
+		excerpt: {rendered: '<p>Test excerpt</p>'},
+		title: {rendered: 'Test Title'},
+		date_gmt: '2024-01-01T12:00:00',
+		link: 'https://example.com/post',
+	}
+
+	// Should parse without error
+	const parsed = WpJsonFeedEntrySchema.parse(incompleteData)
+	expect(parsed).toBeDefined()
+
+	// Convert should also work and return null for featuredImage
+	const converted = convertWpJsonItemToStory(parsed)
+	expect(converted.featuredImage).toBe(null)
 })
