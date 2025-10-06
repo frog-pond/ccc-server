@@ -105,3 +105,53 @@ test('graphql endpoint can fetch a single contact by its global ID', async (t) =
 
 	t.is(response.data.node?.title, contactTitle)
 })
+
+test('graphql endpoint returns a list of dictionary definitions in a connection', async (t) => {
+	const query = `
+		query GetDictionary {
+			dictionary {
+				edges {
+					node {
+						id
+						word
+					}
+				}
+			}
+		}
+	`
+	const response = await ky
+		.post(`http://localhost:${String(port)}/graphql`, {
+			json: {query},
+		})
+		.json<{data: {dictionary: {edges: {node: {id: string; word: string}}[]}}}>()
+
+	const definitions = response.data.dictionary.edges
+	t.true(Array.isArray(definitions))
+	t.truthy(definitions.length)
+	if (definitions[0]) {
+		t.is(definitions[0].node.word, 'AAC')
+		t.truthy(definitions[0].node.id)
+	}
+})
+
+test('graphql endpoint can fetch a single dictionary definition by its global ID', async (t) => {
+	const word = 'AAC'
+	const globalId = toGlobalId('DictionaryDefinition', word)
+
+	const query = `
+		query GetNode($id: ID!) {
+			node(id: $id) {
+				... on DictionaryDefinition {
+					word
+				}
+			}
+		}
+	`
+	const response = await ky
+		.post(`http://localhost:${String(port)}/graphql`, {
+			json: {query, variables: {id: globalId}},
+		})
+		.json<{data: {node: {word: string} | null}}>()
+
+	t.is(response.data.node?.word, word)
+})
