@@ -52,20 +52,16 @@ interface DictionaryDefinitionResponse {
 // =================================================================================
 
 const contactLoader = new DataLoader<string, Contact[]>(async (keys) => {
-	const contacts = await Promise.all(
-		keys.map((key) => get(GH_PAGES(key)).json<ContactResponse>()),
-	)
+	const contacts = await Promise.all(keys.map((key) => get(GH_PAGES(key)).json<ContactResponse>()))
 	return contacts.map((contact) => contact.data)
 })
 
-const dictionaryLoader = new DataLoader<string, DictionaryDefinition[]>(
-	async (keys) => {
-		const dictionary = await Promise.all(
-			keys.map((key) => get(GH_PAGES(key)).json<DictionaryDefinitionResponse>()),
-		)
-		return dictionary.map((entry) => entry.data)
-	},
-)
+const dictionaryLoader = new DataLoader<string, DictionaryDefinition[]>(async (keys) => {
+	const dictionary = await Promise.all(
+		keys.map((key) => get(GH_PAGES(key)).json<DictionaryDefinitionResponse>()),
+	)
+	return dictionary.map((entry) => entry.data)
+})
 
 // #endregion
 
@@ -162,10 +158,7 @@ const ContactType = new GraphQLObjectType<Contact, unknown>({
 	interfaces: [nodeInterface],
 })
 
-const DictionaryDefinitionType = new GraphQLObjectType<
-	DictionaryDefinition,
-	unknown
->({
+const DictionaryDefinitionType = new GraphQLObjectType<DictionaryDefinition, unknown>({
 	name: 'DictionaryDefinition',
 	fields: {
 		id: {
