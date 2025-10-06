@@ -63,7 +63,7 @@
     "lodash-es": "^4.17.21",
     "memoize": "10.0.0",
     "moment": "2.30.1",
-    "moment-timezone": "0.5.45",
+    "moment-timezone": "0.6.0",
     "normalize-url": "8.0.1",
     "p-map": "7.0.3",
     "turndown": "7.2.0",
