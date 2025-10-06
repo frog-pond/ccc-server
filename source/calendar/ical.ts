@@ -31,7 +31,11 @@ function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	})
 }
 
-export async function ical(url: string | URL, {onlyFuture = true} = {}, now = moment()) {
+export async function ical(
+	url: string | URL,
+	{onlyFuture = true, maxEndDate}: {onlyFuture?: boolean; maxEndDate?: moment.Moment} = {},
+	now = moment(),
+) {
 	let body = await get(url, {headers: {accept: 'text/calendar'}}).text()
 
 	let comp = InternetCalendar.Component.fromString(body)
@@ -41,6 +45,12 @@ export async function ical(url: string | URL, {onlyFuture = true} = {}, now = mo
 
 	if (onlyFuture) {
 		events = events.filter((event) => moment(event.endDate.toString()).isAfter(now, 'day'))
+	}
+
+	if (maxEndDate) {
+		events = events.filter((event) =>
+			moment(event.endDate.toString()).isSameOrBefore(maxEndDate, 'day'),
+		)
 	}
 
 	return sortBy(
