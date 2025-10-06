@@ -53,8 +53,8 @@ run = "./scripts/smoke-test.sh carleton-college"
 depends = ["build"]
 
 [tasks.test]
-run = "./node_modules/.bin/ava"
-depends = ["build"]
+run = "./node_modules/.bin/vitest run"
+timeout = "60s"
 
 [tasks.watch]
 depends = "build" # build once, before starting
