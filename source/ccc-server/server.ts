@@ -16,8 +16,8 @@ const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 async function main() {
 	const smokeTesting = Boolean(process.env['SMOKE_TEST'])
 
-	const rawInstitution = process.env['INSTITUTION'];
-	Sentry.setTag("INSTITUTION", rawInstitution);
+	const rawInstitution = process.env['INSTITUTION']
+	Sentry.setTag('INSTITUTION', rawInstitution)
 
 	const institutionResult = InstitutionSchema.safeParse(process.env['INSTITUTION'])
 	if (institutionResult.error) {

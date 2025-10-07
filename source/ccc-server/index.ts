@@ -18,7 +18,7 @@ function setupSentry() {
 		integrations: [
 			nodeProfilingIntegration(),
 			captureConsoleIntegration({levels: ['warn', 'error']}),
-			consoleLoggingIntegration({levels: ["log", "warn", "error"]}),
+			consoleLoggingIntegration({levels: ['log', 'warn', 'error']}),
 		],
 		// Performance Monitoring
 		tracesSampleRate: 1.0,

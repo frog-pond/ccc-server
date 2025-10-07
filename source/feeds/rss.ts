@@ -13,7 +13,7 @@ export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedI
 	} catch (error) {
 		console.error(`Failed to fetch RSS feed from ${String(url)}:`, error)
 		Sentry.captureException(error, {tags: {url: String(url)}}) // TODO: figure out how these interact - but need to see data in sentry first
-		Sentry.logger.error(`Failed to fetch RSS feed`, {url: String(url)})
+		Sentry.logger.error('Failed to fetch RSS feed', {url: String(url)})
 		return []
 	}
 }
