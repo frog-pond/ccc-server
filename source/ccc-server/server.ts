@@ -68,8 +68,6 @@ async function main() {
 	app.use(router.routes())
 	app.use(router.allowedMethods())
 
-	// I'm not sure why typescript-eslint was complaining about this...
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 	Sentry.setupKoaErrorHandler(app)
 
 	//
