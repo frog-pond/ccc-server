@@ -10,8 +10,6 @@ import {
 	type CafeInfoResponseType,
 	type CafeMenuResponseType,
 } from './types.js'
-import {fetchCafe as fetchCafeV2, fetchItem as fetchItemV2, fetchMenu as fetchMenuV2} from './v2.js'
-import type {CafesResponseSchema as CafeV2, MenuResponseSchema as MenuV2} from './v2/types.js'
 
 import {BamcoPageContentsSchema} from './types-bonapp.js'
 
@@ -38,101 +36,9 @@ async function getBonAppWebpage(url: string | URL) {
 	})
 }
 
-function transformV2Cafe(cafe: ReturnType<typeof CafeV2["parse"]>, cafeId: string): CafeInfoResponseType {
-	const today = new Date().toISOString().split('T')[0]
-	const v2Cafe = cafe.cafes[cafeId]
-	if (!v2Cafe) {
-		return CustomCafe('Café is closed')
-	}
-	const day = v2Cafe.days.find(d => d.date === today);
-	return {
-		cafe: {
-			name: v2Cafe.name,
-			address: v2Cafe.address,
-			city: v2Cafe.city,
-			state: v2Cafe.state,
-			zip: v2Cafe.zip,
-			latitude: v2Cafe.latitude,
-			longitude: v2Cafe.longitude,
-			description: v2Cafe.description,
-			message: v2Cafe.message,
-			eod: v2Cafe.eod,
-			timezone: v2Cafe.timezone,
-			menu_type: v2Cafe.menu_type,
-			menu_html: v2Cafe.menu_html,
-			weekly_schedule: v2Cafe.weekly_schedule,
-			days: [{
-				date: today,
-				dayparts: day?.dayparts ?? [],
-                status: day?.status ?? 'closed',
-                message: day?.message ?? false,
-			}],
-		},
-	}
-}
-
-function transformV2Menu(menu: ReturnType<typeof MenuV2["parse"]>, cafeId: string): CafeMenuResponseType {
-	const today = new Date().toISOString().split('T')[0]
-	const v2Cafe = menu.days.find(d => d.date === today)?.cafes[cafeId]
-	if (!v2Cafe) {
-		return CafeMenuIsClosed()
-	}
-
-	const items = Object.fromEntries(
-		Object.values(menu.items).map(item => {
-			const { nutrition_details, ...rest } = item;
-			return [item.id, {
-				...rest,
-				"connector": "",
-				"cor_icon": {},
-				"monotony": {},
-				"nutrition": {
-					"kcal": "",
-					"well_being": "",
-					"well_being_image": ""
-				},
-				"nutrition_details": {},
-				"nutrition_link": "",
-				"options": {},
-				"rating": "0",
-				"special": 0,
-				"sub_station": "",
-				"sub_station_id": "",
-				"sub_station_order": "",
-				"zero_entree": "0"
-			}]
-		})
-	);
-
-	return {
-		cor_icons: {}, // v2 does not provide cor_icons in the menu response
-		items: items,
-		days: [
-			{
-				date: today,
-				cafe: {
-					name: v2Cafe.name,
-					menu_id: v2Cafe.menu_id,
-					dayparts: [v2Cafe.dayparts.map(dp => ({
-						...dp,
-						"abbreviation": "",
-						"endtime_formatted": "",
-						"message": "",
-						"starttime_formatted": "",
-						"time_formatted": "",
-						stations: dp.stations.map(s => ({
-							...s,
-							items: s.items.map(i => i.id)
-						}))
-					}))],
-				},
-			},
-		],
-	}
-}
-
-export async function _cafe(dom: JSDOM): Promise<CafeInfoResponseType> {
+export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	let today = new Date()
+	let dom = await getBonAppWebpage(cafeUrl)
 
 	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
 	if (typeof bamco === 'undefined') {
@@ -160,42 +66,26 @@ export async function _cafe(dom: JSDOM): Promise<CafeInfoResponseType> {
 	})
 }
 
-export async function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
-	const dom = await getBonAppWebpage(cafeUrl)
+export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	try {
-		const bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
-		if (bamco) {
-			const cafeId = String(bamco.current_cafe.id)
-			const v2Cafe = await fetchCafeV2(cafeId)
-			return transformV2Cafe(v2Cafe, cafeId)
+		return _cafe(cafeUrl)
+	} catch (err) {
+		console.error(err)
+		if (Sentry.isInitialized()) {
+			Sentry.captureException(err)
 		}
-	} catch (err) {
-		console.error(err)
-		Sentry.captureException(err)
-	}
-
-	try {
-		return await _cafe(dom)
-	} catch (err) {
-		console.error(err)
-		Sentry.captureException(err)
 		return Promise.resolve(CustomCafe('Could not load café from BonApp'))
 	}
 }
 
-export async function nutrition(itemId: string) {
-	try {
-		return await fetchItemV2(itemId)
-	} catch (err) {
-		console.error(`v2 fetch failed for item ${itemId}, falling back to legacy`)
-		Sentry.captureException(err)
-	}
+export function nutrition(itemId: string) {
 	let url = 'https://legacy.cafebonappetit.com/api/2/items'
 	return get(url, {searchParams: {item: itemId}}).json()
 }
 
-export async function _menu(dom: JSDOM): Promise<CafeMenuResponseType> {
+export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	let today = new Date()
+	let dom = await getBonAppWebpage(cafeUrl)
 
 	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
 	if (typeof bamco === 'undefined') {
@@ -218,25 +108,14 @@ export async function _menu(dom: JSDOM): Promise<CafeMenuResponseType> {
 	})
 }
 
-export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
-	const dom = await getBonAppWebpage(cafeUrl)
+export function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	try {
-		const bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
-		if (bamco) {
-			const cafeId = String(bamco.current_cafe.id)
-			const v2Menu = await fetchMenuV2(cafeId)
-			return transformV2Menu(v2Menu, cafeId)
+		return _menu(cafeUrl)
+	} catch (err) {
+		console.error(err)
+		if (Sentry.isInitialized()) {
+			Sentry.captureException(err)
 		}
-	} catch (err) {
-		console.error(err)
-		Sentry.captureException(err)
-	}
-
-	try {
-		return await _menu(dom)
-	} catch (err) {
-		console.error(err)
-		Sentry.captureException(err)
 		return Promise.resolve(
 			CafeMenuWithError(
 				err && typeof err === 'object' && 'message' in err && err.message,
