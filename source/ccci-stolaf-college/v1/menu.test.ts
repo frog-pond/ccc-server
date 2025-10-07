@@ -1,10 +1,31 @@
-import {test, expect} from 'vitest'
+import {test, expect, vi} from 'vitest'
 import {noop} from 'lodash-es'
 
 import * as menu from './menu.js'
 import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../../menus-bonapp/types.js'
 import type {Context} from '../../ccc-server/context.js'
 import {keysOf} from '../../ccc-lib/keysOf.js'
+
+vi.mock('../../menus-bonapp/index.js', () => {
+  const mockCafeInfoResponse = {
+    cafe: {
+      name: 'Test Cafe',
+      days: [],
+    },
+  };
+
+  const mockCafeMenuResponse = {
+      cor_icons: {},
+      items: {},
+      days: [],
+  };
+
+  return {
+    cafe: vi.fn().mockResolvedValue(mockCafeInfoResponse),
+    menu: vi.fn().mockResolvedValue(mockCafeMenuResponse),
+    nutrition: vi.fn().mockResolvedValue({}),
+  }
+});
 
 const cafeInfoFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Promise<unknown>> = {
 	stav: menu.stavCafe,
