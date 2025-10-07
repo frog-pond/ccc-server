@@ -1,14 +1,15 @@
-import js from '@eslint/js'
+// @ts-check
+
+import eslint from '@eslint/js';
+import { defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
 import globals from 'globals'
-
 import prettier from 'eslint-config-prettier'
-import ts from 'typescript-eslint'
 
-/** @type {import('@typescript-eslint/utils').TSESLint.FlatConfig.ConfigFile} */
-export default [
-	js.configs.recommended,
-	...ts.configs.strictTypeChecked,
-	...ts.configs.stylisticTypeChecked,
+export default defineConfig(
+	eslint.configs.recommended,
+	tseslint.configs.strictTypeChecked,
+	tseslint.configs.stylisticTypeChecked,
 	prettier,
 	{
 		languageOptions: {
@@ -16,8 +17,7 @@ export default [
 			sourceType: 'module',
 			globals: {...globals.node},
 			parserOptions: {
-				project: true,
-				tsconfigRoot: import.meta.dirname,
+				projectService: true,
 			},
 		},
 		rules: {
@@ -57,14 +57,14 @@ export default [
 			semi: 'off',
 
 			// conflicts with the noPropertyAccessFromIndexSignature tsconfig rule
-			'@typescript-eslint/dot-notation': ['error', {allowIndexSignaturePropertyAccess: true}],
+			// '@typescript-eslint/dot-notation': ['error', {allowIndexSignaturePropertyAccess: true}],
 		},
 	},
 	{
 		files: ['**/*.js'],
-		...ts.configs.disableTypeChecked,
+		...tseslint.configs.disableTypeChecked,
 	},
 	{
 		ignores: ['dist/*'],
 	},
-]
+)
