@@ -15,7 +15,7 @@ on:
   push:
     branches: ['master']
   pull_request:
-    branches: ['master']
+  merge_group:
   schedule:
     - cron: '35 20 * * 0'
 
