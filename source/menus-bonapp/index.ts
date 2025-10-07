@@ -40,7 +40,10 @@ async function getBonAppWebpage(url: string | URL) {
 
 function transformV2Cafe(cafe: ReturnType<typeof CafeV2["parse"]>, cafeId: string): CafeInfoResponseType {
 	const today = new Date().toISOString().split('T')[0]
-	const v2Cafe = cafe.cafes[cafeId]!
+	const v2Cafe = cafe.cafes[cafeId]
+	if (!v2Cafe) {
+		return CustomCafe('Café is closed')
+	}
 	return {
 		cafe: {
 			name: v2Cafe.name,
@@ -54,23 +57,50 @@ function transformV2Cafe(cafe: ReturnType<typeof CafeV2["parse"]>, cafeId: strin
 
 function transformV2Menu(menu: ReturnType<typeof MenuV2["parse"]>, cafeId: string): CafeMenuResponseType {
 	const today = new Date().toISOString().split('T')[0]
-	const v2Cafe = menu.days.find(d => d.date === today)?.cafes[cafeId]!
+	const v2Cafe = menu.days.find(d => d.date === today)?.cafes[cafeId]
+	if (!v2Cafe) {
+		return CafeMenuIsClosed()
+	}
+
+	const items = Object.fromEntries(
+		Object.values(menu.items).map(item => [item.id, {
+			...item,
+			"connector": "",
+			"cor_icon": {},
+			"monotony": {},
+			"nutrition": {
+				"kcal": "",
+				"well_being": "",
+				"well_being_image": ""
+			},
+			"nutrition_link": "",
+			"options": {},
+			"price": "",
+			"rating": "0",
+			"special": 0,
+			"sub_station": "",
+			"sub_station_id": "",
+			"sub_station_order": "",
+			"zero_entree": "0"
+		}])
+	);
+
 	return {
 		cor_icons: {}, // v2 does not provide cor_icons in the menu response
-		items: menu.items,
+		items: items,
 		days: [
 			{
 				date: today,
 				cafe: {
 					name: v2Cafe.name,
 					menu_id: v2Cafe.menu_id,
-					dayparts: v2Cafe.dayparts.map(dp => ({
+					dayparts: [v2Cafe.dayparts.map(dp => ({
 						...dp,
 						stations: dp.stations.map(s => ({
 							...s,
 							items: s.items.map(i => i.id)
 						}))
-					})),
+					}))],
 				},
 			},
 		],

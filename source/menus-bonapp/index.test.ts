@@ -3,13 +3,13 @@ import {test, expect, vi} from 'vitest'
 import * as bonApp from './index.js'
 import {CafeInfoResponseSchema, CafeMenuResponseSchema} from './types.js'
 import {get} from '../ccc-lib/http.js'
-import * as v2 from './v2'
+import * as v2 from './v2.js'
 
 vi.mock('../ccc-lib/http.js', () => ({
   get: vi.fn(),
 }))
 
-vi.mock('./v2', () => ({
+vi.mock('./v2.js', () => ({
     fetchCafe: vi.fn(),
     fetchMenu: vi.fn(),
     fetchItem: vi.fn(),

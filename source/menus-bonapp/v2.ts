@@ -1,8 +1,9 @@
 import {get} from '../ccc-lib/http.js'
 import * as Sentry from '@sentry/node'
+import {CafesResponseSchema, ItemSchema, MenuResponseSchema} from './v2/types.js'
 
-const BON_APPETIT_API_USERNAME = process.env.BON_APPETIT_API_USERNAME
-const BON_APPETIT_API_PASSWORD = process.env.BON_APPETIT_API_PASSWORD
+const BON_APPETIT_API_USERNAME = process.env['BON_APPETIT_API_USERNAME']
+const BON_APPETIT_API_PASSWORD = process.env['BON_APPETIT_API_PASSWORD']
 
 if (!BON_APPETIT_API_USERNAME || !BON_APPETIT_API_PASSWORD) {
   throw new Error('Missing BON_APPETIT_API_USERNAME or BON_APPETIT_API_PASSWORD')
@@ -11,8 +12,6 @@ if (!BON_APPETIT_API_USERNAME || !BON_APPETIT_API_PASSWORD) {
 const authHeader = `Basic ${Buffer.from(
   `${BON_APPETIT_API_USERNAME}:${BON_APPETIT_API_PASSWORD}`,
 ).toString('base64')}`
-
-import {CafesResponseSchema, MenuResponseSchema} from './v2/types.js'
 
 export async function fetchV2(endpoint: string, params: Record<string, string>) {
   const url = `https://cafemanager-api.cafebonappetit.com/api/2/${endpoint}`

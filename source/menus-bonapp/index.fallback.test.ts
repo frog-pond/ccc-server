@@ -1,11 +1,11 @@
 import {describe, test, expect, vi} from 'vitest'
-import * as bonapp from './index'
-import * as v2 from './v2'
+import * as bonapp from './index.js'
+import * as v2 from './v2.js'
 import { JSDOM } from 'jsdom'
-import { get } from '../ccc-lib/http'
+import { get } from '../ccc-lib/http.js'
 
 vi.mock('./v2', async () => {
-  const actual = await vi.importActual('./v2')
+  const actual = await vi.importActual('./v2.js')
   return {
     ...actual,
     fetchCafe: vi.fn().mockRejectedValue(new Error('V2 API error')),
@@ -14,7 +14,7 @@ vi.mock('./v2', async () => {
   }
 })
 
-vi.mock('../ccc-lib/http', () => ({
+vi.mock('../ccc-lib/http.js', () => ({
   get: vi.fn(),
 }))
 

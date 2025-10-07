@@ -1,9 +1,9 @@
 import {describe, test, expect, vi} from 'vitest'
-import * as v2 from './v2'
-import {CafesResponseSchema, MenuResponseSchema} from './v2/types'
-import {get} from '../ccc-lib/http'
+import * as v2 from './v2.js'
+import {CafesResponseSchema, MenuResponseSchema} from './v2/types.js'
+import {get} from '../ccc-lib/http.js'
 
-vi.mock('../ccc-lib/http', () => ({
+vi.mock('../ccc-lib/http.js', () => ({
   get: vi.fn(),
 }))
 
