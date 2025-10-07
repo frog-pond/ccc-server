@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@sentry/node": "8.4.0",
-    "@sentry/profiling-node": "8.4.0",
+    "@sentry/profiling-node": "10.18.0",
     "@sentry/utils": "8.4.0",
     "dotenv": "^16.4.5",
     "get-urls": "12.1.0",
