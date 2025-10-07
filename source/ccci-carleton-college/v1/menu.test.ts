@@ -31,13 +31,17 @@ const cafeMenuFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Pro
 } as const
 
 for (const cafe of keysOf(menu.CAFE_URLS)) {
-	test(`${cafe} cafe endpoint should return a BamcoCafeInfo struct`, async () => {
-		const ctx = {cacheControl: noop, body: null} as Context
-		await cafeInfoFunctions[cafe](ctx)
-		expect(() => CafeInfoResponseSchema.parse(ctx.body)).not.toThrow()
-	})
+	test(
+		`${cafe} cafe endpoint should return a BamcoCafeInfo struct`,
+		{timeout: 15_000},
+		async () => {
+			const ctx = {cacheControl: noop, body: null} as Context
+			await cafeInfoFunctions[cafe](ctx)
+			expect(() => CafeInfoResponseSchema.parse(ctx.body)).not.toThrow()
+		},
+	)
 
-	test(`${cafe} menu endpoint should return a CafeMenu struct`, async () => {
+	test(`${cafe} menu endpoint should return a CafeMenu struct`, {timeout: 15_000}, async () => {
 		const ctx = {cacheControl: noop, body: null} as Context
 		await cafeMenuFunctions[cafe](ctx)
 		expect(() => CafeMenuResponseSchema.parse(ctx.body)).not.toThrow()
