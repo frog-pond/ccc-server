@@ -44,12 +44,28 @@ function transformV2Cafe(cafe: ReturnType<typeof CafeV2["parse"]>, cafeId: strin
 	if (!v2Cafe) {
 		return CustomCafe('Café is closed')
 	}
+	const day = v2Cafe.days.find(d => d.date === today);
 	return {
 		cafe: {
 			name: v2Cafe.name,
+			address: v2Cafe.address,
+			city: v2Cafe.city,
+			state: v2Cafe.state,
+			zip: v2Cafe.zip,
+			latitude: v2Cafe.latitude,
+			longitude: v2Cafe.longitude,
+			description: v2Cafe.description,
+			message: v2Cafe.message,
+			eod: v2Cafe.eod,
+			timezone: v2Cafe.timezone,
+			menu_type: v2Cafe.menu_type,
+			menu_html: v2Cafe.menu_html,
+			weekly_schedule: v2Cafe.weekly_schedule,
 			days: [{
 				date: today,
-				dayparts: v2Cafe.days.find(d => d.date === today)?.dayparts ?? [],
+				dayparts: day?.dayparts ?? [],
+                status: day?.status ?? 'closed',
+                message: day?.message ?? false,
 			}],
 		},
 	}
@@ -63,26 +79,29 @@ function transformV2Menu(menu: ReturnType<typeof MenuV2["parse"]>, cafeId: strin
 	}
 
 	const items = Object.fromEntries(
-		Object.values(menu.items).map(item => [item.id, {
-			...item,
-			"connector": "",
-			"cor_icon": {},
-			"monotony": {},
-			"nutrition": {
-				"kcal": "",
-				"well_being": "",
-				"well_being_image": ""
-			},
-			"nutrition_link": "",
-			"options": {},
-			"price": "",
-			"rating": "0",
-			"special": 0,
-			"sub_station": "",
-			"sub_station_id": "",
-			"sub_station_order": "",
-			"zero_entree": "0"
-		}])
+		Object.values(menu.items).map(item => {
+			const { nutrition_details, ...rest } = item;
+			return [item.id, {
+				...rest,
+				"connector": "",
+				"cor_icon": {},
+				"monotony": {},
+				"nutrition": {
+					"kcal": "",
+					"well_being": "",
+					"well_being_image": ""
+				},
+				"nutrition_details": {},
+				"nutrition_link": "",
+				"options": {},
+				"rating": "0",
+				"special": 0,
+				"sub_station": "",
+				"sub_station_id": "",
+				"sub_station_order": "",
+				"zero_entree": "0"
+			}]
+		})
 	);
 
 	return {
@@ -96,6 +115,11 @@ function transformV2Menu(menu: ReturnType<typeof MenuV2["parse"]>, cafeId: strin
 					menu_id: v2Cafe.menu_id,
 					dayparts: [v2Cafe.dayparts.map(dp => ({
 						...dp,
+						"abbreviation": "",
+						"endtime_formatted": "",
+						"message": "",
+						"starttime_formatted": "",
+						"time_formatted": "",
 						stations: dp.stations.map(s => ({
 							...s,
 							items: s.items.map(i => i.id)
