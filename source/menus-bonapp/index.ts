@@ -27,6 +27,7 @@ async function getBonAppWebpage(url: string | URL) {
 			return
 		}
 		console.error(err)
+		Sentry.captureException(err)
 	})
 
 	const body = await _getBamcoPage(url.toString())
@@ -70,10 +71,8 @@ export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	try {
 		return _cafe(cafeUrl)
 	} catch (err) {
-		console.error(err)
-		if (Sentry.isInitialized()) {
-			Sentry.captureException(err)
-		}
+		console.error(err, {cafeUrl: String(cafeUrl)})
+		Sentry.captureException(err)
 		return Promise.resolve(CustomCafe('Could not load café from BonApp'))
 	}
 }
@@ -112,10 +111,8 @@ export function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	try {
 		return _menu(cafeUrl)
 	} catch (err) {
-		console.error(err)
-		if (Sentry.isInitialized()) {
-			Sentry.captureException(err)
-		}
+		console.error(err, {cafeUrl: String(cafeUrl)})
+		Sentry.captureException(err)
 		return Promise.resolve(
 			CafeMenuWithError(
 				err && typeof err === 'object' && 'message' in err && err.message,
