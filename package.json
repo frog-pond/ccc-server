@@ -36,7 +36,7 @@
     "@sentry/utils": "8.4.0",
     "dotenv": "^16.4.5",
     "get-urls": "12.1.0",
-    "html-entities": "2.5.2",
+    "html-entities": "2.6.0",
     "ical.js": "^2.0.1",
     "is-absolute-url": "4.0.1",
     "jsdom": "25.0.1",
