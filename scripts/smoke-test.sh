@@ -39,6 +39,15 @@ for route in $(curl -s localhost:3000/v1/routes | jq -r '.[].path'); do
       # we can run these, because they're ICS, not GCal
       ;;
 
+    "/v1/news/named/stolaf" | "/v1/news/named/krlx")
+      # Validate news endpoints with Zod schema
+      echo "validating $route with Zod schema"
+      RESPONSE=$(curl --silent --fail "localhost:3000$route")
+      # Validate against the Zod schema
+      echo "$RESPONSE" | node dist/scripts/validate-schema.js "$route"
+      continue
+      ;;
+
     "/v1/calendar/"* | "/v1/convos/upcoming")
       echo "skip because we don't have authorization during smoke tests"
       continue
