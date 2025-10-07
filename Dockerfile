@@ -1,4 +1,4 @@
-FROM node:20.19-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS modules_dev
+FROM node:20.19.5-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS modules_dev
 WORKDIR /app
 
 COPY --link ./package.json ./package-lock.json ./
@@ -16,7 +16,7 @@ COPY --link ./types ./types
 RUN npm run build
 
 
-FROM node:20.19-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS runtime
+FROM node:20.19.5-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS runtime
 WORKDIR /app
 
 RUN apk add -U curl
