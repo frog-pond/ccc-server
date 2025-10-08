@@ -16,9 +16,15 @@ const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 async function main() {
 	const smokeTesting = Boolean(process.env['SMOKE_TEST'])
 
+	const rawInstitution = process.env['INSTITUTION']
+	Sentry.setTag('INSTITUTION', rawInstitution)
+
 	const institutionResult = InstitutionSchema.safeParse(process.env['INSTITUTION'])
 	if (institutionResult.error) {
 		console.error(
+			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
+		)
+		Sentry.logger.error(
 			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
 		)
 		process.exit(1)

@@ -31,9 +31,9 @@
     "watch": "node ./scripts/watch.js"
   },
   "dependencies": {
-    "@sentry/node": "8.4.0",
-    "@sentry/profiling-node": "8.4.0",
-    "@sentry/utils": "8.4.0",
+    "@sentry/node": "10.18.0",
+    "@sentry/profiling-node": "10.18.0",
+    "@sentry/utils": "8.55.0",
     "dotenv": "^16.4.5",
     "get-urls": "12.1.0",
     "html-entities": "2.6.0",
@@ -83,8 +83,5 @@
     "typescript": "5.6.2",
     "typescript-eslint": "8.46.0",
     "vitest": "3.2.4"
-  },
-  "engines": {
-    "node": "22.20.0"
   }
 }
