@@ -34,7 +34,7 @@
     "@sentry/node": "10.18.0",
     "@sentry/profiling-node": "10.18.0",
     "@sentry/utils": "8.55.0",
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.0.0",
     "get-urls": "12.1.0",
     "html-entities": "2.6.0",
     "ical.js": "^2.0.1",
