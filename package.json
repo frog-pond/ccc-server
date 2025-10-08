@@ -38,7 +38,7 @@
     "get-urls": "12.1.0",
     "html-entities": "2.6.0",
     "ical.js": "^2.0.1",
-    "is-absolute-url": "4.0.1",
+    "is-absolute-url": "5.0.0",
     "jsdom": "25.0.1",
     "koa": "2.16.2",
     "koa-bodyparser": "4.4.1",
