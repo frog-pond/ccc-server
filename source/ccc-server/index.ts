@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/node'
 import {nodeProfilingIntegration} from '@sentry/profiling-node'
-import {captureConsoleIntegration, consoleLoggingIntegration} from '@sentry/node'
+import {captureConsoleIntegration} from '@sentry/node'
 
 function setupSentry() {
 	const dsn = process.env['SENTRY_DSN']
@@ -18,7 +18,8 @@ function setupSentry() {
 		integrations: [
 			nodeProfilingIntegration(),
 			captureConsoleIntegration({levels: ['warn', 'error']}),
-			consoleLoggingIntegration({levels: ['log', 'warn', 'error']}),
+			// not using logging console integration to avoid tracking koa access logs
+			// consoleLoggingIntegration({levels: ['log', 'warn', 'error']}),
 		],
 		// Performance Monitoring
 		tracesSampleRate: 1.0,
