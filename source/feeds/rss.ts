@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node'
 import {get} from '../ccc-lib/http.js'
 import {JSDOM} from 'jsdom'
 import {FeedItemSchema, type FeedItemType} from './types.js'
@@ -11,6 +12,8 @@ export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedI
 		return Array.from(dom.window.document.querySelectorAll('item')).map(convertRssItemToStory)
 	} catch (error) {
 		console.error(`Failed to fetch RSS feed from ${String(url)}:`, error)
+		Sentry.captureException(error, {tags: {url: String(url)}}) // TODO: figure out how these interact - but need to see data in sentry first
+		Sentry.logger.error('Failed to fetch RSS feed', {url: String(url)})
 		return []
 	}
 }

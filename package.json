@@ -31,14 +31,14 @@
     "watch": "node ./scripts/watch.js"
   },
   "dependencies": {
-    "@sentry/node": "8.4.0",
-    "@sentry/profiling-node": "8.4.0",
-    "@sentry/utils": "8.4.0",
-    "dotenv": "^16.4.5",
+    "@sentry/node": "10.18.0",
+    "@sentry/profiling-node": "10.18.0",
+    "@sentry/utils": "8.55.0",
+    "dotenv": "^17.0.0",
     "get-urls": "12.1.0",
     "html-entities": "2.6.0",
     "ical.js": "^2.0.1",
-    "is-absolute-url": "4.0.1",
+    "is-absolute-url": "5.0.0",
     "jsdom": "25.0.1",
     "koa": "2.16.2",
     "koa-bodyparser": "4.4.1",
@@ -76,14 +76,11 @@
     "@types/lodash-es": "4.17.12",
     "@types/turndown": "5.0.5",
     "eslint": "9.37.0",
-    "globals": "15.15.0",
+    "globals": "16.4.0",
     "prettier": "3.6.2",
     "typed-query-selector": "2.12.0",
     "typescript": "5.6.2",
     "typescript-eslint": "8.46.0",
     "vitest": "3.2.4"
-  },
-  "engines": {
-    "node": "20.17.0"
   }
 }

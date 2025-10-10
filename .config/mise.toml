@@ -1,5 +1,5 @@
 [tools]
-node = "20.17.0"
+node = "22.20.0"
 
 [tasks.build]
 run = "rm -rf ./dist ./.tsbuildinfo && ./node_modules/.bin/tsc"
