@@ -29,20 +29,24 @@ env = { NODE_ENV = "development" }
 depends = ["build"]
 
 [tasks."start:dev"]
-run = {task = "start"}
+run = "node dist/source/ccc-server/index.js"
 env = { NODE_ENV = "development" }
+depends = ["build"]
 
 [tasks."start:prod"]
-run = {task = "start"}
+run = "node dist/source/ccc-server/index.js"
 env = { NODE_ENV = "production" }
+depends = ["build"]
 
 [tasks."stolaf-college"]
-run = {task = "start:dev"}
-env = { INSTITUTION = "stolaf-college" }
+run = "node dist/source/ccc-server/index.js"
+env = { NODE_ENV = "development", INSTITUTION = "stolaf-college" }
+depends = ["build"]
 
 [tasks."carleton-college"]
-run = {task = "start:dev"}
-env = { INSTITUTION = "carleton-college" }
+run = "node dist/source/ccc-server/index.js"
+env = { NODE_ENV = "development", INSTITUTION = "carleton-college" }
+depends = ["build"]
 
 [tasks."test:stolaf-college"]
 run = "./scripts/smoke-test.sh stolaf-college"
@@ -56,11 +60,15 @@ depends = ["build"]
 run = "./node_modules/.bin/vitest run"
 
 [tasks.watch]
-depends = "build" # build once, before starting
-run = {tasks = ["build:watch", "start:watch"]}
+depends = ["build"]
+run = '''
+#!/usr/bin/env bash
+mise run build:watch & mise run start:watch & wait
+'''
 
 [tasks.typecheck]
 run = "./node_modules/.bin/tsc --noEmit"
 
 [tasks.check]
-run = {tasks = ["p", "lint", "test", "typecheck"]}
+depends = ["p", "lint", "test", "typecheck"]
+run = "echo 'All checks passed!'"
