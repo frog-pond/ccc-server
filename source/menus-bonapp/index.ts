@@ -1,4 +1,4 @@
-import {get} from '../ccc-lib/http.ts'
+import {getJson, getText} from '../ccc-lib/http.ts'
 import {ONE_MINUTE} from '../ccc-lib/constants.ts'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
@@ -13,7 +13,7 @@ import {
 
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
 
-const _getBamcoPage = mem((url: string) => get(url).text(), {maxAge: ONE_MINUTE})
+const _getBamcoPage = mem((url: string) => getText(url), {maxAge: ONE_MINUTE})
 
 async function getBonAppWebpage(url: string | URL) {
 	const virtualConsole = new VirtualConsole()
@@ -79,7 +79,7 @@ export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 
 export function nutrition(itemId: string) {
 	let url = 'https://legacy.cafebonappetit.com/api/2/items'
-	return get(url, {searchParams: {item: itemId}}).json()
+	return getJson(url, {searchParams: {item: itemId}})
 }
 
 export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {

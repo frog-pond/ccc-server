@@ -1,13 +1,12 @@
 import * as Sentry from '@sentry/node'
-import {get} from '../ccc-lib/http.ts'
+import {getText} from '../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
 import {FeedItemSchema, type FeedItemType} from './types.ts'
 import moment from 'moment'
 
 export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedItemType[]> {
 	try {
-		const response = await get(url, {searchParams: query})
-		const body = await response.text()
+		const body = await getText(url, {searchParams: query})
 		const dom = new JSDOM(body, {contentType: 'text/xml'})
 		return Array.from(dom.window.document.querySelectorAll('item')).map(convertRssItemToStory)
 	} catch (error) {

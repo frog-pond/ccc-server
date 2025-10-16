@@ -1,4 +1,4 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {makeAbsoluteUrl} from '../../ccc-lib/url.ts'
 import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.ts'
@@ -34,7 +34,7 @@ function processConvo(event: Element) {
 async function fetchUpcoming(eventId: string) {
 	let baseUrl = 'https://www.carleton.edu/convocations/calendar/'
 	let url = 'https://www.carleton.edu/convocations/calendar/'
-	let body = await get(url, {searchParams: {eId: eventId}}).text()
+	let body = await getText(url, {searchParams: {eId: eventId}})
 
 	let dom = new JSDOM(body)
 
@@ -74,7 +74,7 @@ export async function upcomingDetail(ctx: Context) {
 }
 
 async function fetchArchived() {
-	let body = await get(archiveBase).text()
+	let body = await getText(archiveBase)
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 	let convos = Array.from(dom.window.document.querySelectorAll('rss channel item')).map(
 		processConvo,

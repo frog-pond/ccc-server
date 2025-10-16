@@ -1,11 +1,11 @@
-import {get} from '../../../ccc-lib/http.ts'
+import {getText} from '../../../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
 import {groupBy, toPairs} from 'lodash-es'
 
 export async function noonNewsBulletin() {
-	let body = await get('https://apps.carleton.edu/campact/nnb/show.php3', {
+	let body = await getText('https://apps.carleton.edu/campact/nnb/show.php3', {
 		searchParams: {style: 'rss'},
-	}).text()
+	})
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 
 	let bulletinEls = [...dom.window.document.querySelectorAll('item')]

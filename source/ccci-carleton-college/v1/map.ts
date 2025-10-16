@@ -1,14 +1,14 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import type {Context} from '../../ccc-server/context.ts'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
+const GET = mem(getJson, {maxAge: ONE_HOUR})
 
 let url = 'https://carls-app.github.io/map-data/'
 
 export function getMap() {
-	return GET(url + 'map.json').json()
+	return GET(url + 'map.json')
 }
 
 export async function map(ctx: Context) {
@@ -18,7 +18,7 @@ export async function map(ctx: Context) {
 }
 
 export function getGeojsonMap() {
-	return GET(url + 'map.geojson').json()
+	return GET(url + 'map.geojson')
 }
 
 export async function geojson(ctx: Context) {

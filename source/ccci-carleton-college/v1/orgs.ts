@@ -1,4 +1,4 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {JSDOM} from 'jsdom'
@@ -84,7 +84,7 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 
 async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let orgsUrl = 'https://apps.carleton.edu/student/orgs/'
-	let body = await get(orgsUrl).text()
+	let body = await getText(orgsUrl)
 	let dom = new JSDOM(body)
 
 	const allOrgWrappers = dom.window.document.querySelectorAll('.orgContainer, .careerField')

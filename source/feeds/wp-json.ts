@@ -1,4 +1,4 @@
-import {get} from '../ccc-lib/http.ts'
+import {getJson} from '../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
 import {FeedItemSchema, type FeedItemType} from './types.ts'
 import type {SearchParamsOption} from 'ky'
@@ -42,7 +42,7 @@ export async function fetchWpJson(
 	url: string | URL,
 	query: SearchParamsOption = {},
 ): Promise<FeedItemType[]> {
-	const feed = WpJsonFeedResponseSchema.parse(await get(url, {searchParams: query}).json())
+	const feed = WpJsonFeedResponseSchema.parse(await getJson(url, {searchParams: query}))
 	return feed.map(convertWpJsonItemToStory)
 }
 

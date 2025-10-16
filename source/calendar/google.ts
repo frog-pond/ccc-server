@@ -1,4 +1,4 @@
-import {get} from '../ccc-lib/http.ts'
+import {getJson} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
@@ -61,7 +61,7 @@ export async function googleCalendar(calendarId: string, now = moment()) {
 		key: process.env['GOOGLE_CALENDAR_API_KEY'] ?? '',
 	}
 
-	let body = GoogleCalendarResultSchema.parse(await get(calendarUrl, {searchParams: params}).json())
+	let body = GoogleCalendarResultSchema.parse(await getJson(calendarUrl, {searchParams: params}))
 
 	return convertGoogleEvents(body.items)
 }

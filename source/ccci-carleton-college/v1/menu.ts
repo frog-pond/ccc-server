@@ -1,4 +1,4 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.ts'
 import * as bonapp from '../../menus-bonapp/index.ts'
 import mem from 'memoize'
@@ -6,8 +6,8 @@ import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 const pauseMenuUrl = GH_PAGES('pause-menu.json')
-const GET_DAY = mem(get, {maxAge: ONE_DAY})
-export const getPauseMenu = () => GET_DAY(pauseMenuUrl).json()
+const GET_DAY = mem(getJson, {maxAge: ONE_DAY})
+export const getPauseMenu = () => GET_DAY(pauseMenuUrl)
 
 const getMenu = mem(bonapp.menu, {maxAge: ONE_HOUR})
 const getInfo = mem(bonapp.cafe, {maxAge: ONE_HOUR})

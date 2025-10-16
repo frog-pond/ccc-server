@@ -1,4 +1,4 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import moment from 'moment-timezone'
 import type {Context} from '../../ccc-server/context.ts'
@@ -44,10 +44,8 @@ type StOlafStreamsParamsType = z.infer<typeof StOlafStreamsParamsSchema>
 const getStreams = mem(
 	async (params: StOlafStreamsParamsType) => {
 		const url = 'https://www.stolaf.edu/multimedia/api/collection'
-		const response = await get(url, {searchParams: params})
-		const json = (await response.clone().json()) as Promise<
-			(z.infer<typeof StreamEntry> & {starttime: string})[]
-		>
+		const response = await getJson(url, {searchParams: params})
+		const json = (await response) as Promise<(z.infer<typeof StreamEntry> & {starttime: string})[]>
 		const data = StreamEntryCollection.parse(json)
 
 		return data.results.map((stream) => {
