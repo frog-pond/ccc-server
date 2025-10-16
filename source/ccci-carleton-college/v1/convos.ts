@@ -11,10 +11,11 @@ import assert from 'node:assert/strict'
 const archiveBase = 'https://feed.podbean.com/carletonconvos/feed.xml'
 
 function processConvo(event: Element) {
-	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent?.trim()
+	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent.trim()
 
-	let description =
-		JSDOM.fragment(event.querySelector('description')?.textContent ?? '').textContent?.trim() ?? ''
+	let description = JSDOM.fragment(
+		event.querySelector('description')?.textContent ?? '',
+	).textContent.trim()
 
 	let pubDate = moment(event.querySelector('pubDate')?.textContent)
 

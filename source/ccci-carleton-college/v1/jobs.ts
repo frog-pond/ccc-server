@@ -33,7 +33,7 @@ export async function fetchJob(link: URL) {
 	const title = jobs.querySelector('h3')
 	assert(title)
 
-	let titleText = title.textContent?.trim() ?? ''
+	let titleText = title.textContent.trim()
 	const offCampus = titleText.startsWith('Off Campus')
 	if (offCampus) {
 		titleText = titleText.replace(/^Off Campus: +/, '')
@@ -63,7 +63,7 @@ async function _getAllJobs() {
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
 		(link) => {
-			let href = link.textContent?.trim() ?? ''
+			let href = link.textContent.trim()
 			return URL.canParse(href) ? [new URL(href)] : []
 		},
 	)

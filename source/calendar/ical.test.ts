@@ -38,7 +38,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
@@ -81,7 +81,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
@@ -122,7 +122,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
@@ -166,7 +166,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
+	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',

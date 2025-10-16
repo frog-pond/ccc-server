@@ -29,7 +29,7 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 	let name =
 		orgNode
 			.querySelector('h4')
-			?.textContent?.replace(/ Manage$/, '')
+			?.textContent.replace(/ Manage$/, '')
 			.trim() ?? ''
 
 	let adminLink = orgNode.querySelector('h4 > a')?.getAttribute('href')
@@ -38,13 +38,13 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 	const ids = Array.from(orgNode.querySelectorAll('a[name]')).map((n) => n.getAttribute('name'))
 	const id = ids[0] ?? name
 
-	const description = orgNode.querySelector('.orgDescription')?.textContent?.trim() ?? ''
+	const description = orgNode.querySelector('.orgDescription')?.textContent.trim() ?? ''
 
 	let contacts = Array.from(
 		new Set(
 			orgNode
 				.querySelector('.contacts')
-				?.textContent?.trim()
+				?.textContent.trim()
 				.replace(/^Contact: /, '')
 				.split(', ') ?? [],
 		),
@@ -94,7 +94,7 @@ async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let currentCategory = null
 	for (const orgNode of allOrgWrappers) {
 		if (orgNode.classList.contains('careerField')) {
-			currentCategory = orgNode.textContent?.trim()
+			currentCategory = orgNode.textContent.trim()
 			continue
 		}
 

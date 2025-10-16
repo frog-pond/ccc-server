@@ -76,10 +76,10 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 				? item.date_gmt
 				: `${item.date_gmt}Z`,
 		).toISOString(),
-		excerpt: JSDOM.fragment(item.excerpt.rendered).textContent?.trim() ?? '',
+		excerpt: JSDOM.fragment(item.excerpt.rendered).textContent.trim(),
 		featuredImage: featuredImage,
 		link: item.link,
-		title: JSDOM.fragment(item.title.rendered).textContent?.trim() ?? '',
+		title: JSDOM.fragment(item.title.rendered).textContent.trim(),
 	})
 }
 

@@ -9,7 +9,7 @@ import {sortBy} from 'lodash-es'
 function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	let description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
+	let description = JSDOM.fragment(event.description ?? '').textContent.trim()
 
 	return EventSchema.parse({
 		dataSource: 'ical',

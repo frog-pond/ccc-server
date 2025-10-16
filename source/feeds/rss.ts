@@ -31,7 +31,7 @@ export function convertRssItemToStory(item: Element) {
 	let link = item.querySelector('link')?.textContent ?? null
 
 	let title = item.querySelector('title')?.textContent ?? ''
-	title = JSDOM.fragment(title).textContent?.trim() || '(no title)' // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing
+	title = JSDOM.fragment(title).textContent.trim() || '(no title)'
 
 	let datePublished = item.querySelector('pubDate')?.textContent ?? null
 	if (datePublished) {
@@ -41,10 +41,10 @@ export function convertRssItemToStory(item: Element) {
 	let descriptionEl = item.querySelector('description')
 
 	let content = item.getAttribute('content:encoded') ?? descriptionEl?.textContent ?? '(no content)'
-	content = JSDOM.fragment(content).textContent?.trim() ?? ''
+	content = JSDOM.fragment(content).textContent.trim()
 
 	let excerpt: string | null = descriptionEl?.textContent ?? content.substring(0, 250)
-	excerpt = JSDOM.fragment(excerpt).textContent?.trim() ?? null
+	excerpt = JSDOM.fragment(excerpt).textContent.trim() || null
 
 	let featuredImage = null
 	if (item.querySelector('enclosure')) {
