@@ -14,21 +14,21 @@
     "semi": false
   },
   "scripts": {
-    "build": "rm -rf ./dist ./.tsbuildinfo && tsc",
-    "build:watch": "tsc --watch",
+    "build": "tsc --build .",
+    "build:watch": "tsc --watch --build .",
     "p": "npm run pretty -- --no-write --check",
     "pretty": "prettier --write source scripts",
     "lint": "eslint --cache --max-warnings=0 .",
-    "start": "node dist/source/ccc-server/index.js",
-    "start:watch": "NODE_ENV=development node --watch dist/source/ccc-server/index.js",
-    "start:dev": "NODE_ENV=development node dist/source/ccc-server/index.js",
-    "start:prod": "NODE_ENV=production node dist/source/ccc-server/index.js",
+    "start": "node source/ccc-server/index.ts",
+    "start:watch": "NODE_ENV=development node --watch source/ccc-server/index.ts",
+    "start:dev": "NODE_ENV=development node source/ccc-server/index.ts",
+    "start:prod": "NODE_ENV=production node source/ccc-server/index.ts",
     "stolaf-college": "env INSTITUTION=stolaf-college npm run start:dev",
     "carleton-college": "env INSTITUTION=carleton-college npm run start:dev",
     "test:stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test:carleton-college": "./scripts/smoke-test.sh carleton-college",
     "test": "vitest",
-    "watch": "node ./scripts/watch.js"
+    "watch": "npm run build:watch & npm run start:watch"
   },
   "dependencies": {
     "@sentry/node": "10.18.0",
