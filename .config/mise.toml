@@ -46,8 +46,7 @@ run = "./scripts/smoke-test.sh stolaf-college"
 run = "./scripts/smoke-test.sh carleton-college"
 
 [tasks.test]
-run = "vitest run"
-env = { _.path = ['{{config_root}}/node_modules/.bin'] }
+run = "node --test"
 
 [tasks.watch]
 depends = "build"                                # build once, before starting

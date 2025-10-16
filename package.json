@@ -27,7 +27,7 @@
     "carleton-college": "env INSTITUTION=carleton-college npm run start:dev",
     "test:stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test:carleton-college": "./scripts/smoke-test.sh carleton-college",
-    "test": "vitest",
+    "test": "node --test",
     "watch": "npm run build:watch & npm run start:watch"
   },
   "dependencies": {
@@ -80,7 +80,6 @@
     "prettier": "3.6.2",
     "typed-query-selector": "2.12.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.46.0",
-    "vitest": "3.2.4"
+    "typescript-eslint": "8.46.0"
   }
 }

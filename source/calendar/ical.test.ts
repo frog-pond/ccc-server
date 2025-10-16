@@ -1,4 +1,4 @@
-import {test, expect} from 'vitest'
+import {test} from 'node:test'
 import InternetCalendar from 'ical.js'
 import moment from 'moment'
 import {JSDOM} from 'jsdom'
@@ -15,7 +15,7 @@ import {EventSchema} from './types.ts'
  * expects strings. The fix uses the ?? '' operator to convert null to empty string.
  */
 
-test('ical event with missing location should parse successfully', () => {
+void test('ical event with missing location should parse successfully', (t) => {
 	const sampleIcal = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Example//EN
@@ -31,7 +31,7 @@ END:VCALENDAR`
 	const comp = InternetCalendar.Component.fromString(sampleIcal)
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
-	expect(events.length, 'Should have exactly one event').toBe(1)
+	t.assert.equal(events.length, 1, 'Should have exactly one event')
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const event = events[0]!
 
@@ -53,12 +53,12 @@ END:VCALENDAR`
 		config: {startTime: true, endTime: true, subtitle: 'location'},
 	})
 
-	expect(result.title).toBe('Test Event')
-	expect(result.description).toBe('Test description')
-	expect(result.location).toBe('')
+	t.assert.equal(result.title, 'Test Event')
+	t.assert.equal(result.description, 'Test description')
+	t.assert.equal(result.location, '')
 })
 
-test('ical event with missing description should parse successfully', () => {
+void test('ical event with missing description should parse successfully', (t) => {
 	const sampleIcal = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Example//EN
@@ -74,7 +74,7 @@ END:VCALENDAR`
 	const comp = InternetCalendar.Component.fromString(sampleIcal)
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
-	expect(events.length, 'Should have exactly one event').toBe(1)
+	t.assert.equal(events.length, 1, 'Should have exactly one event')
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const event = events[0]!
 
@@ -96,12 +96,12 @@ END:VCALENDAR`
 		config: {startTime: true, endTime: true, subtitle: 'location'},
 	})
 
-	expect(result.title).toBe('Test Event')
-	expect(result.description).toBe('')
-	expect(result.location).toBe('Test Location')
+	t.assert.equal(result.title, 'Test Event')
+	t.assert.equal(result.description, '')
+	t.assert.equal(result.location, 'Test Location')
 })
 
-test('ical event with all properties missing should parse successfully', () => {
+void test('ical event with all properties missing should parse successfully', (t) => {
 	const sampleIcal = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Example//EN
@@ -115,7 +115,7 @@ END:VCALENDAR`
 	const comp = InternetCalendar.Component.fromString(sampleIcal)
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
-	expect(events.length, 'Should have exactly one event').toBe(1)
+	t.assert.equal(events.length, 1, 'Should have exactly one event')
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const event = events[0]!
 
@@ -137,12 +137,12 @@ END:VCALENDAR`
 		config: {startTime: true, endTime: true, subtitle: 'location'},
 	})
 
-	expect(result.title).toBe('')
-	expect(result.description).toBe('')
-	expect(result.location).toBe('')
+	t.assert.equal(result.title, '')
+	t.assert.equal(result.description, '')
+	t.assert.equal(result.location, '')
 })
 
-test('ical event with all properties present should parse successfully', () => {
+void test('ical event with all properties present should parse successfully', (t) => {
 	const sampleIcal = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Example//EN
@@ -159,7 +159,7 @@ END:VCALENDAR`
 	const comp = InternetCalendar.Component.fromString(sampleIcal)
 	const events = comp.getAllSubcomponents('vevent').map((v) => new InternetCalendar.Event(v))
 
-	expect(events.length, 'Should have exactly one event').toBe(1)
+	t.assert.equal(events.length, 1, 'Should have exactly one event')
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const event = events[0]!
 
@@ -181,12 +181,12 @@ END:VCALENDAR`
 		config: {startTime: true, endTime: true, subtitle: 'location'},
 	})
 
-	expect(result.title).toBe('Test Event')
-	expect(result.description).toBe('Test description')
-	expect(result.location).toBe('Test Location')
+	t.assert.equal(result.title, 'Test Event')
+	t.assert.equal(result.description, 'Test description')
+	t.assert.equal(result.location, 'Test Location')
 })
 
-test('ical function should filter events beyond maxEndDate', () => {
+void test('ical function should filter events beyond maxEndDate', (t) => {
 	const now = moment('2024-01-01')
 	const maxEndDate = moment('2026-01-01')
 
@@ -226,10 +226,10 @@ END:VCALENDAR`
 		moment(event.endDate.toString()).isSameOrBefore(maxEndDate, 'day'),
 	)
 
-	expect(events.length, 'Should have filtered out the event beyond 2026').toBe(2)
+	t.assert.equal(events.length, 2, 'Should have filtered out the event beyond 2026')
 
 	const eventSummaries = events.map((e) => e.summary)
-	expect(eventSummaries.includes('Event within range')).toBe(true)
-	expect(eventSummaries.includes('Event just at limit')).toBe(true)
-	expect(eventSummaries.includes('Event beyond maxEndDate')).toBe(false)
+	t.assert.equal(eventSummaries.includes('Event within range'), true)
+	t.assert.equal(eventSummaries.includes('Event just at limit'), true)
+	t.assert.equal(eventSummaries.includes('Event beyond maxEndDate'), false)
 })
