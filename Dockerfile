@@ -1,4 +1,6 @@
-FROM node:22.20.0-alpine@sha256:cb3143549582cc5f74f26f0992cdef4a422b22128cb517f94173a5f910fa4ee7 AS modules_dev
+FROM node:22.20.0-alpine@sha256:cb3143549582cc5f74f26f0992cdef4a422b22128cb517f94173a5f910fa4ee7 AS node
+
+FROM node AS modules_dev
 WORKDIR /app
 
 COPY --link ./package.json ./package-lock.json ./
@@ -16,7 +18,7 @@ COPY --link ./types ./types
 RUN npm run build
 
 
-FROM node:22.20.0-alpine@sha256:cb3143549582cc5f74f26f0992cdef4a422b22128cb517f94173a5f910fa4ee7 AS runtime
+FROM node AS runtime
 WORKDIR /app
 
 RUN apk add -U curl
