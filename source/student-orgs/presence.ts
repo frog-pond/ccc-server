@@ -1,9 +1,9 @@
-import {get, http} from '../ccc-lib/http.js'
+import {get, http} from '../ccc-lib/http.ts'
 import {sortBy} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 import {z} from 'zod'
-import {SortableStudentOrgSchema, type SortableStudentOrgType} from './types.js'
+import {SortableStudentOrgSchema, type SortableStudentOrgType} from './types.ts'
 
 const BasicPresenceOrgSchema = z.object({
 	subdomain: z.string(),

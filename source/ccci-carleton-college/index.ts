@@ -1,1 +1,1 @@
-export {api as v1} from './v1/index.js'
+export {api as v1} from './v1/index.ts'

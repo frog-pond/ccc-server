@@ -1,8 +1,8 @@
-import {get} from '../../ccc-lib/http.js'
-import {ONE_DAY} from '../../ccc-lib/constants.js'
+import {get} from '../../ccc-lib/http.ts'
+import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
-import {GH_PAGES} from './gh-pages.js'
-import type {Context} from '../../ccc-server/context.js'
+import {GH_PAGES} from './gh-pages.ts'
+import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
 
 type StOlafAzResponseType = z.infer<typeof StOlafAzResponseSchema>

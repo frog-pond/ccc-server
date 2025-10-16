@@ -1,10 +1,10 @@
-import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
+import {get} from '../../ccc-lib/http.ts'
+import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import {sortBy} from 'lodash-es'
 import {z} from 'zod'
-import type {Context} from '../../ccc-server/context.js'
+import type {Context} from '../../ccc-server/context.ts'
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({

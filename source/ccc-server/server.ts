@@ -9,7 +9,7 @@ import Router from 'koa-router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {z} from 'zod'
-import type {ContextState, RouterState} from './context.js'
+import type {ContextState, RouterState} from './context.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -34,10 +34,10 @@ async function main() {
 	let v1: Router<RouterState, ContextState>
 	switch (institution) {
 		case 'carleton-college':
-			v1 = (await import('../ccci-carleton-college/index.js')).v1
+			v1 = (await import('../ccci-carleton-college/index.ts')).v1
 			break
 		case 'stolaf-college':
-			v1 = (await import('../ccci-stolaf-college/index.js')).v1
+			v1 = (await import('../ccci-stolaf-college/index.ts')).v1
 			break
 	}
 

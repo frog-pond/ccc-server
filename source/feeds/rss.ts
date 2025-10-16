@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node'
-import {get} from '../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
-import {FeedItemSchema, type FeedItemType} from './types.js'
+import {FeedItemSchema, type FeedItemType} from './types.ts'
 import moment from 'moment'
 
 export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedItemType[]> {

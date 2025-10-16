@@ -1,12 +1,12 @@
-import {get} from '../../ccc-lib/http.js'
-import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.js'
+import {get} from '../../ccc-lib/http.ts'
+import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
-import type {Context} from '../../ccc-server/context.js'
+import type {Context} from '../../ccc-server/context.ts'
 import assert from 'node:assert/strict'
-import {buildDetailMap} from '../../ccc-lib/html.js'
+import {buildDetailMap} from '../../ccc-lib/html.ts'
 
 const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
 const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})

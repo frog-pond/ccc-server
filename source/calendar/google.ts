@@ -1,8 +1,8 @@
-import {get} from '../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
-import {EventSchema} from './types.js'
+import {EventSchema} from './types.ts'
 import {z} from 'zod'
 
 type GoogleCalendarEventType = z.infer<typeof GoogleCalendarEventSchema>

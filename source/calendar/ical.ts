@@ -1,9 +1,9 @@
-import {get} from '../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
 import InternetCalendar from 'ical.js'
-import {EventSchema} from './types.js'
+import {EventSchema} from './types.ts'
 import {sortBy} from 'lodash-es'
 
 function convertEvent(event: InternetCalendar.Event, now = moment()) {

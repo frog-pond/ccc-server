@@ -1,7 +1,7 @@
 import {test, expect} from 'vitest'
 
-import * as bonApp from './index.js'
-import {CafeInfoResponseSchema, CafeMenuResponseSchema} from './types.js'
+import * as bonApp from './index.ts'
+import {CafeInfoResponseSchema, CafeMenuResponseSchema} from './types.ts'
 
 const STAV = 'https://stolaf.cafebonappetit.com/cafe/stav-hall/'
 

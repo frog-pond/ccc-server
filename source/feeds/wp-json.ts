@@ -1,6 +1,6 @@
-import {get} from '../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
-import {FeedItemSchema, type FeedItemType} from './types.js'
+import {FeedItemSchema, type FeedItemType} from './types.ts'
 import type {SearchParamsOption} from 'ky'
 import {z} from 'zod'
 import moment from 'moment'

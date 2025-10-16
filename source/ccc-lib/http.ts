@@ -1,6 +1,6 @@
 import ky, {type AfterResponseHook, type BeforeRequestHook} from 'ky'
 import memoize from 'memoize'
-import {ONE_MINUTE} from './constants.js'
+import {ONE_MINUTE} from './constants.ts'
 
 export const USER_AGENT = 'ccc-server/0.2.0'
 

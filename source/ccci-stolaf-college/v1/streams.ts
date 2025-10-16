@@ -1,7 +1,7 @@
-import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
+import {get} from '../../ccc-lib/http.ts'
+import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import moment from 'moment-timezone'
-import type {Context} from '../../ccc-server/context.js'
+import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
 import mem from 'memoize'
 

@@ -3,7 +3,7 @@ import {
 	CafeMenuDayPartSchema,
 	CafeMenuResponseSchema,
 	CafeMenuItemSchema,
-} from './types.js'
+} from './types.ts'
 
 export function CustomCafe(message: string) {
 	let today = new Date()

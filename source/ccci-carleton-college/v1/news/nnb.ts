@@ -1,4 +1,4 @@
-import {get} from '../../../ccc-lib/http.js'
+import {get} from '../../../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
 import {groupBy, toPairs} from 'lodash-es'
 

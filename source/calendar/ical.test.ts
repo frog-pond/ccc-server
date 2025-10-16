@@ -3,7 +3,7 @@ import InternetCalendar from 'ical.js'
 import moment from 'moment'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
-import {EventSchema} from './types.js'
+import {EventSchema} from './types.ts'
 
 /**
  * Tests for the ical.js event parser

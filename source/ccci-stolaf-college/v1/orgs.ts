@@ -1,8 +1,8 @@
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
+import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 
-import {presence as _presence} from '../../student-orgs/presence.js'
-import type {Context} from '../../ccc-server/context.js'
+import {presence as _presence} from '../../student-orgs/presence.ts'
+import type {Context} from '../../ccc-server/context.ts'
 
 const CACHE_DURATION = ONE_HOUR * 36
 
