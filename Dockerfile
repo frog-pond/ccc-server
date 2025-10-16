@@ -4,14 +4,14 @@ FROM node AS modules_dev
 WORKDIR /app
 
 COPY --link ./package.json ./package-lock.json ./
-RUN npm ci
 
 
 FROM modules_dev AS modules
-RUN npm ci --omit=dev
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 
 FROM modules_dev AS build
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY --link tsconfig.json .
 COPY --link ./source ./source
 COPY --link ./types ./types
