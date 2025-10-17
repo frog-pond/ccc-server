@@ -1,7 +1,7 @@
 version: '3'
 services:
   proxy:
-    image: nginx:alpine@sha256:56c93b2a17e185519a5f420173f899783f0890da60463011c59ddbb904f02093
+    image: nginx:alpine@sha256:61e01287e546aac28a3f56839c136b31f590273f3b41187a36f46f6a03bbfe22
     restart: unless-stopped
     ports:
       - '80:80'
