@@ -1,15 +1,15 @@
-import {get} from '../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
 import InternetCalendar from 'ical.js'
-import {EventSchema} from './types.js'
+import {EventSchema} from './types.ts'
 import {sortBy} from 'lodash-es'
 
 function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	let description = JSDOM.fragment(event.description ?? '').textContent?.trim() ?? ''
+	let description = JSDOM.fragment(event.description ?? '').textContent.trim()
 
 	return EventSchema.parse({
 		dataSource: 'ical',

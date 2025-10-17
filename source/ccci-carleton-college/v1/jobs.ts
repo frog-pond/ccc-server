@@ -1,12 +1,12 @@
-import {get} from '../../ccc-lib/http.js'
-import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.js'
+import {get} from '../../ccc-lib/http.ts'
+import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
-import type {Context} from '../../ccc-server/context.js'
+import type {Context} from '../../ccc-server/context.ts'
 import assert from 'node:assert/strict'
-import {buildDetailMap} from '../../ccc-lib/html.js'
+import {buildDetailMap} from '../../ccc-lib/html.ts'
 
 const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
 const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})
@@ -33,7 +33,7 @@ export async function fetchJob(link: URL) {
 	const title = jobs.querySelector('h3')
 	assert(title)
 
-	let titleText = title.textContent?.trim() ?? ''
+	let titleText = title.textContent.trim()
 	const offCampus = titleText.startsWith('Off Campus')
 	if (offCampus) {
 		titleText = titleText.replace(/^Off Campus: +/, '')
@@ -63,7 +63,7 @@ async function _getAllJobs() {
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
 		(link) => {
-			let href = link.textContent?.trim() ?? ''
+			let href = link.textContent.trim()
 			return URL.canParse(href) ? [new URL(href)] : []
 		},
 	)

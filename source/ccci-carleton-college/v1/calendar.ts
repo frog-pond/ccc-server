@@ -1,9 +1,9 @@
-import {googleCalendar} from '../../calendar/google.js'
-import {ical} from '../../calendar/ical.js'
-import {ONE_MINUTE} from '../../ccc-lib/constants.js'
+import {googleCalendar} from '../../calendar/google.ts'
+import {ical} from '../../calendar/ical.ts'
+import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import moment from 'moment'
-import type {Context} from '../../ccc-server/context.js'
+import type {Context} from '../../ccc-server/context.ts'
 
 export const getGoogleCalendar = mem(googleCalendar, {maxAge: ONE_MINUTE})
 export const getInternetCalendar = mem(ical, {maxAge: ONE_MINUTE})

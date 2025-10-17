@@ -1,5 +1,5 @@
-import {htmlToMarkdown as toMarkdown} from '../../ccc-lib/html-to-markdown.js'
-import type {Context} from '../../ccc-server/context.js'
+import {htmlToMarkdown as toMarkdown} from '../../ccc-lib/html-to-markdown.ts'
+import type {Context} from '../../ccc-server/context.ts'
 
 export function htmlToMarkdown(ctx: Context) {
 	ctx.assert(

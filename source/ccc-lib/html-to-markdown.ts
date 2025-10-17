@@ -1,5 +1,5 @@
 import Turndown from 'turndown'
-import {makeAbsoluteUrl} from './url.js'
+import {makeAbsoluteUrl} from './url.ts'
 
 interface TurndownOptions {
 	baseUrl?: string

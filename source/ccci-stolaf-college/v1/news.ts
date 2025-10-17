@@ -1,8 +1,8 @@
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import {fetchRssFeed} from '../../feeds/rss.js'
-import {fetchWpJson, deprecatedWpJson} from '../../feeds/wp-json.js'
+import {ONE_HOUR} from '../../ccc-lib/constants.ts'
+import {fetchRssFeed} from '../../feeds/rss.ts'
+import {fetchWpJson, deprecatedWpJson} from '../../feeds/wp-json.ts'
 import mem from 'memoize'
-import type {Context} from '../../ccc-server/context.js'
+import type {Context} from '../../ccc-server/context.ts'
 
 const cachedRssFeed = mem(fetchRssFeed, {maxAge: ONE_HOUR})
 const cachedWpJsonFeed = mem(fetchWpJson, {maxAge: ONE_HOUR})

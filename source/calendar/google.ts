@@ -1,8 +1,8 @@
-import {get} from '../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
-import {EventSchema} from './types.js'
+import {EventSchema} from './types.ts'
 import {z} from 'zod'
 
 type GoogleCalendarEventType = z.infer<typeof GoogleCalendarEventSchema>
@@ -29,7 +29,7 @@ function convertGoogleEvents(data: GoogleCalendarEventType[], now = moment()) {
 		const startTime = moment(event.start.date ?? event.start.dateTime)
 		const endTime = moment(event.end.date ?? event.end.dateTime)
 		let description = (event.description ?? '').replace('<br>', '\n')
-		description = JSDOM.fragment(description).textContent?.trim() ?? ''
+		description = JSDOM.fragment(description).textContent.trim()
 
 		return EventSchema.parse({
 			dataSource: 'google',

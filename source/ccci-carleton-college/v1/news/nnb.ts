@@ -1,4 +1,4 @@
-import {get} from '../../../ccc-lib/http.js'
+import {get} from '../../../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
 import {groupBy, toPairs} from 'lodash-es'
 
@@ -11,9 +11,9 @@ export async function noonNewsBulletin() {
 	let bulletinEls = [...dom.window.document.querySelectorAll('item')]
 	let bulletins = bulletinEls.map((item) => {
 		let description = item.querySelector('description')?.textContent ?? ''
-		description = JSDOM.fragment(description).textContent?.trim() ?? ''
+		description = JSDOM.fragment(description).textContent.trim()
 		let category = item.querySelector('category')?.textContent ?? ''
-		category = JSDOM.fragment(category).textContent?.trim() ?? ''
+		category = JSDOM.fragment(category).textContent.trim()
 		return {description, category}
 	})
 

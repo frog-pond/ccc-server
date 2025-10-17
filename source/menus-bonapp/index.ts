@@ -1,17 +1,17 @@
-import {get} from '../ccc-lib/http.js'
-import {ONE_MINUTE} from '../ccc-lib/constants.js'
+import {get} from '../ccc-lib/http.ts'
+import {ONE_MINUTE} from '../ccc-lib/constants.ts'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
 import mem from 'memoize'
-import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe} from './helpers.js'
+import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe} from './helpers.ts'
 import {
 	CafeInfoResponseSchema,
 	CafeMenuResponseSchema,
 	type CafeInfoResponseType,
 	type CafeMenuResponseType,
-} from './types.js'
+} from './types.ts'
 
-import {BamcoPageContentsSchema} from './types-bonapp.js'
+import {BamcoPageContentsSchema} from './types-bonapp.ts'
 
 const _getBamcoPage = mem((url: string) => get(url).text(), {maxAge: ONE_MINUTE})
 

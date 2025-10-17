@@ -1,10 +1,10 @@
-import {test, expect} from 'vitest'
+import {test} from 'node:test'
 import {noop} from 'lodash-es'
 
-import * as menu from './menu.js'
-import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../../menus-bonapp/types.js'
-import type {Context} from '../../ccc-server/context.js'
-import {keysOf} from '../../ccc-lib/keysOf.js'
+import * as menu from './menu.ts'
+import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../../menus-bonapp/types.ts'
+import type {Context} from '../../ccc-server/context.ts'
+import {keysOf} from '../../ccc-lib/keysOf.ts'
 
 const cafeInfoFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Promise<unknown>> = {
 	stav: menu.stavCafe,
@@ -30,20 +30,22 @@ const cafeMenuFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Pro
 	schulze: menu.schulzeMenu,
 } as const
 
-for (const cafe of keysOf(menu.CAFE_URLS)) {
-	test(
-		`${cafe} cafe endpoint should return a BamcoCafeInfo struct`,
-		{timeout: 15_000},
-		async () => {
+void test('cafe endpoints', {concurrency: true}, (t) => {
+	for (const cafe of keysOf(menu.CAFE_URLS)) {
+		void t.test(`${cafe} should return a BamcoCafeInfo`, {timeout: 15_000}, async (t) => {
 			const ctx = {cacheControl: noop, body: null} as Context
-			await cafeInfoFunctions[cafe](ctx)
-			expect(() => CafeInfoResponseSchema.parse(ctx.body)).not.toThrow()
-		},
-	)
+			await t.assert.doesNotReject(cafeInfoFunctions[cafe](ctx))
+			t.assert.doesNotThrow(() => CafeInfoResponseSchema.parse(ctx.body))
+		})
+	}
+})
 
-	test(`${cafe} menu endpoint should return a CafeMenu struct`, {timeout: 15_000}, async () => {
-		const ctx = {cacheControl: noop, body: null} as Context
-		await cafeMenuFunctions[cafe](ctx)
-		expect(() => CafeMenuResponseSchema.parse(ctx.body)).not.toThrow()
-	})
-}
+void test('menu endpoints', {concurrency: true}, (t) => {
+	for (const cafe of keysOf(menu.CAFE_URLS)) {
+		void t.test(`${cafe} should return a CafeMenu`, {timeout: 15_000}, async (t) => {
+			const ctx = {cacheControl: noop, body: null} as Context
+			await t.assert.doesNotReject(cafeMenuFunctions[cafe](ctx))
+			t.assert.doesNotThrow(() => CafeMenuResponseSchema.parse(ctx.body))
+		})
+	}
+})

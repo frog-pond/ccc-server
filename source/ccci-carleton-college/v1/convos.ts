@@ -1,20 +1,21 @@
-import {get} from '../../ccc-lib/http.js'
-import {ONE_HOUR} from '../../ccc-lib/constants.js'
-import {makeAbsoluteUrl} from '../../ccc-lib/url.js'
-import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.js'
+import {get} from '../../ccc-lib/http.ts'
+import {ONE_HOUR} from '../../ccc-lib/constants.ts'
+import {makeAbsoluteUrl} from '../../ccc-lib/url.ts'
+import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.ts'
 import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import moment from 'moment'
-import type {Context} from '../../ccc-server/context.js'
+import type {Context} from '../../ccc-server/context.ts'
 import assert from 'node:assert/strict'
 
 const archiveBase = 'https://feed.podbean.com/carletonconvos/feed.xml'
 
 function processConvo(event: Element) {
-	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent?.trim()
+	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent.trim()
 
-	let description =
-		JSDOM.fragment(event.querySelector('description')?.textContent ?? '').textContent?.trim() ?? ''
+	let description = JSDOM.fragment(
+		event.querySelector('description')?.textContent ?? '',
+	).textContent.trim()
 
 	let pubDate = moment(event.querySelector('pubDate')?.textContent)
 

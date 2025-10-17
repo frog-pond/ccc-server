@@ -1,6 +1,6 @@
-import {get} from '../ccc-lib/http.js'
+import {get} from '../ccc-lib/http.ts'
 import {JSDOM} from 'jsdom'
-import {FeedItemSchema, type FeedItemType} from './types.js'
+import {FeedItemSchema, type FeedItemType} from './types.ts'
 import type {SearchParamsOption} from 'ky'
 import {z} from 'zod'
 import moment from 'moment'
@@ -76,10 +76,10 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 				? item.date_gmt
 				: `${item.date_gmt}Z`,
 		).toISOString(),
-		excerpt: JSDOM.fragment(item.excerpt.rendered).textContent?.trim() ?? '',
+		excerpt: JSDOM.fragment(item.excerpt.rendered).textContent.trim(),
 		featuredImage: featuredImage,
 		link: item.link,
-		title: JSDOM.fragment(item.title.rendered).textContent?.trim() ?? '',
+		title: JSDOM.fragment(item.title.rendered).textContent.trim(),
 	})
 }
 
