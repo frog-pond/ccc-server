@@ -50,7 +50,7 @@
     "koa-json-error": "3.1.2",
     "koa-logger": "4.0.0",
     "koa-response-time": "2.1.0",
-    "koa-router": "12.0.1",
+    "koa-router": "14.0.0",
     "ky": "^1.3.0",
     "lodash-es": "^4.17.21",
     "memoize": "10.1.0",
