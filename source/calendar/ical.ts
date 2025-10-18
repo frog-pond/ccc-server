@@ -1,4 +1,4 @@
-import {get} from '../ccc-lib/http.ts'
+import {getText} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {JSDOM} from 'jsdom'
@@ -36,7 +36,7 @@ export async function ical(
 	{onlyFuture = true, maxEndDate}: {onlyFuture?: boolean; maxEndDate?: moment.Moment} = {},
 	now = moment(),
 ) {
-	let body = await get(url, {headers: {accept: 'text/calendar'}}).text()
+	let body = await getText(url, {headers: {accept: 'text/calendar'}})
 
 	let comp = InternetCalendar.Component.fromString(body)
 	let events = comp

@@ -1,15 +1,15 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
-const GET = mem(get, {maxAge: ONE_HOUR})
+const GET = mem(getJson, {maxAge: ONE_HOUR})
 
 let url = GH_PAGES('building-hours.json')
 
 export function getBuildingHours() {
-	return GET(url).json()
+	return GET(url)
 }
 
 export async function buildingHours(ctx: Context) {

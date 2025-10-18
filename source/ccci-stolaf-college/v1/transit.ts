@@ -1,4 +1,4 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.ts'
@@ -6,8 +6,8 @@ import type {Context} from '../../ccc-server/context.ts'
 
 const getBus = mem(
 	async () => {
-		const response = await get(GH_PAGES('bus-times.json'))
-		return response.json()
+		const response = await getJson(GH_PAGES('bus-times.json'))
+		return response
 	},
 	{maxAge: ONE_HOUR},
 )
@@ -20,8 +20,8 @@ export async function bus(ctx: Context) {
 
 const getModes = mem(
 	async () => {
-		const response = await get(GH_PAGES('transportation.json'))
-		return response.json()
+		const response = await getJson(GH_PAGES('transportation.json'))
+		return response
 	},
 	{maxAge: ONE_HOUR},
 )

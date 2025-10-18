@@ -1,4 +1,4 @@
-import ky, {type AfterResponseHook, type BeforeRequestHook} from 'ky'
+import ky, {type AfterResponseHook, type BeforeRequestHook, type Input, type Options} from 'ky'
 import memoize from 'memoize'
 import {ONE_MINUTE} from './constants.ts'
 
@@ -27,4 +27,9 @@ export const http = ky.extend({
 	},
 })
 
-export const get = memoize(http.get, {maxAge: ONE_MINUTE})
+const _getText = (input: Input, options?: Options) => http.get(input, options).text()
+const _getJson = <T = unknown>(input: Input, options?: Options) =>
+	http.get(input, options).json<T>()
+
+export const getText = memoize(_getText, {maxAge: ONE_MINUTE})
+export const getJson = memoize(_getJson, {maxAge: ONE_MINUTE})

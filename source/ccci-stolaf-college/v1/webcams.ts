@@ -1,15 +1,15 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
-const GET = mem(get, {maxAge: ONE_DAY})
+const GET = mem(getJson, {maxAge: ONE_DAY})
 
 let url = GH_PAGES('webcams.json')
 
 export function getWebcams() {
-	return GET(url).json()
+	return GET(url)
 }
 
 export async function webcams(ctx: Context) {

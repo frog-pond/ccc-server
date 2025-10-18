@@ -1,4 +1,4 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getText} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import {cleanTextBlock, findHtmlKey, buildDetailMap} from '../../ccc-lib/html.ts'
 import mem from 'memoize'
@@ -8,8 +8,8 @@ import getUrls from 'get-urls'
 import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
 
-const GET_ONE_DAY = mem(get, {maxAge: ONE_DAY})
-const GET_TWO_DAYS = mem(get, {maxAge: ONE_DAY * 2})
+const GET_ONE_DAY = mem(getText, {maxAge: ONE_DAY})
+const GET_TWO_DAYS = mem(getText, {maxAge: ONE_DAY * 2})
 
 const getJobsUrl = () => new URL('https://wp.stolaf.edu/student-jobs/wp-json/wp/v2/pages/80')
 
@@ -79,7 +79,7 @@ function buildJobDetailResponse(url: URL, dom: JSDOM, detailMap: Map<string, str
 }
 
 async function fetchDetail(url: URL) {
-	const body = await GET_TWO_DAYS(url).text()
+	const body = await GET_TWO_DAYS(url)
 
 	/**
 	 * run-scripts value is needed to properly evaluate javascript to display an email address.
@@ -183,7 +183,7 @@ async function _getJobs() {
 		const rendered = z
 			.object({content: z.object({rendered: z.string()})})
 			// eslint-disable-next-line no-await-in-loop
-			.parse(await GET_ONE_DAY(jobsUrl).json()).content.rendered
+			.parse(await GET_ONE_DAY(jobsUrl)).content.rendered
 
 		const dom = new JSDOM(rendered, {contentType: 'text/html'})
 		previousDom = dom

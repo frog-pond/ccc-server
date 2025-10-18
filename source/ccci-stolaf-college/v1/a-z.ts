@@ -1,4 +1,4 @@
-import {get} from '../../ccc-lib/http.ts'
+import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.ts'
@@ -30,16 +30,16 @@ const AllAboutOlafExtraAzResponseSchema = z.object({
 const getOlafAtoZ = mem(
 	async () => {
 		let url = 'https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z'
-		const response = await get(url)
-		return StOlafAzResponseSchema.parse(await response.json())
+		const response = await getJson(url)
+		return StOlafAzResponseSchema.parse(await response)
 	},
 	{maxAge: ONE_DAY},
 )
 
 const getPagesAtoZ = mem(
 	async () => {
-		const response = await get(GH_PAGES('a-to-z.json'))
-		return AllAboutOlafExtraAzResponseSchema.parse(await response.json())
+		const response = await getJson(GH_PAGES('a-to-z.json'))
+		return AllAboutOlafExtraAzResponseSchema.parse(await response)
 	},
 	{maxAge: ONE_DAY},
 )
