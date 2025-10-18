@@ -17,7 +17,7 @@ const _getBamcoPage = mem((url: string) => getText(url), {maxAge: ONE_MINUTE})
 
 async function getBonAppWebpage(url: string | URL) {
 	const virtualConsole = new VirtualConsole()
-	virtualConsole.sendTo(console, {omitJSDOMErrors: true})
+	virtualConsole.forwardTo(console, {jsdomErrors: 'none'})
 	virtualConsole.on('jsdomError', (err) => {
 		let messagesToSkip = [
 			'Uncaught [ReferenceError: wp is not defined]',
