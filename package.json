@@ -40,7 +40,7 @@
     "ical.js": "^2.0.1",
     "is-absolute-url": "5.0.0",
     "jsdom": "27.0.1",
-    "koa": "3.0.2",
+    "koa": "3.0.3",
     "koa-bodyparser": "4.4.1",
     "koa-cash": "^5.0.0",
     "koa-compress": "5.1.1",
