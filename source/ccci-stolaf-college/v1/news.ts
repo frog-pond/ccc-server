@@ -52,10 +52,10 @@ export async function mess(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await cachedWpJsonFeed(
-		new URL('https://www.theolafmessenger.com/wp-json/wp/v2/posts/'),
-		{per_page: 10, _embed: true},
-	)
+	ctx.body = await cachedWpJsonFeed(new URL('https://www.olafmessenger.com/wp-json/wp/v2/posts/'), {
+		per_page: 10,
+		_embed: true,
+	})
 }
 
 export function ksto(ctx: Context) {

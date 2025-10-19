@@ -47,9 +47,7 @@ export async function carletonian(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await cachedRssFeed(
-		new URL('https://apps.carleton.edu/carletonian/feeds/blogs/tonian'),
-	)
+	ctx.body = await cachedRssFeed(new URL('https://thecarletonian.com/feed/'))
 }
 
 export async function krlxNews(ctx: Context) {
