@@ -1,6 +1,5 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
-import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import {sortBy} from 'lodash-es'
 import {z} from 'zod'
@@ -82,9 +81,8 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 	return SortableCarletonStudentOrgSchema.parse(orgObj)
 }
 
-async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
-	let orgsUrl = 'https://apps.carleton.edu/student/orgs/'
-	let body = await getText(orgsUrl)
+async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
+	let body = await getText('https://apps.carleton.edu/student/orgs/')
 	let dom = new JSDOM(body)
 
 	const allOrgWrappers = dom.window.document.querySelectorAll('.orgContainer, .careerField')
@@ -115,10 +113,9 @@ async function _getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	return sortBy(Array.from(allOrgs.values()), '$sortableName')
 }
 
-export const getOrgs = mem(_getOrgs, {maxAge: ONE_HOUR * 6})
-
 export async function orgs(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
+	if (ctx.cached(ONE_HOUR * 6)) return
 
 	ctx.body = await getOrgs()
 }

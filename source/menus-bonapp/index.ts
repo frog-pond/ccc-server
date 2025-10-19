@@ -1,8 +1,6 @@
 import {getJson, getText} from '../ccc-lib/http.ts'
-import {ONE_MINUTE} from '../ccc-lib/constants.ts'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
-import mem from 'memoize'
 import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe} from './helpers.ts'
 import {
 	CafeInfoResponseSchema,
@@ -12,8 +10,6 @@ import {
 } from './types.ts'
 
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
-
-const _getBamcoPage = mem((url: string) => getText(url), {maxAge: ONE_MINUTE})
 
 async function getBonAppWebpage(url: string | URL) {
 	const virtualConsole = new VirtualConsole()
@@ -30,7 +26,7 @@ async function getBonAppWebpage(url: string | URL) {
 		Sentry.captureException(err)
 	})
 
-	const body = await _getBamcoPage(url.toString())
+	const body = await getText(url.toString())
 	return new JSDOM(body, {
 		runScripts: 'dangerously',
 		virtualConsole,
@@ -78,8 +74,7 @@ export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 }
 
 export function nutrition(itemId: string) {
-	let url = 'https://legacy.cafebonappetit.com/api/2/items'
-	return getJson(url, {searchParams: {item: itemId}})
+	return getJson('https://legacy.cafebonappetit.com/api/2/items', {searchParams: {item: itemId}})
 }
 
 export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {

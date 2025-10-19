@@ -2,13 +2,10 @@ import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {makeAbsoluteUrl} from '../../ccc-lib/url.ts'
 import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.ts'
-import mem from 'memoize'
 import {JSDOM} from 'jsdom'
 import moment from 'moment'
 import type {Context} from '../../ccc-server/context.ts'
 import assert from 'node:assert/strict'
-
-const archiveBase = 'https://feed.podbean.com/carletonconvos/feed.xml'
 
 function processConvo(event: Element) {
 	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent.trim()
@@ -63,10 +60,11 @@ async function fetchUpcoming(eventId: string) {
 	}
 }
 
-export const getUpcoming = mem(fetchUpcoming, {maxAge: ONE_HOUR * 6})
+export const getUpcoming = fetchUpcoming
 
 export async function upcomingDetail(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
+	if (ctx.cached(ONE_HOUR * 6)) return
 
 	let detailId = ctx.URL.searchParams.get('id')
 	ctx.assert(detailId, 400, '?id is required')
@@ -74,7 +72,7 @@ export async function upcomingDetail(ctx: Context) {
 }
 
 async function fetchArchived() {
-	let body = await getText(archiveBase)
+	let body = await getText('https://feed.podbean.com/carletonconvos/feed.xml')
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 	let convos = Array.from(dom.window.document.querySelectorAll('rss channel item')).map(
 		processConvo,
@@ -83,9 +81,11 @@ async function fetchArchived() {
 	return convos
 }
 
-export const getArchived = mem(fetchArchived, {maxAge: ONE_HOUR * 6})
+export const getArchived = fetchArchived
 
 export async function archived(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
+	if (ctx.cached(ONE_HOUR * 6)) return
+
 	ctx.body = await getArchived()
 }

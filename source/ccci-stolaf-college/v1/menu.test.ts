@@ -33,7 +33,7 @@ const cafeMenuFunctions: Record<keyof typeof menu.CAFE_URLS, (c: Context) => Pro
 void test('cafe endpoints', {concurrency: true}, (t) => {
 	for (const cafe of keysOf(menu.CAFE_URLS)) {
 		void t.test(`${cafe} should return a BamcoCafeInfo`, {timeout: 15_000}, async (t) => {
-			const ctx = {cacheControl: noop, body: null} as Context
+			const ctx = {cacheControl: noop, cached: noop, body: null} as Context
 			await t.assert.doesNotReject(cafeInfoFunctions[cafe](ctx))
 			t.assert.doesNotThrow(() => CafeInfoResponseSchema.parse(ctx.body))
 		})
@@ -43,7 +43,7 @@ void test('cafe endpoints', {concurrency: true}, (t) => {
 void test('menu endpoints', {concurrency: true}, (t) => {
 	for (const cafe of keysOf(menu.CAFE_URLS)) {
 		void t.test(`${cafe} should return a CafeMenu`, {timeout: 15_000}, async (t) => {
-			const ctx = {cacheControl: noop, body: null} as Context
+			const ctx = {cacheControl: noop, cached: noop, body: null} as Context
 			await t.assert.doesNotReject(cafeMenuFunctions[cafe](ctx))
 			t.assert.doesNotThrow(() => CafeMenuResponseSchema.parse(ctx.body))
 		})

@@ -1,19 +1,10 @@
 import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
-
-const GET = mem(getJson, {maxAge: ONE_HOUR})
-
-let url = GH_PAGES('faqs.json')
-
-export function getFaqs() {
-	return GET(url)
-}
 
 export async function faqs(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 
-	ctx.body = await getFaqs()
+	ctx.body = await getJson(GH_PAGES('faqs.json'))
 }

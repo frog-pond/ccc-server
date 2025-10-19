@@ -1,19 +1,11 @@
 import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
-const GET = mem(getJson, {maxAge: ONE_DAY})
-
-let url = GH_PAGES('color-printers.json')
-
-export function getColorPrinters() {
-	return GET(url)
-}
-
 export async function colorPrinters(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = await getColorPrinters()
+	ctx.body = await getJson(GH_PAGES('color-printers.json'))
 }

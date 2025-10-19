@@ -3,7 +3,6 @@ import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import moment from 'moment-timezone'
 import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
-import mem from 'memoize'
 
 const StreamEntry = z.object({
 	starttime: z.string(),
@@ -41,26 +40,24 @@ const StOlafStreamsParamsSchema = z.object({
 })
 type StOlafStreamsParamsType = z.infer<typeof StOlafStreamsParamsSchema>
 
-const getStreams = mem(
-	async (params: StOlafStreamsParamsType) => {
-		const url = 'https://www.stolaf.edu/multimedia/api/collection'
-		const response = await getJson(url, {searchParams: params})
-		const json = (await response) as Promise<(z.infer<typeof StreamEntry> & {starttime: string})[]>
-		const data = StreamEntryCollection.parse(json)
+const getStreams = async (params: StOlafStreamsParamsType) => {
+	const url = 'https://www.stolaf.edu/multimedia/api/collection'
+	const response = await getJson(url, {searchParams: params})
+	const json = (await response) as Promise<(z.infer<typeof StreamEntry> & {starttime: string})[]>
+	const data = StreamEntryCollection.parse(json)
 
-		return data.results.map((stream) => {
-			let {starttime} = stream
-			return {
-				...stream,
-				starttime: moment.tz(starttime, 'YYYY-MM-DD HH:mm', 'America/Chicago').toISOString(),
-			}
-		})
-	},
-	{maxAge: ONE_HOUR},
-)
+	return data.results.map((stream) => {
+		let {starttime} = stream
+		return {
+			...stream,
+			starttime: moment.tz(starttime, 'YYYY-MM-DD HH:mm', 'America/Chicago').toISOString(),
+		}
+	})
+}
 
 export async function upcoming(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
+	if (ctx.cached(ONE_HOUR)) return
 
 	const {
 		dateFrom = moment().tz('America/Chicago').format('YYYY-MM-DD'),
@@ -79,6 +76,7 @@ export async function upcoming(ctx: Context) {
 
 export async function archived(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
+	if (ctx.cached(ONE_HOUR)) return
 
 	const {
 		dateFrom = moment().subtract(2, 'month').tz('America/Chicago').format('YYYY-MM-DD'),
@@ -92,5 +90,6 @@ export async function archived(ctx: Context) {
 		date_to: dateTo,
 		sort,
 	})
+
 	ctx.body = await getStreams(params)
 }

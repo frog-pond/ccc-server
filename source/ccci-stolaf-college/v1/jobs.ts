@@ -1,15 +1,11 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import {cleanTextBlock, findHtmlKey, buildDetailMap} from '../../ccc-lib/html.ts'
-import mem from 'memoize'
 import pMap from 'p-map'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
 import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
-
-const GET_ONE_DAY = mem(getText, {maxAge: ONE_DAY})
-const GET_TWO_DAYS = mem(getText, {maxAge: ONE_DAY * 2})
 
 const getJobsUrl = () => new URL('https://wp.stolaf.edu/student-jobs/wp-json/wp/v2/pages/80')
 
@@ -79,7 +75,7 @@ function buildJobDetailResponse(url: URL, dom: JSDOM, detailMap: Map<string, str
 }
 
 async function fetchDetail(url: URL) {
-	const body = await GET_TWO_DAYS(url)
+	const body = await getText(url)
 
 	/**
 	 * run-scripts value is needed to properly evaluate javascript to display an email address.
@@ -164,7 +160,7 @@ export function findPageUrls(dom: JSDOM) {
  * So we end up making multiple requests to the paginated wp-json endpoint to build a list of
  * all job posting urls, and finally request each url we find to build our data.
  */
-async function _getJobs() {
+export async function getJobs() {
 	let allUrls: URL[] = []
 
 	/**
@@ -183,7 +179,7 @@ async function _getJobs() {
 		const rendered = z
 			.object({content: z.object({rendered: z.string()})})
 			// eslint-disable-next-line no-await-in-loop
-			.parse(await GET_ONE_DAY(jobsUrl)).content.rendered
+			.parse(await getText(jobsUrl)).content.rendered
 
 		const dom = new JSDOM(rendered, {contentType: 'text/html'})
 		previousDom = dom
@@ -195,10 +191,9 @@ async function _getJobs() {
 	return pMap(allUrls, fetchDetail, {concurrency: 4})
 }
 
-export const getJobs = mem(_getJobs, {maxAge: ONE_DAY})
-
 export async function jobs(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
 
 	ctx.body = await getJobs()
 }
