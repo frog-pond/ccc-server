@@ -1,4 +1,3 @@
-import conditional from 'koa-conditional-get'
 import etag from '@koa/etag'
 import compress from 'koa-compress'
 import {withBodyParsers} from '@koa/body-parsers'
@@ -9,6 +8,7 @@ import * as Sentry from '@sentry/node'
 import {z} from 'zod'
 import type {ContextState, RouterState} from './context.ts'
 import { accessLog } from '../ccc-koa/access-log.ts'
+import { conditionalGet } from '../ccc-koa/conditional-get.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -62,7 +62,7 @@ async function main() {
 	app.use(accessLog())
 	app.use(compress())
 	// etag works together with conditional-get
-	app.use(conditional())
+	app.use(conditionalGet())
 	app.use(etag())
 	// support adding cache-control headers
 	cacheControl(app)
