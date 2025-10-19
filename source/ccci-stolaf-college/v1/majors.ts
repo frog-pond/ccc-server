@@ -1,17 +1,15 @@
 import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import mem from 'memoize'
 import type {Context} from '../../ccc-server/context.ts'
-
-const GET = mem(getJson, {maxAge: ONE_DAY})
 
 export function getMajors() {
 	let url = 'https://www.stolaf.edu/directory/majors'
-	return GET(url, {searchParams: {format: 'json'}})
+	return getJson(url, {searchParams: {format: 'json'}})
 }
 
 export async function majors(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
 
 	ctx.body = await getMajors()
 }

@@ -1,15 +1,11 @@
 import {getText} from '../../ccc-lib/http.ts'
-import {ONE_DAY, ONE_HOUR} from '../../ccc-lib/constants.ts'
-import mem from 'memoize'
+import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
 import type {Context} from '../../ccc-server/context.ts'
 import assert from 'node:assert/strict'
 import {buildDetailMap} from '../../ccc-lib/html.ts'
-
-const GET_ONE_DAY = mem(getText, {maxAge: ONE_DAY})
-const GET_TWO_DAYS = mem(getText, {maxAge: ONE_DAY * 2})
 
 const jobsUrl = 'https://apps.carleton.edu/campus/sfs/employment/feeds/jobs'
 
@@ -25,7 +21,7 @@ export async function fetchJob(link: URL) {
 		link.protocol = 'https:'
 	}
 
-	const body = await GET_TWO_DAYS(link)
+	const body = await getText(link)
 	const dom = new JSDOM(body)
 
 	const jobs = dom.window.document.querySelector('#jobs')
@@ -58,8 +54,8 @@ export async function fetchJob(link: URL) {
 	}
 }
 
-async function _getAllJobs() {
-	let body = await GET_ONE_DAY(jobsUrl)
+async function getAllJobs() {
+	let body = await getText(jobsUrl)
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
 		(link) => {
@@ -70,10 +66,9 @@ async function _getAllJobs() {
 	return pMap(jobLinks, fetchJob, {concurrency: 4})
 }
 
-export const getJobs = mem(_getAllJobs, {maxAge: ONE_HOUR})
-
 export async function jobs(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
+	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = await getJobs()
+	ctx.body = await getAllJobs()
 }

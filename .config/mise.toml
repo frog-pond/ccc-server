@@ -21,22 +21,17 @@ run = "node source/ccc-server/index.ts"
 
 [tasks."start:watch"]
 run = "node --watch source/ccc-server/index.ts"
-env = { NODE_ENV = "development" }
-
-[tasks."start:dev"]
-run = { task = "start" }
-env = { NODE_ENV = "development" }
 
 [tasks."start:prod"]
 run = { task = "start" }
 env = { NODE_ENV = "production" }
 
 [tasks."stolaf-college"]
-run = { task = "start:dev" }
+run = "mise run start"
 env = { INSTITUTION = "stolaf-college" }
 
 [tasks."carleton-college"]
-run = { task = "start:dev" }
+run = "mise run start"
 env = { INSTITUTION = "carleton-college" }
 
 [tasks."test:stolaf-college"]

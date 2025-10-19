@@ -1,4 +1,4 @@
-import {getJson, http} from '../ccc-lib/http.ts'
+import {getJson} from '../ccc-lib/http.ts'
 import {sortBy} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
@@ -64,7 +64,7 @@ const fetchOrg = async (base: string, orgUri: string) =>
 export async function presence(school: string): Promise<SortableStudentOrgType[]> {
 	let orgsUrl = `https://api.presence.io/${school}/v1/organizations`
 
-	let body = BasicPresenceOrgSchema.array().parse(await http.get(orgsUrl))
+	let body = BasicPresenceOrgSchema.array().parse(await getJson(orgsUrl))
 
 	let orgs = await pMap(body, (org) => fetchOrg(orgsUrl, org.uri), {
 		concurrency: 8,

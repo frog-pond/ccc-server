@@ -1,6 +1,5 @@
 import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import mem from 'memoize'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
@@ -27,22 +26,15 @@ const AllAboutOlafExtraAzResponseSchema = z.object({
 	),
 })
 
-const getOlafAtoZ = mem(
-	async () => {
-		let url = 'https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z'
-		const response = await getJson(url)
-		return StOlafAzResponseSchema.parse(await response)
-	},
-	{maxAge: ONE_DAY},
-)
+const getOlafAtoZ = async () => {
+	const response = await getJson('https://wp.stolaf.edu/wp-json/site-data/sidebar/a-z')
+	return StOlafAzResponseSchema.parse(await response)
+}
 
-const getPagesAtoZ = mem(
-	async () => {
-		const response = await getJson(GH_PAGES('a-to-z.json'))
-		return AllAboutOlafExtraAzResponseSchema.parse(await response)
-	},
-	{maxAge: ONE_DAY},
-)
+const getPagesAtoZ = async () => {
+	const response = await getJson(GH_PAGES('a-to-z.json'))
+	return AllAboutOlafExtraAzResponseSchema.parse(await response)
+}
 
 // merge custom entries defined on GH pages with the fetched WP-JSON
 function combineResponses(
@@ -71,6 +63,7 @@ function combineResponses(
 
 export async function atoz(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
 
 	let pagesResponse = await getPagesAtoZ()
 	let olafResponse = await getOlafAtoZ()
