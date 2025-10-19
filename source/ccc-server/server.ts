@@ -81,21 +81,48 @@ async function main() {
 
 	// add cached response support at the Koa level
 	// (individual route handlers can use ctx.cache to set caching parameters)
-	let cache = new QuickLRU<string, CacheObject|undefined>({maxSize: 10_000, maxAge: ONE_DAY})
+	let cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
 	app.use(
 		cachable({
-			maxAge: ONE_DAY,
 			setCachedHeader: true,
-			get: (key) => cache.get(key),
-			set: (key, value) => {
+			get(key) {
+				return cache.get(key)
+			},
+			set(key, value, maxAge = ONE_DAY) {
 				if (value === undefined) {
 					cache.delete(key)
 					return
 				}
-				cache.set(key, value)
+				cache.set(key, value, {maxAge})
 			},
 		}),
 	)
+
+	router.get('/_cache', (ctx) => {
+		if (ctx.cached(10000)) return
+		let result = new Map()
+		for (const key of cache.keys()) {
+			result.set(key, Math.floor((cache.expiresIn(key) ?? 0) / 1000).toFixed(0))
+		}
+		ctx.body = Object.fromEntries(result.entries())
+	})
+
+	router.delete('/_cache', (ctx) => {
+		let keys = ctx.URL.searchParams.getAll('key')
+		if (keys.length) {
+			let found = 0
+			for (let key of keys) {
+				let didDelete = cache.delete(key)
+				if (didDelete) found++
+			}
+			ctx.response.set('X-Cache-Deleted', found.toFixed(0))
+		} else {
+			let size = cache.size
+			cache.clear()
+			ctx.response.set('X-Cache-Deleted', size.toFixed(0))
+		}
+		ctx.status = 204
+	})
 
 	// hook in the router
 	app.use(router.routes())
