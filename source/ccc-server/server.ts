@@ -1,8 +1,6 @@
 import conditional from 'koa-conditional-get'
 import etag from '@koa/etag'
 import compress from 'koa-compress'
-import logger from 'koa-logger'
-import responseTime from 'koa-response-time'
 import bodyParser from 'koa-bodyparser'
 import cacheControl from 'koa-ctx-cache-control'
 import Router from '@koa/router'
@@ -10,6 +8,7 @@ import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {z} from 'zod'
 import type {ContextState, RouterState} from './context.ts'
+import { accessLog } from '../ccc-koa/access-log.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -60,8 +59,7 @@ async function main() {
 	//
 	// attach middleware
 	//
-	app.use(responseTime({hrtime: true}))
-	app.use(logger())
+	app.use(accessLog())
 	app.use(compress())
 	// etag works together with conditional-get
 	app.use(conditional())
