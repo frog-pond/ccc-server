@@ -1,12 +1,10 @@
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {fetchRssFeed} from '../../feeds/rss.ts'
 import {fetchWpJson, deprecatedWpJson} from '../../feeds/wp-json.ts'
-import {noonNewsBulletin} from './news/nnb.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 const cachedRssFeed = fetchRssFeed
 const cachedWpJsonFeed = fetchWpJson
-const cachedNoonNewsBulletin = noonNewsBulletin
 
 export async function rss(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
@@ -26,11 +24,11 @@ export async function wpJson(ctx: Context) {
 	ctx.body = await cachedWpJsonFeed(urlToFetch)
 }
 
-export async function nnb(ctx: Context) {
+export function nnb(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
 	if (ctx.cached(ONE_HOUR * 6)) return
 
-	ctx.body = await cachedNoonNewsBulletin()
+	ctx.body = deprecatedWpJson()
 }
 
 export async function carletonNow(ctx: Context) {

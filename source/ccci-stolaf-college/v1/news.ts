@@ -34,11 +34,11 @@ export async function stolaf(ctx: Context) {
 	})
 }
 
-export async function oleville(ctx: Context) {
+export function oleville(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await cachedRssFeed(new URL('https://www.oleville.com/blog-feed.xml'))
+	ctx.body = deprecatedWpJson()
 }
 
 export function politicole(ctx: Context) {
