@@ -1,7 +1,7 @@
 import conditional from 'koa-conditional-get'
 import etag from '@koa/etag'
 import compress from 'koa-compress'
-import bodyParser from 'koa-bodyparser'
+import {withBodyParsers} from '@koa/body-parsers'
 import cacheControl from 'koa-ctx-cache-control'
 import Router from '@koa/router'
 import Koa from 'koa'
@@ -67,7 +67,7 @@ async function main() {
 	// support adding cache-control headers
 	cacheControl(app)
 	// parse request bodies
-	app.use(bodyParser())
+	withBodyParsers(app)
 	// hook in the router
 	app.use(router.routes())
 	app.use(router.allowedMethods())
