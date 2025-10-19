@@ -1,5 +1,5 @@
 import conditional from 'koa-conditional-get'
-import etag from 'koa-etag'
+import etag from '@koa/etag'
 import compress from 'koa-compress'
 import logger from 'koa-logger'
 import responseTime from 'koa-response-time'
