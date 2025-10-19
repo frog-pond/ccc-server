@@ -85,14 +85,13 @@ async function main() {
 	app.use(
 		cachable({
 			maxAge: ONE_DAY,
-			get: (key) => Promise.resolve(cache.get(key)),
+			get: (key) => cache.get(key),
 			set: (key, value) => {
 				if (value === undefined) {
 					cache.delete(key)
-					return Promise.resolve(undefined)
+					return
 				}
 				cache.set(key, value)
-				return Promise.resolve(undefined)
 			},
 		}),
 	)

@@ -59,12 +59,12 @@ declare module 'koa' {
 		 *
 		 * @param maxAge The max age passed to `get()`.
 		 */
-		cached(maxAge?: number): Promise<boolean>
+		cached(maxAge?: number): boolean
 		/**
 		 * This is a special method that you can use to clear the cache for a specific key
 		 * @param key The cache key you want to invalidate
 		 */
-		evictCachedItem(key: string): Promise<void>
+		evictCachedItem(key: string): void
 		/**
 		 * cacheKey stores the key used to cache this response
 		 */
@@ -114,21 +114,21 @@ interface Options {
 	hash?(ctx: ExtendableContext): string
 
 	/**
-	 * Get a value from a store. Must return a Promise, which returns the cache's value, if any.
+	 * Get a value from a store.
 	 * @param key Cache key
 	 * @param maxAge Max age (in milliseconds) for the cache
 	 */
-	get(key: string, maxAge?: number): Promise<CacheObject | undefined>
+	get(key: string, maxAge?: number): CacheObject | undefined
 
 	/**
-	 * Set a value to a store. Must return a Promise.
+	 * Set a value to a store.
 	 * Note: `maxAge` is set by `.cash = { maxAge }`. If it's not set, then `maxAge` will be `0`,
 	 * which you should then ignore.
 	 * @param key Cache key
 	 * @param value Cached value
 	 * @param maxAge Max age (in milliseconds) for the cache
 	 */
-	set(key: string, value: CacheObject | undefined, maxAge?: number): Promise<void>
+	set(key: string, value: CacheObject | undefined, maxAge?: number): void
 }
 
 export function cachable(options: Options): Middleware {
@@ -140,17 +140,17 @@ export function cachable(options: Options): Middleware {
 	const methods = {...defaultMethods, ...options.methods}
 
 	// allow for manual cache clearing
-	async function evictCachedItem(key: string): Promise<void> {
-		await set(key, undefined)
+	function evictCachedItem(key: string): void {
+		set(key, undefined)
 	}
 
 	// ctx.cached(maxAge) => boolean
-	async function cached(this: ExtendableContext, maxAge: number | undefined): Promise<boolean> {
+	function cached(this: ExtendableContext, maxAge: number | undefined): boolean {
 		// uncacheable request method
 		if (!methods[this.request.method]) return false
 
 		this[CACHE_KEY] = hash(this)
-		const obj = await get(this[CACHE_KEY], maxAge ?? options.maxAge ?? 0)
+		const obj = get(this[CACHE_KEY], maxAge ?? options.maxAge ?? 0)
 		const body = obj?.body
 		if (!body) {
 			// tell the upstream middleware to cache this response
@@ -258,7 +258,7 @@ export function cachable(options: Options): Middleware {
 			throw new Error('cacheKey is undefined when trying to set cache')
 		}
 
-		await set(ctx[CACHE_KEY], obj, ctx[CACHE_INFO_KEY].maxAge ?? options.maxAge ?? 0)
+		set(ctx[CACHE_KEY], obj, ctx[CACHE_INFO_KEY].maxAge ?? options.maxAge ?? 0)
 	}
 
 	return cache
