@@ -1,14 +1,17 @@
 import etag from '@koa/etag'
 import compress from 'koa-compress'
 import {withBodyParsers} from '@koa/body-parsers'
-import cacheControl from 'koa-ctx-cache-control'
 import Router from '@koa/router'
 import Koa from 'koa'
 import * as Sentry from '@sentry/node'
 import {z} from 'zod'
 import type {ContextState, RouterState} from './context.ts'
-import { accessLog } from '../ccc-koa/access-log.ts'
-import { conditionalGet } from '../ccc-koa/conditional-get.ts'
+import {accessLog} from '../ccc-koa/access-log.ts'
+import {conditionalGet} from '../ccc-koa/conditional-get.ts'
+import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
+import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
+import QuickLRU from 'quick-lru'
+import {ONE_DAY} from '../ccc-lib/constants.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -59,15 +62,41 @@ async function main() {
 	//
 	// attach middleware
 	//
+
+	// logging
 	app.use(accessLog())
+
+	// automatically compress responses (TODO: delegate to nginx?)
 	app.use(compress())
+
 	// etag works together with conditional-get
 	app.use(conditionalGet())
 	app.use(etag())
+
 	// support adding cache-control headers
-	cacheControl(app)
+	ctxCacheControl(app)
+
 	// parse request bodies
 	withBodyParsers(app)
+
+	// add cached response support at the Koa level
+	// (individual route handlers can use ctx.cache to set caching parameters)
+	let cache = new QuickLRU<string, CacheObject|undefined>({maxSize: 10_000, maxAge: ONE_DAY})
+	app.use(
+		cachable({
+			maxAge: ONE_DAY,
+			get: (key) => Promise.resolve(cache.get(key)),
+			set: (key, value) => {
+				if (value === undefined) {
+					cache.delete(key)
+					return Promise.resolve(undefined)
+				}
+				cache.set(key, value)
+				return Promise.resolve(undefined)
+			},
+		}),
+	)
+
 	// hook in the router
 	app.use(router.routes())
 	app.use(router.allowedMethods())
