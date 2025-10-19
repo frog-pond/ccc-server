@@ -1,4 +1,4 @@
-import Router from 'koa-router'
+import Router from '@koa/router'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
 import * as convos from './convos.ts'
@@ -14,7 +14,7 @@ import * as orgs from './orgs.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
-import type {ContextState, RouterState} from '../../ccc-server/context.ts'
+import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>({prefix: '/v1'})
 
@@ -114,15 +114,15 @@ api.get('/transit/modes', transit.modes)
 api.get('/util/html-to-md', util.htmlToMarkdown)
 
 // sitemap
-api.get('/routes', (ctx) => {
+api.get('/routes', (ctx: Context) => {
 	const leadingVersionRegex = /\/v[0-9]\//
 	ctx.body = api.stack
 		.map((layer) => ({
-			path: layer.path,
-			displayName: layer.path.split(leadingVersionRegex).slice(1).join(),
+			path: layer.path.toString(),
+			displayName: layer.path.toString().split(leadingVersionRegex).slice(1).join(),
 			params: layer.paramNames.map((param) => param.name),
 		}))
-		.sort((a, b) => a.path.localeCompare(b.path))
+		.toSorted((a, b) => a.path.localeCompare(b.path))
 })
 
 export {api}

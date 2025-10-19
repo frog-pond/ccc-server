@@ -1,4 +1,4 @@
-import Router from 'koa-router'
+import Router from '@koa/router'
 import * as atoz from './a-z.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
@@ -128,11 +128,11 @@ api.get('/routes', (ctx: Context) => {
 	const leadingVersionRegex = /\/v[0-9]\//
 	ctx.body = api.stack
 		.map((layer) => ({
-			path: layer.path,
-			displayName: layer.path.split(leadingVersionRegex).slice(1).join(),
+			path: layer.path.toString(),
+			displayName: layer.path.toString().split(leadingVersionRegex).slice(1).join(),
 			params: layer.paramNames.map((param) => param.name),
 		}))
-		.sort((a, b) => a.path.localeCompare(b.path))
+		.toSorted((a, b) => a.path.localeCompare(b.path))
 })
 
 export {api}
