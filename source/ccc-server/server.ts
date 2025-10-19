@@ -24,7 +24,7 @@ async function main() {
 	const institutionResult = InstitutionSchema.safeParse(process.env['INSTITUTION'])
 	if (institutionResult.error) {
 		console.error(
-			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
+			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}, but got: ${String(rawInstitution)}`,
 		)
 		Sentry.logger.error(
 			`the INSTITUTION environment variable must be one of ${InstitutionSchema.options.join(', ')}`,
@@ -85,6 +85,7 @@ async function main() {
 	app.use(
 		cachable({
 			maxAge: ONE_DAY,
+			setCachedHeader: true,
 			get: (key) => cache.get(key),
 			set: (key, value) => {
 				if (value === undefined) {
