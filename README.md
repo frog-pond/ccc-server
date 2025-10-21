@@ -145,4 +145,19 @@ Returns:
 }
 ```
 
-The server will exit gracefully, and the process manager should restart it automatically.
+**Restart Behavior:**
+
+The restart endpoint supports two modes:
+
+1. **Custom Script (Docker/docker-compose deployments)**: Set `RESTART_SCRIPT` environment variable to point to a script that handles the restart. For docker-compose deployments, this script should pull new images and restart containers:
+
+   ```bash
+   # Example: /home/user/poke-docker.sh
+   #!/bin/sh
+   cd /home/user/ccc-server
+   docker-compose pull && docker-compose down && docker-compose up -d
+   ```
+
+   Set `RESTART_SCRIPT=/home/user/poke-docker.sh` in your environment.
+
+2. **Process Exit (Default)**: If no `RESTART_SCRIPT` is configured, the server will exit gracefully. The process manager (systemd, PM2, or Docker's restart policy) should restart it automatically. **Note**: This won't pull new Docker images, so it's only suitable for non-containerized deployments.

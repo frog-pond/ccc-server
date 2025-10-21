@@ -15,6 +15,10 @@ void test('restart endpoint should return success response', async (t: TestConte
 		exitCode = code
 	}
 
+	// Clear RESTART_SCRIPT env var for default behavior test
+	const originalScript = process.env['RESTART_SCRIPT']
+	delete process.env['RESTART_SCRIPT']
+
 	const ctx = {
 		status: 200,
 		body: null,
@@ -30,11 +34,14 @@ void test('restart endpoint should return success response', async (t: TestConte
 	// Wait for setImmediate to execute
 	await new Promise((resolve) => setImmediate(resolve))
 
-	// Restore process.exit
+	// Restore process.exit and env var
 	process.exit = originalExit
+	if (originalScript !== undefined) {
+		process.env['RESTART_SCRIPT'] = originalScript
+	}
 
 	// In production, process.exit would be called with code 0
 	// We verify it was called correctly
-	t.assert.ok(exitCalled, 'process.exit should be called')
+	t.assert.ok(exitCalled, 'process.exit should be called when no RESTART_SCRIPT is set')
 	t.assert.equal(exitCode, 0, 'Exit code should be 0')
 })
