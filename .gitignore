@@ -8,9 +8,6 @@
 # environment variables file
 .env
 
-# VERSION file (deployment-specific)
-VERSION
-
 # eslint cache
 .eslintcache
 

@@ -85,7 +85,7 @@ The workflow uses the `release` environment with manual approval requirements:
 #### How it Works
 
 1. When a new release is published on GitHub, the workflow:
-   - Extracts the version from the release tag (e.g., `v1.2.3` → `1.2.3`)
+   - Verifies the release tag matches the version in `package.json`
    - Waits for manual approval (if configured)
    - Triggers a server restart via `POST /restart`
    - Polls the `/health` endpoint to verify the new version is running
@@ -94,44 +94,32 @@ The workflow uses the `release` environment with manual approval requirements:
 2. The server must have:
    - `RESTART_TOKEN` environment variable set (matching GitHub secret)
    - A process manager (systemd, PM2, Docker) that automatically restarts the process on exit
-   - **Version configuration** using one of these methods (in order of precedence):
-     1. `APP_VERSION` environment variable
-     2. `VERSION` file in the project root containing the version string
-     3. Git repository with tags (the health endpoint will use `git describe --tags`)
 
-#### Server Deployment Setup
+#### Releasing a New Version
 
-For the health check to report the correct version, set up version tracking on your server:
+Before creating a release:
 
-**Option 1: VERSION file (recommended)**
-```bash
-# During deployment, write the version to a file
-echo "1.2.3" > /path/to/ccc-server/VERSION
-```
+1. Update the version in `package.json`:
+   ```bash
+   npm version patch  # or minor, or major
+   ```
 
-**Option 2: Environment variable**
-```bash
-# Add to your .env or process manager configuration
-APP_VERSION=1.2.3
-```
+2. Commit the version change:
+   ```bash
+   git add package.json package-lock.json
+   git commit -m "Bump version to X.Y.Z"
+   git push
+   ```
 
-**Option 3: Git repository**
-```bash
-# Ensure your production deployment is a git repository with tags
-cd /path/to/ccc-server
-git fetch --tags
-git checkout v1.2.3
-```
+3. Create a GitHub release with a tag matching the package.json version (e.g., `v1.2.3`)
+
+The workflow will verify that the release tag matches the package.json version before proceeding with the deployment.
 
 #### Health Check Endpoint
 
 `GET /health`
 
-Returns the current version and status. The version is determined by checking (in order):
-1. `APP_VERSION` environment variable
-2. `VERSION` file in project root
-3. `git describe --tags` output
-4. "unknown" if none of the above are available
+Returns the current version from `package.json` and status.
 
 Returns:
 ```json

@@ -15,13 +15,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Extract version from release tag
+      - name: Extract and verify version
         id: version
         run: |
           TAG="${{ github.event.release.tag_name }}"
           VERSION="${TAG#v}"
+          echo "Release tag version: $VERSION"
+          
+          # Extract version from package.json
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "package.json version: $PACKAGE_VERSION"
+          
+          # Verify they match
+          if [ "$VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "❌ Error: Release tag version ($VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            echo "Please ensure package.json version is updated before creating a release"
+            exit 1
+          fi
+          
+          echo "✅ Version verified: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
 
       - name: Trigger server restart
         run: |
