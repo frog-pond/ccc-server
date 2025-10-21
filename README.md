@@ -94,10 +94,44 @@ The workflow uses the `release` environment with manual approval requirements:
 2. The server must have:
    - `RESTART_TOKEN` environment variable set (matching GitHub secret)
    - A process manager (systemd, PM2, Docker) that automatically restarts the process on exit
+   - **Version configuration** using one of these methods (in order of precedence):
+     1. `APP_VERSION` environment variable
+     2. `VERSION` file in the project root containing the version string
+     3. Git repository with tags (the health endpoint will use `git describe --tags`)
+
+#### Server Deployment Setup
+
+For the health check to report the correct version, set up version tracking on your server:
+
+**Option 1: VERSION file (recommended)**
+```bash
+# During deployment, write the version to a file
+echo "1.2.3" > /path/to/ccc-server/VERSION
+```
+
+**Option 2: Environment variable**
+```bash
+# Add to your .env or process manager configuration
+APP_VERSION=1.2.3
+```
+
+**Option 3: Git repository**
+```bash
+# Ensure your production deployment is a git repository with tags
+cd /path/to/ccc-server
+git fetch --tags
+git checkout v1.2.3
+```
 
 #### Health Check Endpoint
 
 `GET /health`
+
+Returns the current version and status. The version is determined by checking (in order):
+1. `APP_VERSION` environment variable
+2. `VERSION` file in project root
+3. `git describe --tags` output
+4. "unknown" if none of the above are available
 
 Returns:
 ```json
