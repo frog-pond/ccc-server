@@ -13,6 +13,8 @@ import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
 import QuickLRU from 'quick-lru'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
 import {health} from './health.ts'
+import {restart} from './restart.ts'
+import {verifyRestartToken} from './middleware/auth.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -61,6 +63,8 @@ async function main() {
 	})
 
 	router.get('/health', health)
+
+	router.post('/restart', verifyRestartToken, restart)
 
 	//
 	// attach middleware
