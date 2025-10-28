@@ -1,5 +1,5 @@
 [tools]
-node = "24.10.0"
+node = "24.11.0"
 
 [tasks.p]
 run = "mise run pretty -- --no-write --check"
