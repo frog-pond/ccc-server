@@ -28,7 +28,7 @@ const BasicPresenceOrgSchema = z.object({
 type DetailedPresenceOrgType = z.infer<typeof DetailedPresenceOrgSchema>
 const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
 	z.object({
-		description: z.string(),
+		description: z.string().optional().nullable(),
 		website: z.string().optional().nullable(),
 	}),
 )
@@ -37,7 +37,7 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 	let name = org.name.trim()
 	let category = org.categories.join(', ')
 	let meetings = (org.regularMeetingLocation ?? '').trim() + (org.regularMeetingTime ?? '').trim()
-	let description = JSDOM.fragment(org.description).textContent.trim()
+	let description = org.description ? JSDOM.fragment(org.description).textContent.trim() : ''
 	let website = org.website?.trim() ?? ''
 	if (website && !/^https?:\/\//.test(website)) {
 		website = `http://${website}`
