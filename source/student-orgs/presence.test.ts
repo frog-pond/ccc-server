@@ -14,7 +14,7 @@ import {cleanOrg} from './presence.ts'
 
 void test('cleanOrg should handle org with description', (t) => {
 	const sortableRegex = /^(St\.? Olaf(?: College)?|The) +/i
-	
+
 	const orgWithDescription = {
 		subdomain: 'stolaf',
 		campusName: 'St. Olaf College',
@@ -40,7 +40,7 @@ void test('cleanOrg should handle org with description', (t) => {
 
 void test('cleanOrg should handle org with missing description', (t) => {
 	const sortableRegex = /^(St\.? Olaf(?: College)?|The) +/i
-	
+
 	const orgWithoutDescription = {
 		subdomain: 'stolaf',
 		campusName: 'St. Olaf College',
@@ -66,7 +66,7 @@ void test('cleanOrg should handle org with missing description', (t) => {
 
 void test('cleanOrg should handle org with empty description string', (t) => {
 	const sortableRegex = /^(St\.? Olaf(?: College)?|The) +/i
-	
+
 	const orgWithEmptyDescription = {
 		subdomain: 'stolaf',
 		campusName: 'St. Olaf College',
