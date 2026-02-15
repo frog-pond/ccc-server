@@ -28,7 +28,7 @@ const BasicPresenceOrgSchema = z.object({
 type DetailedPresenceOrgType = z.infer<typeof DetailedPresenceOrgSchema>
 const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
 	z.object({
-		description: z.string(),
+		description: z.string().default(''),
 		website: z.string().optional().nullable(),
 	}),
 )
