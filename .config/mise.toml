@@ -48,7 +48,7 @@ run = "tsc --build ."
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks."build:watch"]
-run = "tsc --watch --build ."
+run = "tsc --build --watch ."
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks.typecheck]
