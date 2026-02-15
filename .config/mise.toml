@@ -43,9 +43,13 @@ run = "./scripts/smoke-test.sh carleton-college"
 [tasks.test]
 run = "node --test"
 
-[tasks.watch]
-depends = "build"                                # build once, before starting
-run = { tasks = ["build:watch", "start:watch"] }
+[tasks.build]
+run = "tsc --build ."
+env = { _.path = ['{{config_root}}/node_modules/.bin'] }
+
+[tasks."build:watch"]
+run = "tsc --watch --build ."
+env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks.typecheck]
 run = "tsc --build ."
