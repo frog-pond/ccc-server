@@ -5,7 +5,7 @@ cautious-computing-context: backend node caching server/proxy
 ## Getting Started
 
 Prerequisites
-- Node.js v20.17
+- Node.js v24.11.0
 - npm
 
 Install
@@ -22,8 +22,14 @@ npm ci
 
 Watch mode (recommended): auto-recompile & restart on changes
 
+Run these in separate terminals:
+
 ```sh
-mise run watch
+# TypeScript compilation in watch mode
+mise run build:watch
+
+# Server with auto-restart
+mise run start:watch
 ```
 
 Institution-specific servers
