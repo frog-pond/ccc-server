@@ -16,7 +16,7 @@
 - **Preferred task runner:** This repo uses `mise` task definitions in `.config/mise.toml`. Use `mise run <task>` where possible; CI relies on these tasks.
 - **Install:** `npm install` (CI uses `npm ci` — you can run `mise run npm ci` in environments that support it)
 - **Development:**
-  - Watch/reload: `npm run watch` (see `scripts/watch.js`) or `mise run watch`
+  - Watch/reload: `npm run watch` (runs both TypeScript compilation and server in watch mode) or use `mise run build:watch` + `mise run start:watch` in separate terminals
   - Institution-specific dev: `mise run stolaf-college` or `mise run carleton-college` (these set `INSTITUTION` and depend on `build`)
 - **Build:** `mise run build` (same as `npm run build`)
 - **Production:** `mise run start:prod` (or `npm run start:prod`)
