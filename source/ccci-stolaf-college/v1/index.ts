@@ -18,6 +18,7 @@ import * as streams from './streams.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
+import * as reddit from './reddit.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -102,6 +103,10 @@ api.get('/news/named/politicole', news.politicole)
 api.get('/news/named/mess', news.mess)
 api.get('/news/named/ksto', news.ksto)
 api.get('/news/named/krlx', news.krlx)
+
+// reddit
+api.get('/reddit/posts/:subreddit', reddit.posts)
+api.get('/reddit/comments', reddit.comments)
 
 // hours
 api.get('/spaces/hours', hours.buildingHours)
