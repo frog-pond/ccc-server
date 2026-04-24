@@ -1,5 +1,4 @@
 import {test} from 'node:test'
-import assert from 'node:assert/strict'
 import {parseRedditPosts, parseRedditComments, buildCommentTree} from './reddit.ts'
 
 const POSTS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -17,7 +16,7 @@ const POSTS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
   <entry>
     <id>https://www.reddit.com/r/stolaf/comments/xyz789/another_post/</id>
     <title>Another Post</title>
-    <author><name>/u/second_user</name></author>
+    <author><name>u/second_user</name></author>
     <published>2024-01-16T08:00:00+00:00</published>
     <content type="html">&lt;p&gt;Another post&lt;/p&gt;</content>
     <link rel="alternate" href="https://www.reddit.com/r/stolaf/comments/xyz789/another_post/"/>
@@ -75,7 +74,7 @@ void test('parseRedditPosts: parses two posts', (t) => {
 void test('parseRedditPosts: strips /u/ prefix from author', (t) => {
 	const posts = parseRedditPosts(POSTS_FIXTURE)
 	t.assert.equal(posts[0]!.author, 'test_user')
-	t.assert.equal(posts[1]!.author, 'second_user')
+	t.assert.equal(posts[1]!.author, 'u/second_user')
 })
 
 void test('parseRedditPosts: parses thumbnail URL', (t) => {
@@ -114,4 +113,37 @@ void test('buildCommentTree: single entry (just post) returns empty array', (t) 
 		{id: 'post-id', author: 'op', contentHtml: '', publishedAt: '', parentId: null},
 	])
 	t.assert.deepEqual(result, [])
+})
+
+void test('buildCommentTree: orphan comments become top-level', (t) => {
+	const result = buildCommentTree([
+		{id: 'post-id', author: 'op', contentHtml: '', publishedAt: '', parentId: null},
+		{id: 'orphan-id', author: 'orphan', contentHtml: '', publishedAt: '', parentId: 'nonexistent-parent'},
+	])
+	t.assert.equal(result.length, 1)
+	t.assert.equal(result[0]!.author, 'orphan')
+})
+
+void test('parseRedditPosts: drops entry with missing id', (t) => {
+	const xmlWithMissingId = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <title>Valid Post</title>
+    <author><name>/u/valid_user</name></author>
+    <published>2024-01-15T12:00:00+00:00</published>
+    <content type="html">&lt;p&gt;content&lt;/p&gt;</content>
+    <link rel="alternate" href="https://www.reddit.com/r/stolaf/comments/valid/"/>
+    <id>https://www.reddit.com/r/stolaf/comments/valid/</id>
+  </entry>
+  <entry>
+    <title>No ID Post</title>
+    <author><name>/u/user2</name></author>
+    <published>2024-01-15T12:00:00+00:00</published>
+    <content type="html">&lt;p&gt;content&lt;/p&gt;</content>
+    <link rel="alternate" href="https://www.reddit.com/r/stolaf/comments/noid/"/>
+  </entry>
+</feed>`
+	const posts = parseRedditPosts(xmlWithMissingId)
+	t.assert.equal(posts.length, 1)
+	t.assert.equal(posts[0]!.author, 'valid_user')
 })
