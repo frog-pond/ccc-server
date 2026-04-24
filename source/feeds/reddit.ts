@@ -48,7 +48,7 @@ function parseContent(entry: Element): string {
 }
 
 function parsePublished(entry: Element): string {
-	return entry.querySelector('published')?.textContent ?? new Date().toISOString()
+	return entry.querySelector('published')?.textContent ?? ''
 }
 
 function parseId(entry: Element): string {
@@ -99,7 +99,7 @@ export function parseRedditPosts(xml: string): RedditPostType[] {
 
 // ── Comment tree builder ───────────────────────────────────────────────────
 
-type FlatEntry = {
+export type FlatEntry = {
 	id: string
 	author: string
 	contentHtml: string
