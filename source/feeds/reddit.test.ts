@@ -148,6 +148,36 @@ void test('parseRedditPosts: drops entry with missing id', (t) => {
 	t.assert.equal(posts[0]!.author, 'valid_user')
 })
 
+void test('parseRedditPosts: strips "submitted by" footer from post contentHtml', (t) => {
+	// Real Reddit RSS encodes post body in a table; the actual body is in <div class="md">
+	// and a second row contains "submitted by /u/author [link] [comments]"
+	const xmlWithFooter = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>https://www.reddit.com/r/stolaf/comments/abc/footer_test/</id>
+    <title>Footer Test</title>
+    <author><name>/u/test_user</name></author>
+    <published>2024-01-15T12:00:00+00:00</published>
+    <content type="html">&lt;table&gt;&lt;tr&gt;&lt;td&gt;&lt;div class="md"&gt;&lt;p&gt;Real body here&lt;/p&gt;&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt; submitted by &lt;a href=""&gt;/u/test_user&lt;/a&gt; &lt;a href=""&gt;[link]&lt;/a&gt; &lt;a href=""&gt;[comments]&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</content>
+    <link rel="alternate" href="https://www.reddit.com/r/stolaf/comments/abc/footer_test/"/>
+  </entry>
+</feed>`
+	const posts = parseRedditPosts(xmlWithFooter)
+	t.assert.equal(posts.length, 1)
+	t.assert.ok(
+		!posts[0]!.contentHtml.includes('submitted by'),
+		'contentHtml should not include "submitted by"',
+	)
+	t.assert.ok(
+		!posts[0]!.contentHtml.includes('[link]'),
+		'contentHtml should not include "[link]"',
+	)
+	t.assert.ok(
+		posts[0]!.contentHtml.includes('Real body here'),
+		'contentHtml should include actual body content',
+	)
+})
+
 // ── parseRedditCommentsJson tests ──────────────────────────────────────────
 
 // Mirrors the shape returned by https://www.reddit.com/r/stolaf/comments/<id>.json?raw_json=1

@@ -45,7 +45,13 @@ function parseAuthor(entry: Element): string {
 }
 
 function parseContent(entry: Element): string {
-	return entry.querySelector('content')?.textContent ?? ''
+	const raw = entry.querySelector('content')?.textContent ?? ''
+	if (!raw) return ''
+	// Reddit RSS wraps post body in a table; extract only the <div class="md">
+	// inner HTML, dropping the "submitted by /u/... [link] [comments]" row.
+	const innerDom = new JSDOM(raw)
+	const md = innerDom.window.document.querySelector('div.md')
+	return md ? md.innerHTML : raw
 }
 
 function parsePublished(entry: Element): string {
