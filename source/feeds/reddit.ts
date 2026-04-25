@@ -23,7 +23,8 @@ export const RedditCommentSchema: z.ZodType<RedditCommentType> = z.lazy(() =>
 		author: z.string(),
 		contentHtml: z.string(),
 		publishedAt: z.string(),
-		score: z.number().default(0),
+		// Reddit API can return null for score on new/contest-mode posts
+		score: z.number().nullable().default(0).transform((v) => v ?? 0),
 		replies: z.array(RedditCommentSchema),
 	}),
 )

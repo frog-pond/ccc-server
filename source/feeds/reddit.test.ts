@@ -295,3 +295,29 @@ void test('parseRedditCommentsJson: score is extracted from comment data', (t) =
 	t.assert.equal(comments[0]!.replies[0]!.score, 7, 'reply should have score 7')
 	t.assert.equal(comments[1]!.score, 0, 'comment with score 0 should be 0')
 })
+
+void test('parseRedditCommentsJson: null score defaults to 0 (Reddit hides scores on new/contest posts)', (t) => {
+	const fixture = [
+		{kind: 'Listing', data: {children: [{kind: 't3', data: {id: 'p1', title: 'Post'}}]}},
+		{
+			kind: 'Listing',
+			data: {
+				children: [
+					{
+						kind: 't1',
+						data: {
+							id: 'cn1',
+							author: 'user',
+							body_html: '<div class="md"><p>comment</p></div>',
+							created_utc: 1705318800,
+							score: null,
+							replies: '',
+						},
+					},
+				],
+			},
+		},
+	]
+	const comments = parseRedditCommentsJson(fixture)
+	t.assert.equal(comments[0]!.score, 0, 'null score should default to 0')
+})
