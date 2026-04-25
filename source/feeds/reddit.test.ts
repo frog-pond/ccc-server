@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {parseRedditPosts, parseRedditComments, buildCommentTree} from './reddit.ts'
+import {parseRedditPosts, parseRedditComments, parseRedditCommentsJson, buildCommentTree} from './reddit.ts'
 
 const POSTS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
@@ -146,4 +146,94 @@ void test('parseRedditPosts: drops entry with missing id', (t) => {
 	const posts = parseRedditPosts(xmlWithMissingId)
 	t.assert.equal(posts.length, 1)
 	t.assert.equal(posts[0]!.author, 'valid_user')
+})
+
+// ── parseRedditCommentsJson tests ──────────────────────────────────────────
+
+// Mirrors the shape returned by https://www.reddit.com/r/stolaf/comments/<id>.json?raw_json=1
+const JSON_COMMENTS_FIXTURE = [
+	// [0] is post listing (ignored)
+	{kind: 'Listing', data: {children: [{kind: 't3', data: {id: 'abc123', title: 'Test Post'}}]}},
+	// [1] is comment listing
+	{
+		kind: 'Listing',
+		data: {
+			children: [
+				{
+					kind: 't1',
+					data: {
+						id: 'c1',
+						author: 'commenter1',
+						body_html: '<div class="md"><p>Top level comment</p></div>',
+						created_utc: 1705318800,
+						replies: {
+							kind: 'Listing',
+							data: {
+								children: [
+									{
+										kind: 't1',
+										data: {
+											id: 'c2',
+											author: 'commenter2',
+											body_html: '<div class="md"><p>Reply to c1</p></div>',
+											created_utc: 1705320600,
+											replies: '',
+										},
+									},
+									// more kind should be skipped
+									{kind: 'more', data: {id: 'c3', count: 5}},
+								],
+							},
+						},
+					},
+				},
+				{
+					kind: 't1',
+					data: {
+						id: 'c4',
+						author: 'commenter3',
+						body_html: '<div class="md"><p>Second top-level</p></div>',
+						created_utc: 1705322400,
+						replies: '',
+					},
+				},
+				// more at root level also skipped
+				{kind: 'more', data: {id: 'c5', count: 3}},
+			],
+		},
+	},
+]
+
+void test('parseRedditCommentsJson: returns two top-level comments', (t) => {
+	const comments = parseRedditCommentsJson(JSON_COMMENTS_FIXTURE)
+	t.assert.equal(comments.length, 2)
+})
+
+void test('parseRedditCommentsJson: first comment has one reply', (t) => {
+	const comments = parseRedditCommentsJson(JSON_COMMENTS_FIXTURE)
+	t.assert.equal(comments[0]!.replies.length, 1)
+	t.assert.equal(comments[0]!.replies[0]!.author, 'commenter2')
+})
+
+void test('parseRedditCommentsJson: more kind entries are skipped', (t) => {
+	const comments = parseRedditCommentsJson(JSON_COMMENTS_FIXTURE)
+	// root has 2 (not 3), reply list has 1 (not 2)
+	t.assert.equal(comments.length, 2)
+	t.assert.equal(comments[0]!.replies.length, 1)
+})
+
+void test('parseRedditCommentsJson: id is prefixed with t1_', (t) => {
+	const comments = parseRedditCommentsJson(JSON_COMMENTS_FIXTURE)
+	t.assert.equal(comments[0]!.id, 't1_c1')
+})
+
+void test('parseRedditCommentsJson: created_utc converted to ISO 8601', (t) => {
+	const comments = parseRedditCommentsJson(JSON_COMMENTS_FIXTURE)
+	t.assert.equal(comments[0]!.publishedAt, new Date(1705318800 * 1000).toISOString())
+})
+
+void test('parseRedditCommentsJson: returns empty array for invalid input', (t) => {
+	t.assert.deepEqual(parseRedditCommentsJson(null), [])
+	t.assert.deepEqual(parseRedditCommentsJson([]), [])
+	t.assert.deepEqual(parseRedditCommentsJson([{}]), [])
 })

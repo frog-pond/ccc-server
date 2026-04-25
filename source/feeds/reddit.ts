@@ -1,7 +1,8 @@
 import * as Sentry from '@sentry/node'
 import {JSDOM} from 'jsdom'
 import {z} from 'zod'
-import {getText} from '../ccc-lib/http.ts'
+import {getText, getJson} from '../ccc-lib/http.ts'
+import {getRedditToken} from '../ccc-lib/reddit-auth.ts'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,44 @@ export function parseRedditComments(xml: string): RedditCommentType[] {
 	return buildCommentTree(entries)
 }
 
+// ── JSON API parser ────────────────────────────────────────────────────────
+
+type RedditJsonChild = {kind: string; data: unknown}
+
+function parseCommentJsonChild(child: RedditJsonChild): RedditCommentType[] {
+	if (child.kind !== 't1') return []
+
+	const d = child.data as {
+		id: string
+		author: string
+		body_html: string
+		created_utc: number
+		replies: '' | {kind: string; data: {children: RedditJsonChild[]}}
+	}
+
+	const repliesChildren =
+		d.replies && typeof d.replies === 'object' ? d.replies.data.children : []
+
+	return [
+		{
+			id: `t1_${d.id}`,
+			author: d.author,
+			contentHtml: d.body_html,
+			publishedAt: new Date(d.created_utc * 1000).toISOString(),
+			replies: repliesChildren.flatMap(parseCommentJsonChild),
+		},
+	]
+}
+
+export function parseRedditCommentsJson(response: unknown): RedditCommentType[] {
+	if (!Array.isArray(response) || response.length < 2) return []
+	const commentListing = response[1] as {
+		data: {children: RedditJsonChild[]}
+	}
+	const children = commentListing?.data?.children ?? []
+	return children.flatMap(parseCommentJsonChild)
+}
+
 // ── Fetch helpers ──────────────────────────────────────────────────────────
 
 export async function fetchRedditPosts(subreddit: string): Promise<RedditPostType[]> {
@@ -176,9 +215,22 @@ export async function fetchRedditPosts(subreddit: string): Promise<RedditPostTyp
 
 export async function fetchRedditComments(postUrl: string): Promise<RedditCommentType[]> {
 	try {
-		const url = postUrl.endsWith('/') ? `${postUrl}.rss` : `${postUrl}/.rss`
-		const body = await getText(url)
-		return parseRedditComments(body)
+		const token = await getRedditToken()
+		const parsed = new URL(postUrl)
+		const jsonPath = parsed.pathname.replace(/\/$/, '') + '.json'
+
+		let jsonUrl: string
+		let headers: Record<string, string> = {}
+
+		if (token) {
+			jsonUrl = `https://oauth.reddit.com${jsonPath}?raw_json=1`
+			headers = {Authorization: `Bearer ${token}`}
+		} else {
+			jsonUrl = `https://www.reddit.com${jsonPath}?raw_json=1`
+		}
+
+		const body = await getJson(jsonUrl, {headers})
+		return parseRedditCommentsJson(body)
 	} catch (error) {
 		Sentry.captureException(error, {tags: {postUrl}})
 		return []
