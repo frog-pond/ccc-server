@@ -178,6 +178,24 @@ void test('parseRedditPosts: strips "submitted by" footer from post contentHtml'
 	)
 })
 
+void test('parseRedditPosts: link-only post (no div.md) returns empty contentHtml', (t) => {
+	// Link posts have no div.md — only a table with the submitted-by row
+	const xmlLinkOnly = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>https://www.reddit.com/r/stolaf/comments/link1/link_post/</id>
+    <title>Link Post</title>
+    <author><name>/u/link_user</name></author>
+    <published>2024-01-15T12:00:00+00:00</published>
+    <content type="html">&lt;table&gt;&lt;tr&gt;&lt;td&gt; &lt;a href="https://example.com"&gt;[link]&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt; submitted by &lt;a href=""&gt;/u/link_user&lt;/a&gt; &lt;a href=""&gt;[link]&lt;/a&gt; &lt;a href=""&gt;[comments]&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</content>
+    <link rel="alternate" href="https://www.reddit.com/r/stolaf/comments/link1/link_post/"/>
+  </entry>
+</feed>`
+	const posts = parseRedditPosts(xmlLinkOnly)
+	t.assert.equal(posts.length, 1)
+	t.assert.equal(posts[0]!.contentHtml, '', 'link-only post should have empty contentHtml')
+})
+
 // ── parseRedditCommentsJson tests ──────────────────────────────────────────
 
 // Mirrors the shape returned by https://www.reddit.com/r/stolaf/comments/<id>.json?raw_json=1

@@ -51,7 +51,7 @@ function parseContent(entry: Element): string {
 	// inner HTML, dropping the "submitted by /u/... [link] [comments]" row.
 	const innerDom = new JSDOM(raw)
 	const md = innerDom.window.document.querySelector('div.md')
-	return md ? md.innerHTML : raw
+	return md ? md.innerHTML : ''
 }
 
 function parsePublished(entry: Element): string {
