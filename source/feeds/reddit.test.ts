@@ -214,6 +214,7 @@ const JSON_COMMENTS_FIXTURE = [
 						author: 'commenter1',
 						body_html: '<div class="md"><p>Top level comment</p></div>',
 						created_utc: 1705318800,
+						score: 42,
 						replies: {
 							kind: 'Listing',
 							data: {
@@ -225,6 +226,7 @@ const JSON_COMMENTS_FIXTURE = [
 											author: 'commenter2',
 											body_html: '<div class="md"><p>Reply to c1</p></div>',
 											created_utc: 1705320600,
+											score: 7,
 											replies: '',
 										},
 									},
@@ -242,6 +244,7 @@ const JSON_COMMENTS_FIXTURE = [
 						author: 'commenter3',
 						body_html: '<div class="md"><p>Second top-level</p></div>',
 						created_utc: 1705322400,
+						score: 0,
 						replies: '',
 					},
 				},
@@ -284,4 +287,11 @@ void test('parseRedditCommentsJson: returns empty array for invalid input', (t) 
 	t.assert.deepEqual(parseRedditCommentsJson(null), [])
 	t.assert.deepEqual(parseRedditCommentsJson([]), [])
 	t.assert.deepEqual(parseRedditCommentsJson([{}]), [])
+})
+
+void test('parseRedditCommentsJson: score is extracted from comment data', (t) => {
+	const comments = parseRedditCommentsJson(JSON_COMMENTS_FIXTURE)
+	t.assert.equal(comments[0]!.score, 42, 'top-level comment should have score 42')
+	t.assert.equal(comments[0]!.replies[0]!.score, 7, 'reply should have score 7')
+	t.assert.equal(comments[1]!.score, 0, 'comment with score 0 should be 0')
 })

@@ -23,6 +23,7 @@ export const RedditCommentSchema: z.ZodType<RedditCommentType> = z.lazy(() =>
 		author: z.string(),
 		contentHtml: z.string(),
 		publishedAt: z.string(),
+		score: z.number().default(0),
 		replies: z.array(RedditCommentSchema),
 	}),
 )
@@ -31,6 +32,7 @@ export type RedditCommentType = {
 	author: string
 	contentHtml: string
 	publishedAt: string
+	score: number
 	replies: RedditCommentType[]
 }
 
@@ -111,6 +113,7 @@ export type FlatEntry = {
 	author: string
 	contentHtml: string
 	publishedAt: string
+	score: number
 	parentId: string | null
 }
 
@@ -123,6 +126,7 @@ function parseCommentEntries(doc: Document): FlatEntry[] {
 			author: parseAuthor(entry),
 			contentHtml: parseContent(entry),
 			publishedAt: parsePublished(entry),
+			score: 0, // RSS feed does not include vote counts
 			parentId,
 		}
 	})
@@ -142,6 +146,7 @@ export function buildCommentTree(entries: FlatEntry[]): RedditCommentType[] {
 			author: e.author,
 			contentHtml: e.contentHtml,
 			publishedAt: e.publishedAt,
+			score: e.score,
 			parentId: e.parentId,
 			replies: [],
 		})
@@ -181,6 +186,7 @@ function parseCommentJsonChild(child: RedditJsonChild): RedditCommentType[] {
 		author: string
 		body_html: string
 		created_utc: number
+		score: number
 		replies: '' | {kind: string; data: {children: RedditJsonChild[]}}
 	}
 
@@ -193,6 +199,7 @@ function parseCommentJsonChild(child: RedditJsonChild): RedditCommentType[] {
 			author: d.author,
 			contentHtml: d.body_html,
 			publishedAt: new Date(d.created_utc * 1000).toISOString(),
+			score: d.score ?? 0,
 			replies: repliesChildren.flatMap(parseCommentJsonChild),
 		},
 	]
