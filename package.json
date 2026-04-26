@@ -27,7 +27,7 @@
     "carleton-college": "env INSTITUTION=carleton-college npm run start:dev",
     "test:stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test:carleton-college": "./scripts/smoke-test.sh carleton-college",
-    "test": "node --test",
+    "test": "node --test 'source/**/*.test.ts'",
     "watch": "npm run build:watch & npm run start:watch"
   },
   "dependencies": {
