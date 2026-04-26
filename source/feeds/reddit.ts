@@ -134,12 +134,10 @@ function parseCommentEntries(doc: Document): FlatEntry[] {
 }
 
 export function buildCommentTree(entries: FlatEntry[]): RedditCommentType[] {
-	if (entries.length === 0) return []
-
 	// First entry is the post itself — skip it, use its id to identify root comments
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const postId = entries[0]!.id
-	const commentEntries = entries.slice(1)
+	const [post, ...commentEntries] = entries
+	if (!post) return []
+	const postId = post.id
 
 	const nodeMap = new Map<string, RedditCommentType & {parentId: string | null}>()
 	for (const e of commentEntries) {
