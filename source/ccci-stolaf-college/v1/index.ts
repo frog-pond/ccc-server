@@ -1,4 +1,5 @@
 import Router from '@koa/router'
+import * as athletics from './athletics.ts'
 import * as atoz from './a-z.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
@@ -127,6 +128,9 @@ api.get('/reports/stav', reports.stavMealtimeReport)
 
 // utilities
 api.get('/util/html-to-md', util.htmlToMarkdown)
+
+// athletics
+api.get('/athletics/scores', athletics.scores)
 
 // sitemap
 api.get('/routes', (ctx: Context) => {
