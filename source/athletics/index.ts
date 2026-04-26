@@ -28,14 +28,33 @@ const LinksSchema = z
 	})
 	.catchall(z.unknown())
 
+/**
+ * Parses the upstream API's non-standard "M/D/YYYY h:mm:ss AM/PM" UTC format
+ * and returns an ISO 8601 string so consumers can use new Date() safely.
+ */
+function parseDateUtcField(dateStr: string): string {
+	const parts = dateStr.split(' ')
+	if (parts.length !== 3) {
+		return dateStr
+	}
+	const [datePart, timePart, ampm] = parts as [string, string, string]
+	const [month, day, year] = datePart.split('/').map(Number) as [number, number, number]
+	const [hours, minutes, seconds] = timePart.split(':').map(Number) as [number, number, number]
+	let hour24 = hours % 12
+	if (ampm === 'PM') {
+		hour24 += 12
+	}
+	return new Date(Date.UTC(year, month - 1, day, hour24, minutes, seconds)).toISOString()
+}
+
 export const ScoreSchema = z.object({
 	id: z.string(),
 	sport: z.string(),
 	sport_abbrev: z.string(),
 	date: z.string(),
 	dateFormatted: z.string(),
-	date_utc: z.string(),
-	date_end_utc: z.string(),
+	date_utc: z.string().transform(parseDateUtcField),
+	date_end_utc: z.string().transform(parseDateUtcField),
 	time: z.string(),
 	timestamp: z.number(),
 	location: LocationInfoSchema,
