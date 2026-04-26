@@ -3,7 +3,7 @@ import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 const ATHLETICS_URL =
-	'https://athletics.stolaf.edu/services/scores_chris.aspx?format=json'
+	'https://athletics.carleton.edu/services/scores_chris.aspx?format=json'
 
 const FIVE_MINUTES = ONE_MINUTE * 5
 
