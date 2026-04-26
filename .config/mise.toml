@@ -41,7 +41,7 @@ run = "./scripts/smoke-test.sh stolaf-college"
 run = "./scripts/smoke-test.sh carleton-college"
 
 [tasks.test]
-run = "node --test"
+run = "node --test 'source/**/*.test.ts'"
 
 [tasks.build]
 run = "tsc --build ."
