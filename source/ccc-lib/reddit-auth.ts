@@ -1,12 +1,12 @@
 import {http} from './http.ts'
 
-type TokenResponse = {
+interface TokenResponse {
 	access_token: string
 	token_type: string
 	expires_in: number
 }
 
-type CachedToken = {
+interface CachedToken {
 	token: string
 	expiresAt: number
 }

@@ -1,4 +1,5 @@
-import {test} from 'node:test'
+import {test, type TestContext} from 'node:test'
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- test files commonly index into result arrays */
 import {parseRedditPosts, parseRedditComments, parseRedditCommentsJson, buildCommentTree} from './reddit.ts'
 
 const POSTS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -110,15 +111,15 @@ void test('buildCommentTree: empty entries returns empty array', (t) => {
 
 void test('buildCommentTree: single entry (just post) returns empty array', (t) => {
 	const result = buildCommentTree([
-		{id: 'post-id', author: 'op', contentHtml: '', publishedAt: '', parentId: null},
+		{id: 'post-id', author: 'op', contentHtml: '', publishedAt: '', score: 0, parentId: null},
 	])
 	t.assert.deepEqual(result, [])
 })
 
 void test('buildCommentTree: orphan comments become top-level', (t) => {
 	const result = buildCommentTree([
-		{id: 'post-id', author: 'op', contentHtml: '', publishedAt: '', parentId: null},
-		{id: 'orphan-id', author: 'orphan', contentHtml: '', publishedAt: '', parentId: 'nonexistent-parent'},
+		{id: 'post-id', author: 'op', contentHtml: '', publishedAt: '', score: 0, parentId: null},
+		{id: 'orphan-id', author: 'orphan', contentHtml: '', publishedAt: '', score: 0, parentId: 'nonexistent-parent'},
 	])
 	t.assert.equal(result.length, 1)
 	t.assert.equal(result[0]!.author, 'orphan')
@@ -148,7 +149,7 @@ void test('parseRedditPosts: drops entry with missing id', (t) => {
 	t.assert.equal(posts[0]!.author, 'valid_user')
 })
 
-void test('parseRedditPosts: strips "submitted by" footer from post contentHtml', (t) => {
+void test('parseRedditPosts: strips "submitted by" footer from post contentHtml', (t: TestContext) => {
 	// Real Reddit RSS encodes post body in a table; the actual body is in <div class="md">
 	// and a second row contains "submitted by /u/author [link] [comments]"
 	const xmlWithFooter = `<?xml version="1.0" encoding="UTF-8"?>

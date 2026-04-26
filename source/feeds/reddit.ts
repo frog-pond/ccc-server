@@ -17,7 +17,7 @@ export const RedditPostSchema = z.object({
 })
 export type RedditPostType = z.infer<typeof RedditPostSchema>
 
-export const RedditCommentSchema: z.ZodType<RedditCommentType> = z.lazy(() =>
+export const RedditCommentSchema: z.ZodType<RedditCommentType, z.ZodTypeDef, unknown> = z.lazy(() =>
 	z.object({
 		id: z.string(),
 		author: z.string(),
@@ -28,7 +28,7 @@ export const RedditCommentSchema: z.ZodType<RedditCommentType> = z.lazy(() =>
 		replies: z.array(RedditCommentSchema),
 	}),
 )
-export type RedditCommentType = {
+export interface RedditCommentType {
 	id: string
 	author: string
 	contentHtml: string
@@ -95,7 +95,7 @@ export function parseRedditPosts(xml: string): RedditPostType[] {
 
 		const result = RedditPostSchema.safeParse({
 			id,
-			title: entry.querySelector('title')?.textContent?.trim() ?? '(no title)',
+			title: (entry.querySelector('title')?.textContent ?? '(no title)').trim(),
 			author: parseAuthor(entry),
 			publishedAt: parsePublished(entry),
 			permalink,
@@ -109,7 +109,7 @@ export function parseRedditPosts(xml: string): RedditPostType[] {
 
 // ── Comment tree builder ───────────────────────────────────────────────────
 
-export type FlatEntry = {
+export interface FlatEntry {
 	id: string
 	author: string
 	contentHtml: string
@@ -137,6 +137,7 @@ export function buildCommentTree(entries: FlatEntry[]): RedditCommentType[] {
 	if (entries.length === 0) return []
 
 	// First entry is the post itself — skip it, use its id to identify root comments
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const postId = entries[0]!.id
 	const commentEntries = entries.slice(1)
 
@@ -177,7 +178,7 @@ export function parseRedditComments(xml: string): RedditCommentType[] {
 
 // ── JSON API parser ────────────────────────────────────────────────────────
 
-type RedditJsonChild = {kind: string; data: unknown}
+interface RedditJsonChild {kind: string; data: unknown}
 
 function parseCommentJsonChild(child: RedditJsonChild): RedditCommentType[] {
 	if (child.kind !== 't1') return []
@@ -187,7 +188,7 @@ function parseCommentJsonChild(child: RedditJsonChild): RedditCommentType[] {
 		author: string
 		body_html: string
 		created_utc: number
-		score: number
+		score: number | null
 		replies: '' | {kind: string; data: {children: RedditJsonChild[]}}
 	}
 
@@ -211,7 +212,7 @@ export function parseRedditCommentsJson(response: unknown): RedditCommentType[] 
 	const commentListing = response[1] as {
 		data: {children: RedditJsonChild[]}
 	}
-	const children = commentListing?.data?.children ?? []
+	const children = commentListing.data.children
 	return children.flatMap(parseCommentJsonChild)
 }
 
