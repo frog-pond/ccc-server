@@ -1,6 +1,11 @@
 import {test, type TestContext} from 'node:test'
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- test files commonly index into result arrays */
-import {parseRedditPosts, parseRedditComments, parseRedditCommentsJson, buildCommentTree} from './reddit.ts'
+import {
+	parseRedditPosts,
+	parseRedditComments,
+	parseRedditCommentsJson,
+	buildCommentTree,
+} from './reddit.ts'
 
 const POSTS_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
@@ -119,7 +124,14 @@ void test('buildCommentTree: single entry (just post) returns empty array', (t) 
 void test('buildCommentTree: orphan comments become top-level', (t) => {
 	const result = buildCommentTree([
 		{id: 'post-id', author: 'op', contentHtml: '', publishedAt: '', score: 0, parentId: null},
-		{id: 'orphan-id', author: 'orphan', contentHtml: '', publishedAt: '', score: 0, parentId: 'nonexistent-parent'},
+		{
+			id: 'orphan-id',
+			author: 'orphan',
+			contentHtml: '',
+			publishedAt: '',
+			score: 0,
+			parentId: 'nonexistent-parent',
+		},
 	])
 	t.assert.equal(result.length, 1)
 	t.assert.equal(result[0]!.author, 'orphan')
@@ -169,10 +181,7 @@ void test('parseRedditPosts: strips "submitted by" footer from post contentHtml'
 		!posts[0]!.contentHtml.includes('submitted by'),
 		'contentHtml should not include "submitted by"',
 	)
-	t.assert.ok(
-		!posts[0]!.contentHtml.includes('[link]'),
-		'contentHtml should not include "[link]"',
-	)
+	t.assert.ok(!posts[0]!.contentHtml.includes('[link]'), 'contentHtml should not include "[link]"')
 	t.assert.ok(
 		posts[0]!.contentHtml.includes('Real body here'),
 		'contentHtml should include actual body content',

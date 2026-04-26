@@ -24,7 +24,11 @@ export const RedditCommentSchema: z.ZodType<RedditCommentType, z.ZodTypeDef, unk
 		contentHtml: z.string(),
 		publishedAt: z.string(),
 		// Reddit API can return null for score on new/contest-mode posts
-		score: z.number().nullable().default(0).transform((v) => v ?? 0),
+		score: z
+			.number()
+			.nullable()
+			.default(0)
+			.transform((v) => v ?? 0),
 		replies: z.array(RedditCommentSchema),
 	}),
 )
@@ -176,7 +180,10 @@ export function parseRedditComments(xml: string): RedditCommentType[] {
 
 // ── JSON API parser ────────────────────────────────────────────────────────
 
-interface RedditJsonChild {kind: string; data: unknown}
+interface RedditJsonChild {
+	kind: string
+	data: unknown
+}
 
 function parseCommentJsonChild(child: RedditJsonChild): RedditCommentType[] {
 	if (child.kind !== 't1') return []
@@ -190,8 +197,7 @@ function parseCommentJsonChild(child: RedditJsonChild): RedditCommentType[] {
 		replies: '' | {kind: string; data: {children: RedditJsonChild[]}}
 	}
 
-	const repliesChildren =
-		d.replies && typeof d.replies === 'object' ? d.replies.data.children : []
+	const repliesChildren = d.replies && typeof d.replies === 'object' ? d.replies.data.children : []
 
 	return [
 		{
