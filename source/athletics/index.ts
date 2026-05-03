@@ -5,7 +5,7 @@ import {getJson} from '../ccc-lib/http.ts'
 
 const LocationInfoSchema = z.object({
 	location: z.string(),
-	homeAway: z.enum(['H', 'A', 'N']),
+	homeAway: z.enum(['H', 'A', 'N']).optional(),
 	facility: z.string(),
 })
 
