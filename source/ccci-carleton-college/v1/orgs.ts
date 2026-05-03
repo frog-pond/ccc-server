@@ -10,10 +10,10 @@ export const CarletonStudentOrgSchema = z.object({
 	id: z.string(),
 	contacts: z.string().array(),
 	categories: z.string().array(),
-	socialLinks: z.string().url().array(),
-	adminLink: z.string().url(),
+	socialLinks: z.url().array(),
+	adminLink: z.url(),
 	description: z.string(),
-	website: z.string().url(),
+	website: z.url(),
 	name: z.string().min(1),
 })
 

@@ -45,7 +45,7 @@ const NutritionDetailContainer = z.object({
 
 const BamcoMenuItemSchema = z.object({
 	connector: z.string().default(''),
-	cor_icon: z.union([z.array(z.unknown()), z.record(z.string())]).default({}),
+	cor_icon: z.union([z.array(z.unknown()), z.record(z.string(), z.string())]).default({}),
 	description: z.string(),
 	id: z.unknown(),
 	label: z.string(),
@@ -53,7 +53,7 @@ const BamcoMenuItemSchema = z.object({
 	nutrition: NutritionContainer,
 	nutrition_details: z.optional(NutritionDetailContainer),
 	nutrition_link: z.string().default(''),
-	options: z.union([z.array(z.unknown()), z.record(z.unknown())]).default({}),
+	options: z.union([z.array(z.unknown()), z.record(z.string(), z.unknown())]).default({}),
 	price: zodCurrencyString.default(''),
 	rating: zodNumericString,
 	special: zodNumericBoolean,
@@ -91,7 +91,7 @@ const BamcoCorIconSchema = z.object({
 	allergen: z.unknown(),
 	description: z.string(),
 	id: z.unknown(),
-	image: z.string().url(),
+	image: z.url(),
 	is_filter: zodYesNo,
 	label: z.string(),
 	position: zodNumericString,
@@ -108,8 +108,8 @@ export const BamcoPageContentsSchema = z.union([
 			name: z.string(),
 			id: z.unknown(),
 		}),
-		menu_items: z.record(BamcoMenuItemSchema),
-		cor_icons: z.union([z.array(z.unknown()), z.record(BamcoCorIconSchema)]),
-		dayparts: z.record(BamcoDayPartSchema),
+		menu_items: z.record(z.string(), BamcoMenuItemSchema),
+		cor_icons: z.union([z.array(z.unknown()), z.record(z.string(), BamcoCorIconSchema)]),
+		dayparts: z.record(z.string(), BamcoDayPartSchema),
 	}),
 ])

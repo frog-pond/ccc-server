@@ -10,16 +10,16 @@ const StreamEntry = z.object({
 	eid: z.unknown(),
 	performer: z.string(),
 	subtitle: z.string(),
-	poster: z.string().url(),
-	player: z.string().url(),
+	poster: z.url(),
+	player: z.url(),
 	status: z.string(),
 	category: z.string(),
 	hptitle: z.string(),
 	category_textcolor: z.string(),
 	category_color: z.string(),
-	thumb: z.string().url(),
+	thumb: z.url(),
 	title: z.string(),
-	iframesrc: z.string().url(),
+	iframesrc: z.url(),
 })
 
 const StreamEntryCollection = z.object({
@@ -27,14 +27,14 @@ const StreamEntryCollection = z.object({
 })
 
 const GetStreamsParamsSchema = z.object({
-	dateFrom: z.string().date().optional(),
-	dateTo: z.string().date().optional(),
+	dateFrom: z.iso.date().optional(),
+	dateTo: z.iso.date().optional(),
 	sort: z.enum(['ascending', 'descending']).default('ascending'),
 })
 
 const StOlafStreamsParamsSchema = z.object({
-	date_from: z.string().date(),
-	date_to: z.string().date(),
+	date_from: z.iso.date(),
+	date_to: z.iso.date(),
 	sort: z.enum(['ascending', 'descending']),
 	class: z.enum(['current', 'archived']),
 })

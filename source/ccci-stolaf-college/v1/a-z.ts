@@ -10,7 +10,7 @@ const StOlafAzResponseSchema = z.object({
 		menu_items: z.array(
 			z.object({
 				letter: z.string(),
-				values: z.array(z.object({label: z.string(), url: z.string().url()})),
+				values: z.array(z.object({label: z.string(), url: z.url()})),
 			}),
 		),
 	}),
@@ -21,7 +21,7 @@ const AllAboutOlafExtraAzResponseSchema = z.object({
 	data: z.array(
 		z.object({
 			letter: z.string(),
-			values: z.array(z.object({label: z.string(), url: z.string().url()})),
+			values: z.array(z.object({label: z.string(), url: z.url()})),
 		}),
 	),
 })
