@@ -16,9 +16,9 @@ const WpJsonFeedEntrySchema = z.object({
 						id: z.unknown(),
 						media_type: z.union([z.literal('image'), z.string()]),
 						media_details: z.object({
-							sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
+							sizes: z.optional(z.record(z.string(), z.object({source_url: z.url()}))),
 						}),
-						source_url: z.string().url(),
+						source_url: z.url(),
 					}),
 				)
 				.nullable()
@@ -33,7 +33,7 @@ const WpJsonFeedEntrySchema = z.object({
 	excerpt: z.object({rendered: z.string()}),
 	title: z.object({rendered: z.string()}),
 	date_gmt: z.string(),
-	link: z.string().url(),
+	link: z.url(),
 })
 
 const WpJsonFeedResponseSchema = z.array(WpJsonFeedEntrySchema)
