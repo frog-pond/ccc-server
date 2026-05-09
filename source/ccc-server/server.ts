@@ -140,8 +140,50 @@ async function main() {
 
 	// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 	const PORT = process.env['NODE_PORT'] || '3000'
-	app.listen(Number.parseInt(PORT, 10))
+	const port = Number.parseInt(PORT, 10)
+	app.listen(port)
 	console.log(`listening on port ${PORT}`)
+
+	if (process.env['ADVERTISE_MDNS'] === '1') {
+		const {hostname} = await import('node:os')
+		const serviceName = `ccc-server (${hostname()})`
+
+		if (process.platform === 'darwin') {
+			// On macOS, delegate to dns-sd so registration goes through the system
+			// mDNSResponder. A pure-JS mDNS stack competing on port 5353 triggers
+			// Bonjour name-conflict dialogs and can rename the host.
+			const {spawn} = await import('node:child_process')
+			const child = spawn(
+				'dns-sd',
+				['-R', serviceName, '_ccc-server._tcp', 'local', String(port), `institution=${institution}`, 'path=/v1/'],
+				{stdio: 'ignore', detached: false},
+			)
+			console.log(`advertising mDNS service: ${serviceName}._ccc-server._tcp on port ${String(port)}`)
+
+			const teardown = () => child.kill()
+			process.once('SIGTERM', teardown)
+			process.once('SIGINT', teardown)
+		} else {
+			const {Bonjour} = await import('bonjour-service')
+			const bonjour = new Bonjour()
+			const service = bonjour.publish({
+				name: serviceName,
+				type: 'ccc-server',
+				port,
+				txt: {institution, path: '/v1/'},
+			})
+			console.log(`advertising mDNS service: ${service.name}._ccc-server._tcp on port ${String(port)}`)
+
+			const teardown = () => {
+				service.stop?.(() => {
+					// bonjour.destroy() returns any; call without returning
+					bonjour.destroy()
+				})
+			}
+			process.once('SIGTERM', teardown)
+			process.once('SIGINT', teardown)
+		}
+	}
 }
 
 await main()

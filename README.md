@@ -39,6 +39,29 @@ mise run stolaf-college
 mise run carleton-college
 ```
 
+### Local Network Discovery (mDNS)
+
+When developing alongside a React Native client on the same network, you can advertise the server via mDNS/Bonjour so the client can discover it automatically without typing the IP address.
+
+```sh
+mise run stolaf-college:mdns
+mise run carleton-college:mdns
+```
+
+This publishes a `_ccc-server._tcp` service (via `dns-sd` on macOS, `bonjour-service` elsewhere). The service name includes the hostname (e.g. `ccc-server (Gecko)`), and the TXT record contains the institution name and the `/v1/` path prefix. The advertisement is torn down cleanly on `SIGTERM`/`SIGINT`.
+
+You can also set `ADVERTISE_MDNS=1` manually alongside any start command:
+
+```sh
+ADVERTISE_MDNS=1 mise run stolaf-college
+```
+
+To verify the advertisement is visible on the network:
+
+```sh
+dns-sd -B _ccc-server._tcp local
+```
+
 ### Production
 
 ```sh
