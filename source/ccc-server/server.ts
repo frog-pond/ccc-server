@@ -155,10 +155,20 @@ async function main() {
 			const {spawn} = await import('node:child_process')
 			const child = spawn(
 				'dns-sd',
-				['-R', serviceName, '_ccc-server._tcp', 'local', String(port), `institution=${institution}`, 'path=/v1/'],
+				[
+					'-R',
+					serviceName,
+					'_ccc-server._tcp',
+					'local',
+					String(port),
+					`institution=${institution}`,
+					'path=/v1/',
+				],
 				{stdio: 'ignore', detached: false},
 			)
-			console.log(`advertising mDNS service: ${serviceName}._ccc-server._tcp on port ${String(port)}`)
+			console.log(
+				`advertising mDNS service: ${serviceName}._ccc-server._tcp on port ${String(port)}`,
+			)
 
 			const teardown = () => child.kill()
 			process.once('SIGTERM', teardown)
@@ -172,7 +182,9 @@ async function main() {
 				port,
 				txt: {institution, path: '/v1/'},
 			})
-			console.log(`advertising mDNS service: ${service.name}._ccc-server._tcp on port ${String(port)}`)
+			console.log(
+				`advertising mDNS service: ${service.name}._ccc-server._tcp on port ${String(port)}`,
+			)
 
 			const teardown = () => {
 				service.stop?.(() => {
