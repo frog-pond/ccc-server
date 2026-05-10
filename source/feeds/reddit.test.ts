@@ -4,6 +4,7 @@ import {
 	parseRedditPosts,
 	parseRedditComments,
 	parseRedditCommentsJson,
+	parseRedditPostsJson,
 	buildCommentTree,
 } from './reddit.ts'
 
@@ -330,4 +331,239 @@ void test('parseRedditCommentsJson: null score defaults to 0 (Reddit hides score
 	]
 	const comments = parseRedditCommentsJson(fixture)
 	t.assert.equal(comments[0]!.score, 0, 'null score should default to 0')
+})
+
+// ── parseRedditPostsJson tests ─────────────────────────────────────────────
+
+const JSON_POSTS_FIXTURE = {
+	data: {
+		children: [
+			// Text post
+			{
+				kind: 't3',
+				data: {
+					id: 'text1',
+					title: 'A simple question',
+					author: 'user1',
+					created_utc: 1700000000,
+					permalink: '/r/stolaf/comments/text1/a_simple_question/',
+					selftext_html: '<div class="md"><p>Some body text</p></div>',
+					thumbnail: 'self',
+					is_self: true,
+					is_gallery: false,
+				},
+			},
+			// Image post
+			{
+				kind: 't3',
+				data: {
+					id: 'img1',
+					title: 'Beautiful campus photo',
+					author: 'photog',
+					created_utc: 1700001000,
+					permalink: '/r/stolaf/comments/img1/beautiful_campus_photo/',
+					selftext_html: null,
+					thumbnail: 'https://preview.redd.it/thumb.jpg?width=640&format=webp',
+					post_hint: 'image',
+					is_self: false,
+					is_gallery: false,
+					url_overridden_by_dest: 'https://i.redd.it/fullres.jpg',
+					domain: 'i.redd.it',
+				},
+			},
+			// Gallery post
+			{
+				kind: 't3',
+				data: {
+					id: 'gal1',
+					title: 'Club event photos',
+					author: 'clubprez',
+					created_utc: 1700002000,
+					permalink: '/r/stolaf/comments/gal1/club_event_photos/',
+					selftext_html: null,
+					thumbnail: 'https://preview.redd.it/crop.jpg?width=140&height=140',
+					is_self: false,
+					is_gallery: true,
+					url_overridden_by_dest: 'https://www.reddit.com/gallery/gal1',
+					domain: 'reddit.com',
+					media_metadata: {
+						img001: {
+							status: 'valid',
+							e: 'Image',
+							s: {
+								u: 'https://preview.redd.it/img001.jpg?width=1728&amp;format=png&amp;auto=webp',
+								x: 1728,
+								y: 2304,
+							},
+						},
+						img002: {
+							status: 'valid',
+							e: 'Image',
+							s: {
+								u: 'https://preview.redd.it/img002.jpg?width=1728&amp;format=png&amp;auto=webp',
+								x: 1728,
+								y: 2304,
+							},
+						},
+					},
+				},
+			},
+			// Link post
+			{
+				kind: 't3',
+				data: {
+					id: 'link1',
+					title: 'NYT article about Carleton',
+					author: 'newssharer',
+					created_utc: 1700003000,
+					permalink: '/r/carletoncollege/comments/link1/nyt_article/',
+					selftext_html: '<div class="md"><p>Great article!</p></div>',
+					thumbnail: 'https://external-preview.redd.it/nyt.jpg',
+					post_hint: 'link',
+					is_self: false,
+					is_gallery: false,
+					url_overridden_by_dest: 'https://www.nytimes.com/2026/04/17/article',
+					domain: 'nytimes.com',
+				},
+			},
+			// Crosspost
+			{
+				kind: 't3',
+				data: {
+					id: 'cross1',
+					title: 'Choosing a college advice',
+					author: 'sharer',
+					created_utc: 1700004000,
+					permalink: '/r/stolaf/comments/cross1/choosing_a_college_advice/',
+					selftext_html: null,
+					thumbnail: 'self',
+					is_self: false,
+					is_gallery: false,
+					crosspost_parent: 't3_orig1',
+					crosspost_parent_list: [
+						{
+							id: 'orig1',
+							title: 'Choosing a college advice',
+							author: 'original_poster',
+							subreddit: 'ApplyingToCollege',
+							selftext: 'Original body text here (plain markdown)',
+							permalink: '/r/ApplyingToCollege/comments/orig1/choosing_a_college_advice/',
+							created_utc: 1699900000,
+							is_self: true,
+							is_gallery: false,
+							thumbnail: 'self',
+						},
+					],
+					url_overridden_by_dest:
+						'/r/ApplyingToCollege/comments/orig1/choosing_a_college_advice/',
+					domain: 'self.ApplyingToCollege',
+				},
+			},
+			// Non-t3 entry (should be skipped)
+			{kind: 'more', data: {id: 'skip1', count: 5}},
+		],
+	},
+}
+
+void test('parseRedditPostsJson: text post', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	const post = posts.find((p) => p.id === 't3_text1')!
+	t.assert.ok(post, 'text post should be parsed')
+	t.assert.equal(post.postType, 'text')
+	t.assert.equal(post.thumbnail, null) // 'self' → null
+	t.assert.ok(post.contentHtml.includes('Some body text'))
+	t.assert.equal(post.images, undefined)
+	t.assert.equal(post.linkUrl, null)
+})
+
+void test('parseRedditPostsJson: image post', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	const post = posts.find((p) => p.id === 't3_img1')!
+	t.assert.ok(post, 'image post should be parsed')
+	t.assert.equal(post.postType, 'image')
+	t.assert.equal(post.imageUrl, 'https://i.redd.it/fullres.jpg')
+	t.assert.ok(post.thumbnail?.includes('preview.redd.it'))
+	t.assert.equal(post.linkUrl, null)
+	t.assert.equal(post.images, undefined)
+})
+
+void test('parseRedditPostsJson: gallery post decodes HTML entities in image URLs', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	const post = posts.find((p) => p.id === 't3_gal1')!
+	t.assert.ok(post, 'gallery post should be parsed')
+	t.assert.equal(post.postType, 'gallery')
+	t.assert.equal(post.images?.length, 2)
+	t.assert.ok(post.images![0]!.includes('&format=png'), 'HTML entities must be decoded')
+	t.assert.ok(!post.images![0]!.includes('&amp;'), 'raw &amp; must not remain in URL')
+})
+
+void test('parseRedditPostsJson: link post', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	const post = posts.find((p) => p.id === 't3_link1')!
+	t.assert.ok(post, 'link post should be parsed')
+	t.assert.equal(post.postType, 'link')
+	t.assert.equal(post.linkUrl, 'https://www.nytimes.com/2026/04/17/article')
+	t.assert.equal(post.linkDomain, 'nytimes.com')
+	t.assert.ok(post.contentHtml.includes('Great article!'))
+	t.assert.equal(post.imageUrl, null)
+})
+
+void test('parseRedditPostsJson: crosspost includes original post metadata', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	const post = posts.find((p) => p.id === 't3_cross1')!
+	t.assert.ok(post, 'crosspost should be parsed')
+	t.assert.equal(post.postType, 'crosspost')
+	t.assert.equal(post.thumbnail, null)
+	t.assert.ok(post.crosspostParent, 'crosspostParent should be present')
+	t.assert.equal(post.crosspostParent!.subreddit, 'ApplyingToCollege')
+	t.assert.equal(post.crosspostParent!.author, 'original_poster')
+	t.assert.ok(post.crosspostParent!.selftext.includes('Original body text'))
+	t.assert.ok(post.crosspostParent!.permalink.includes('reddit.com'))
+})
+
+void test('parseRedditPostsJson: skips non-t3 entries', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	// 5 valid t3 entries, 1 'more' entry skipped
+	t.assert.equal(posts.length, 5)
+})
+
+void test('parseRedditPostsJson: normalizes special thumbnail strings to null', (t: TestContext) => {
+	const fixture = {
+		data: {
+			children: [
+				{
+					kind: 't3',
+					data: {
+						id: 'tn1',
+						title: 'Test',
+						author: 'u1',
+						created_utc: 1700000000,
+						permalink: '/r/stolaf/comments/tn1/test/',
+						selftext_html: '',
+						thumbnail: 'default',
+						is_self: true,
+						is_gallery: false,
+					},
+				},
+			],
+		},
+	}
+	const posts = parseRedditPostsJson(fixture)
+	t.assert.equal(posts[0]!.thumbnail, null, '"default" thumbnail should normalize to null')
+})
+
+void test('parseRedditPostsJson: id is prefixed with t3_', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	t.assert.ok(posts.every((p) => p.id.startsWith('t3_')))
+})
+
+void test('parseRedditPostsJson: created_utc converted to ISO 8601', (t: TestContext) => {
+	const posts = parseRedditPostsJson(JSON_POSTS_FIXTURE)
+	const post = posts.find((p) => p.id === 't3_text1')!
+	t.assert.equal(post.publishedAt, new Date(1700000000 * 1000).toISOString())
+})
+
+void test('parseRedditPostsJson: returns empty array for invalid input', (t: TestContext) => {
+	t.assert.deepEqual(parseRedditPostsJson(null), [])
+	t.assert.deepEqual(parseRedditPostsJson({}), [])
 })
