@@ -1,0 +1,31 @@
+#!/bin/sh
+# Example restart script for docker-compose deployments
+# This script should be placed on the server (outside the container)
+# and referenced via RESTART_SCRIPT environment variable
+
+# Ensure script is run by the correct user
+if [ "$(whoami)" != "your-username" ]; then
+    >&2 echo "Error: This script must be run by your-username"
+    exit 1
+fi
+
+# Enable debugging
+set -x
+
+# Change to the directory containing docker-compose.yml
+dir=/home/your-username/ccc-server
+
+cd "$dir" || exit 1
+
+# Pull latest images, stop containers, and restart them
+docker-compose pull && docker-compose down && docker-compose up -d
+
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+    echo "Successfully restarted containers with latest images"
+else
+    echo "Failed to restart containers (exit code: $exit_code)"
+fi
+
+exit $exit_code
