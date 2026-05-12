@@ -34,6 +34,7 @@
     "@koa/body-parsers": "^6.0.1",
     "@koa/etag": "5.0.2",
     "@koa/router": "^14.0.0",
+    "@opentelemetry/instrumentation": "0.214.0",
     "@sentry/node": "10.52.0",
     "@sentry/profiling-node": "10.52.0",
     "@sentry/utils": "8.55.2",
