@@ -140,13 +140,58 @@ async function main() {
 
 	// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 	const PORT = process.env['NODE_PORT'] || '3000'
-	const port = Number.parseInt(PORT, 10)
-	app.listen(port)
-	console.log(`listening on port ${PORT}`)
+	const parsedPort = Number.parseInt(PORT, 10)
+	if (!Number.isInteger(parsedPort) || parsedPort < 0 || parsedPort > 65_535) {
+		console.error(`NODE_PORT must be an integer between 0 and 65535, but got: ${PORT}`)
+		process.exit(1)
+	}
+
+	const server = app.listen(parsedPort)
+	await new Promise<void>((resolve, reject) => {
+		server.once('listening', resolve)
+		server.once('error', reject)
+	})
+
+	let boundAddress = server.address()
+	if (boundAddress === null || typeof boundAddress === 'string') {
+		console.error('failed to determine bound server address')
+		process.exit(1)
+	}
+	const boundPort = boundAddress.port
+	console.log(`listening on port ${String(boundPort)}`)
 
 	if (process.env['ADVERTISE_MDNS'] === '1') {
 		const {hostname} = await import('node:os')
 		const serviceName = `ccc-server (${hostname()})`
+		let shutdownInitiated = false
+		let stopAdvertisement: (() => void | Promise<void>) | undefined
+		const closeServer = () =>
+			new Promise<void>((resolve) => {
+				server.close(() => {
+					resolve()
+				})
+			})
+		const installShutdownHandlers = () => {
+			const handleSignal = (signal: NodeJS.Signals) => {
+				if (shutdownInitiated) return
+				shutdownInitiated = true
+				void (async () => {
+					await stopAdvertisement?.()
+					await closeServer()
+					process.removeListener('SIGTERM', onSigTerm)
+					process.removeListener('SIGINT', onSigInt)
+					process.kill(process.pid, signal)
+				})()
+			}
+			const onSigTerm = () => {
+				handleSignal('SIGTERM')
+			}
+			const onSigInt = () => {
+				handleSignal('SIGINT')
+			}
+			process.once('SIGTERM', onSigTerm)
+			process.once('SIGINT', onSigInt)
+		}
 
 		if (process.platform === 'darwin') {
 			// On macOS, delegate to dns-sd so registration goes through the system
@@ -160,40 +205,59 @@ async function main() {
 					serviceName,
 					'_ccc-server._tcp',
 					'local',
-					String(port),
+					String(boundPort),
 					`institution=${institution}`,
 					'path=/v1/',
 				],
 				{stdio: 'ignore', detached: false},
 			)
-			console.log(
-				`advertising mDNS service: ${serviceName}._ccc-server._tcp on port ${String(port)}`,
-			)
-
-			const teardown = () => child.kill()
-			process.once('SIGTERM', teardown)
-			process.once('SIGINT', teardown)
-		} else {
-			const {Bonjour} = await import('bonjour-service')
-			const bonjour = new Bonjour()
-			const service = bonjour.publish({
-				name: serviceName,
-				type: 'ccc-server',
-				port,
-				txt: {institution, path: '/v1/'},
+			child.once('error', (error) => {
+				console.warn(`mDNS advertisement disabled: failed to start dns-sd (${error.message})`)
 			})
 			console.log(
-				`advertising mDNS service: ${service.name}._ccc-server._tcp on port ${String(port)}`,
+				`advertising mDNS service: ${serviceName}._ccc-server._tcp on port ${String(boundPort)}`,
 			)
 
-			const teardown = () => {
-				service.stop?.(() => {
-					// bonjour.destroy() returns any; call without returning
-					bonjour.destroy()
-				})
+			stopAdvertisement = () => {
+				child.kill()
 			}
-			process.once('SIGTERM', teardown)
-			process.once('SIGINT', teardown)
+			installShutdownHandlers()
+		} else {
+			try {
+				const {Bonjour} = await import('bonjour-service')
+				const bonjour = new Bonjour()
+				const service = bonjour.publish({
+					name: serviceName,
+					type: 'ccc-server',
+					port: boundPort,
+					txt: {institution, path: '/v1/'},
+				})
+				console.log(
+					`advertising mDNS service: ${service.name}._ccc-server._tcp on port ${String(boundPort)}`,
+				)
+
+				stopAdvertisement = () =>
+					new Promise<void>((resolve) => {
+						const stop =
+							typeof service.stop === 'function'
+								? (service.stop as (callback: () => void) => void)
+								: undefined
+						if (!stop) {
+							bonjour.destroy()
+							resolve()
+							return
+						}
+						stop(() => {
+							// bonjour.destroy() returns any; call without returning
+							bonjour.destroy()
+							resolve()
+						})
+					})
+				installShutdownHandlers()
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error)
+				console.warn(`mDNS advertisement disabled: ${message}`)
+			}
 		}
 	}
 }
