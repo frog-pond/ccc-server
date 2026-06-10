@@ -30,9 +30,17 @@ env = { NODE_ENV = "production" }
 run = "mise run start"
 env = { INSTITUTION = "stolaf-college" }
 
+[tasks."stolaf-college:mdns"]
+run = "mise run start"
+env = { INSTITUTION = "stolaf-college", ADVERTISE_MDNS = "1" }
+
 [tasks."carleton-college"]
 run = "mise run start"
 env = { INSTITUTION = "carleton-college" }
+
+[tasks."carleton-college:mdns"]
+run = "mise run start"
+env = { INSTITUTION = "carleton-college", ADVERTISE_MDNS = "1" }
 
 [tasks."test:stolaf-college"]
 run = "./scripts/smoke-test.sh stolaf-college"
