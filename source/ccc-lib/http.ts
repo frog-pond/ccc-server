@@ -1,6 +1,7 @@
 import ky, {type AfterResponseHook, type BeforeRequestHook, type Input, type Options} from 'ky'
 
-export const USER_AGENT = 'ccc-server/0.2.0'
+export const USER_AGENT =
+	'Mozilla/5.0 (compatible; ccc-server/0.2.0; +https://github.com/frog-pond/ccc-server)'
 
 const IS_DEBUG_KY = process.env['TRACE']?.split(',').includes('ky')
 
