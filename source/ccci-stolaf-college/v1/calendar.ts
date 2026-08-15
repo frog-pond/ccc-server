@@ -1,7 +1,7 @@
 import {googleCalendar} from '../../calendar/google.ts'
 import {ical} from '../../calendar/ical.ts'
 import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
-import {deprecatedEvents, MOVED_TITLE} from './deprecated.ts'
+import {deprecatedEvents, UNAVAILABLE_TITLE} from './deprecated.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 export const getGoogleCalendar = googleCalendar
@@ -32,8 +32,8 @@ export function stolaf(ctx: Context) {
 	if (ctx.cached(ONE_MINUTE)) return
 
 	ctx.body = deprecatedEvents(
-		MOVED_TITLE,
-		'The calendar now loads inside the app. See the linked discussion for details.',
+		UNAVAILABLE_TITLE,
+		"This version of All About Olaf can't load the calendar. Open this event for details.",
 	)
 }
 

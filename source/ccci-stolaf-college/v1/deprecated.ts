@@ -19,10 +19,14 @@ import {z} from 'zod'
 /// fixes this has not shipped, so an update prompt would send people to an App
 /// Store listing with nothing new on it. The discussion carries the detail and
 /// stays correct either way.
+///
+/// It also avoids saying the data "moved into the app", which means nothing to
+/// someone already looking at the app — that describes our plumbing, not their
+/// problem. What they can act on is that this version cannot load it.
 
 const DISCUSSION_URL = 'https://github.com/frog-pond/ccc-server/discussions/564'
 
-export const MOVED_TITLE = 'This has moved'
+export const UNAVAILABLE_TITLE = 'Unavailable in this version'
 
 /// For sources that are genuinely gone rather than relocated, so the two cases
 /// stay distinguishable to whoever is reading the screen.
@@ -35,7 +39,7 @@ const LinkGroupSchema = z.object({
 
 export function deprecatedLinkGroups(text: string) {
 	return LinkGroupSchema.array().parse([
-		{title: MOVED_TITLE, data: [{label: text, url: DISCUSSION_URL}]},
+		{title: UNAVAILABLE_TITLE, data: [{label: text, url: DISCUSSION_URL}]},
 	])
 }
 
@@ -43,7 +47,9 @@ export function atoz(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = deprecatedLinkGroups('The A–Z index now loads inside the app. Tap for details.')
+	ctx.body = deprecatedLinkGroups(
+		"This version of All About Olaf can't load the A–Z index. Tap for details.",
+	)
 }
 
 /// The Google calendar behind this route was deleted upstream, and no app
@@ -71,7 +77,7 @@ export function deprecatedFeedItems(text: string, now = new Date()) {
 			excerpt: text,
 			featuredImage: null,
 			link: DISCUSSION_URL,
-			title: MOVED_TITLE,
+			title: UNAVAILABLE_TITLE,
 		},
 	])
 }
