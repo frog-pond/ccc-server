@@ -33,7 +33,7 @@ export function stolaf(ctx: Context) {
 
 	ctx.body = deprecatedEvents(
 		UNAVAILABLE_TITLE,
-		"This version of All About Olaf can't load the calendar. Open this event for details.",
+		"The calendar can't be loaded right now. Open this event for details.",
 	)
 }
 

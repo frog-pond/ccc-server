@@ -22,11 +22,17 @@ import {z} from 'zod'
 ///
 /// It also avoids saying the data "moved into the app", which means nothing to
 /// someone already looking at the app — that describes our plumbing, not their
-/// problem. What they can act on is that this version cannot load it.
+/// problem.
+///
+/// And it avoids framing this as something a newer version fixes. That implies
+/// a build exists to go and get, and none does yet; anyone who went looking
+/// would find the version they already have. Once the release ships, revisit
+/// this — at that point telling people to update becomes the correct and
+/// useful thing to say. Nothing here will remind you.
 
 const DISCUSSION_URL = 'https://github.com/frog-pond/ccc-server/discussions/564'
 
-export const UNAVAILABLE_TITLE = 'Unavailable in this version'
+export const UNAVAILABLE_TITLE = 'Temporarily unavailable'
 
 /// For sources that are genuinely gone rather than relocated, so the two cases
 /// stay distinguishable to whoever is reading the screen.
@@ -47,9 +53,7 @@ export function atoz(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = deprecatedLinkGroups(
-		"This version of All About Olaf can't load the A–Z index. Tap for details.",
-	)
+	ctx.body = deprecatedLinkGroups("The A–Z index can't be loaded right now. Tap for details.")
 }
 
 /// The Google calendar behind this route was deleted upstream, and no app
