@@ -14,21 +14,6 @@ import {z} from 'zod'
 /// event's title with `config.subtitle` beneath it. Nothing here requires a
 /// client change, which is the point — the clients that see it cannot be
 /// changed.
-///
-/// The message deliberately does not tell anyone to update. The release that
-/// fixes this has not shipped, so an update prompt would send people to an App
-/// Store listing with nothing new on it. The discussion carries the detail and
-/// stays correct either way.
-///
-/// It also avoids saying the data "moved into the app", which means nothing to
-/// someone already looking at the app — that describes our plumbing, not their
-/// problem.
-///
-/// And it avoids framing this as something a newer version fixes. That implies
-/// a build exists to go and get, and none does yet; anyone who went looking
-/// would find the version they already have. Once the release ships, revisit
-/// this — at that point telling people to update becomes the correct and
-/// useful thing to say. Nothing here will remind you.
 
 const DISCUSSION_URL = 'https://github.com/frog-pond/ccc-server/discussions/564'
 
