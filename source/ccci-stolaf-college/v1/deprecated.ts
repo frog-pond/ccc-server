@@ -22,7 +22,11 @@ import {z} from 'zod'
 
 const DISCUSSION_URL = 'https://github.com/frog-pond/ccc-server/discussions/564'
 
-const MOVED_TITLE = 'This has moved'
+export const MOVED_TITLE = 'This has moved'
+
+/// For sources that are genuinely gone rather than relocated, so the two cases
+/// stay distinguishable to whoever is reading the screen.
+const RETIRED_TITLE = 'No longer updated'
 
 const LinkGroupSchema = z.object({
 	title: z.string(),
@@ -40,6 +44,16 @@ export function atoz(ctx: Context) {
 	if (ctx.cached(ONE_DAY)) return
 
 	ctx.body = deprecatedLinkGroups('The A–Z index now loads inside the app. Tap for details.')
+}
+
+/// The Google calendar behind this route was deleted upstream, and no app
+/// screen ever read it. The route stays anyway: retired endpoints answer with a
+/// notice here rather than a 404, the way the retired news sources do.
+export function olevilleCalendar(ctx: Context) {
+	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
+
+	ctx.body = deprecatedEvents(RETIRED_TITLE, 'The Oleville calendar is no longer published.')
 }
 
 /// Distinct from `deprecatedWpJson`, which tells the reader a source is dead.
@@ -62,13 +76,13 @@ export function deprecatedFeedItems(text: string, now = new Date()) {
 	])
 }
 
-export function deprecatedEvents(text: string, now = new Date()) {
+export function deprecatedEvents(title: string, text: string, now = new Date()) {
 	return EventSchema.array().parse([
 		{
 			dataSource: 'deprecated',
 			startTime: now.toISOString(),
 			endTime: now.toISOString(),
-			title: MOVED_TITLE,
+			title,
 			description: text,
 			location: '',
 			isOngoing: false,
