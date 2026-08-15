@@ -1,6 +1,7 @@
 import {googleCalendar} from '../../calendar/google.ts'
 import {ical} from '../../calendar/ical.ts'
 import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
+import {deprecatedEvents, UNAVAILABLE_TITLE} from './deprecated.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 export const getGoogleCalendar = googleCalendar
@@ -24,18 +25,16 @@ export async function ics(ctx: Context) {
 	ctx.body = await getInternetCalendar(new URL(calendarUrl))
 }
 
-export async function stolaf(ctx: Context) {
+/// The imported Google calendar behind this route was deleted upstream. The app
+/// reads The Events Calendar directly now.
+export function stolaf(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = await getGoogleCalendar('5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com')
-}
-
-export async function oleville(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-	if (ctx.cached(ONE_MINUTE)) return
-
-	ctx.body = await getGoogleCalendar('opha089fhthpchc0pkdqinca44nl7svk@import.calendar.google.com')
+	ctx.body = deprecatedEvents(
+		UNAVAILABLE_TITLE,
+		"The calendar can't be loaded right now. Open this event for details.",
+	)
 }
 
 export async function northfield(ctx: Context) {

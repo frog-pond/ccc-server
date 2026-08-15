@@ -1,9 +1,9 @@
 import Router from '@koa/router'
 import * as athletics from './athletics.ts'
-import * as atoz from './a-z.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
 import * as departments from './departments.ts'
+import * as deprecated from './deprecated.ts'
 import * as dictionary from './dictionary.ts'
 import * as faqs from './faqs.ts'
 import * as help from './help.ts'
@@ -15,6 +15,7 @@ import * as news from './news.ts'
 import * as orgs from './orgs.ts'
 import * as printing from './printing.ts'
 import * as reports from './reports.ts'
+import * as sources from './sources.ts'
 import * as streams from './streams.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
@@ -61,13 +62,17 @@ api.get('/food/named/menu/schulze', menus.schulzeMenu)
 api.get('/calendar/google', calendar.google)
 api.get('/calendar/ics', calendar.ics)
 api.get('/calendar/named/stolaf', calendar.stolaf)
-api.get('/calendar/named/oleville', calendar.oleville)
+api.get('/calendar/named/oleville', deprecated.olevilleCalendar)
 api.get('/calendar/named/northfield', calendar.northfield)
 api.get('/calendar/named/krlx-schedule', calendar.krlx)
 api.get('/calendar/named/ksto-schedule', calendar.ksto)
 
-// a-to-z
-api.get('/a-to-z', atoz.atoz)
+// a-to-z — St. Olaf's WordPress blocks this server's IP; the app fetches it
+// directly now.
+api.get('/a-to-z', deprecated.atoz)
+
+// sources
+api.get('/sources', sources.sources)
 
 // dictionary
 api.get('/dictionary', dictionary.dictionary)
