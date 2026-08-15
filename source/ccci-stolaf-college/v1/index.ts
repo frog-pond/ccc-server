@@ -1,6 +1,5 @@
 import Router from '@koa/router'
 import * as athletics from './athletics.ts'
-import * as atoz from './a-z.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
 import * as departments from './departments.ts'
@@ -20,6 +19,7 @@ import * as streams from './streams.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
+import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -62,13 +62,17 @@ api.get('/food/named/menu/schulze', menus.schulzeMenu)
 api.get('/calendar/google', calendar.google)
 api.get('/calendar/ics', calendar.ics)
 api.get('/calendar/named/stolaf', calendar.stolaf)
-api.get('/calendar/named/oleville', calendar.oleville)
 api.get('/calendar/named/northfield', calendar.northfield)
 api.get('/calendar/named/krlx-schedule', calendar.krlx)
 api.get('/calendar/named/ksto-schedule', calendar.ksto)
 
-// a-to-z
-api.get('/a-to-z', atoz.atoz)
+// a-to-z — St. Olaf's WordPress blocks this server's IP; the app fetches it
+// directly now.
+api.get('/a-to-z', (ctx) => {
+	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
+	ctx.body = []
+})
 
 // sources
 api.get('/sources', sources.sources)
