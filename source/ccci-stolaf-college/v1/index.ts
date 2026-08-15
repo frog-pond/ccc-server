@@ -15,6 +15,7 @@ import * as news from './news.ts'
 import * as orgs from './orgs.ts'
 import * as printing from './printing.ts'
 import * as reports from './reports.ts'
+import * as sources from './sources.ts'
 import * as streams from './streams.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
@@ -68,6 +69,9 @@ api.get('/calendar/named/ksto-schedule', calendar.ksto)
 
 // a-to-z
 api.get('/a-to-z', atoz.atoz)
+
+// sources
+api.get('/sources', sources.sources)
 
 // dictionary
 api.get('/dictionary', dictionary.dictionary)
