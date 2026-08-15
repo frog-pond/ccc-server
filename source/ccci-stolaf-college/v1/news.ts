@@ -32,7 +32,7 @@ export function stolaf(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = deprecatedFeedItems('St. Olaf news moved into the app. Update to read it again.')
+	ctx.body = deprecatedFeedItems('St. Olaf news now loads inside the app. Tap for details.')
 }
 
 export function oleville(ctx: Context) {

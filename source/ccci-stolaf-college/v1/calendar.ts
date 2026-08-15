@@ -31,7 +31,9 @@ export function stolaf(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = deprecatedEvents('The calendar moved into the app. Update to see events again.')
+	ctx.body = deprecatedEvents(
+		'The calendar now loads inside the app. See the linked discussion for details.',
+	)
 }
 
 export async function northfield(ctx: Context) {
