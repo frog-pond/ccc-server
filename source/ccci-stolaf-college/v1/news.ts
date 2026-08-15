@@ -1,6 +1,7 @@
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {fetchRssFeed} from '../../feeds/rss.ts'
 import {fetchWpJson, deprecatedWpJson} from '../../feeds/wp-json.ts'
+import {deprecatedFeedItems} from './deprecated.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 const cachedRssFeed = fetchRssFeed
@@ -31,7 +32,7 @@ export function stolaf(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = deprecatedWpJson()
+	ctx.body = deprecatedFeedItems('St. Olaf news moved into the app. Update to read it again.')
 }
 
 export function oleville(ctx: Context) {

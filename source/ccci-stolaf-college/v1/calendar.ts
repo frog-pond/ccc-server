@@ -1,6 +1,7 @@
 import {googleCalendar} from '../../calendar/google.ts'
 import {ical} from '../../calendar/ical.ts'
 import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
+import {deprecatedEvents} from './deprecated.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 export const getGoogleCalendar = googleCalendar
@@ -30,7 +31,7 @@ export function stolaf(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = []
+	ctx.body = deprecatedEvents('The calendar moved into the app. Update to see events again.')
 }
 
 export async function northfield(ctx: Context) {

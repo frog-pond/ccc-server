@@ -3,6 +3,7 @@ import * as athletics from './athletics.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
 import * as departments from './departments.ts'
+import * as deprecated from './deprecated.ts'
 import * as dictionary from './dictionary.ts'
 import * as faqs from './faqs.ts'
 import * as help from './help.ts'
@@ -19,7 +20,6 @@ import * as streams from './streams.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
-import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -68,11 +68,7 @@ api.get('/calendar/named/ksto-schedule', calendar.ksto)
 
 // a-to-z — St. Olaf's WordPress blocks this server's IP; the app fetches it
 // directly now.
-api.get('/a-to-z', (ctx) => {
-	ctx.cacheControl(ONE_DAY)
-	if (ctx.cached(ONE_DAY)) return
-	ctx.body = []
-})
+api.get('/a-to-z', deprecated.atoz)
 
 // sources
 api.get('/sources', sources.sources)
