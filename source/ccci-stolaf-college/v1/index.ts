@@ -8,7 +8,6 @@ import * as dictionary from './dictionary.ts'
 import * as faqs from './faqs.ts'
 import * as help from './help.ts'
 import * as hours from './hours.ts'
-import * as jobs from './jobs.ts'
 import * as majors from './majors.ts'
 import * as menus from './menu.ts'
 import * as news from './news.ts'
@@ -94,7 +93,7 @@ api.get('/faqs', faqs.faqs)
 api.get('/webcams', webcams.webcams)
 
 // jobs
-api.get('/jobs', jobs.jobs)
+api.get('/jobs', deprecated.jobs)
 
 // orgs
 api.get('/orgs', orgs.orgs)
