@@ -41,6 +41,57 @@ export function atoz(ctx: Context) {
 	ctx.body = deprecatedLinkGroups("The A–Z index can't be loaded right now. Tap for details.")
 }
 
+/// The student job listings moved to Oracle Recruiting, which this server's
+/// scraper of the WordPress page cannot follow. Newer builds read Oracle
+/// directly; the builds that see this one cannot.
+///
+/// Shaped for the job screens those builds already ship: the list groups rows
+/// by `type` and labels them with `office`, so both have to carry something,
+/// and the detail screen parses `lastModified` with moment's `MMMM D, YYYY`.
+export function jobs(ctx: Context) {
+	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
+
+	ctx.body = deprecatedJobs(
+		"Student job listings can't be loaded in this version. Tap for details.",
+	)
+}
+
+/// Fills the list's grouping heading and row subtitle, which have no message to
+/// carry but cannot be blank.
+const JOBS_HEADING = 'Student work'
+
+export function deprecatedJobs(text: string, now = new Date()) {
+	return [
+		{
+			comments: '',
+			contactEmail: '',
+			contactName: '',
+			contactPhone: '',
+			description: text,
+			goodForIncomingStudents: false,
+			hoursPerWeek: '',
+			howToApply: '',
+			id: 0,
+			lastModified: now.toLocaleDateString('en-US', {
+				month: 'long',
+				day: 'numeric',
+				year: 'numeric',
+			}),
+			links: [DISCUSSION_URL],
+			office: JOBS_HEADING,
+			openPositions: '',
+			skills: '',
+			timeline: '',
+			timeOfHours: '',
+			title: UNAVAILABLE_TITLE,
+			type: JOBS_HEADING,
+			url: DISCUSSION_URL,
+			year: '',
+		},
+	]
+}
+
 /// The Google calendar behind this route was deleted upstream, and no app
 /// screen ever read it. The route stays anyway: retired endpoints answer with a
 /// notice here rather than a 404, the way the retired news sources do.
