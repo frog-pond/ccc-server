@@ -4,6 +4,7 @@ import {JSDOM} from 'jsdom'
 import {sortBy} from 'lodash-es'
 import {z} from 'zod'
 import type {Context} from '../../ccc-server/context.ts'
+import {unavailableOrgs} from './deprecated.ts'
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
@@ -81,7 +82,9 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 	return SortableCarletonStudentOrgSchema.parse(orgObj)
 }
 
-async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
+/// Kept against the block being lifted: the page's shape has not changed,
+/// only our ability to reach it.
+export async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let body = await getText('https://apps.carleton.edu/student/orgs/')
 	let dom = new JSDOM(body)
 
@@ -113,9 +116,9 @@ async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	return sortBy(Array.from(allOrgs.values()), '$sortableName')
 }
 
-export async function orgs(ctx: Context) {
+export function orgs(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
 	if (ctx.cached(ONE_HOUR * 6)) return
 
-	ctx.body = await getOrgs()
+	ctx.body = unavailableOrgs()
 }

@@ -1,4 +1,5 @@
-import {deprecatedEvents, DISCUSSION_URL, RETIRED_TITLE} from '../../calendar/deprecated.ts'
+import {deprecatedEvents} from '../../calendar/deprecated.ts'
+import {DISCUSSION_URL, RETIRED_TITLE, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
 import {FeedItemSchema} from '../../feeds/types.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
@@ -14,8 +15,6 @@ import {z} from 'zod'
 /// event's title with `config.subtitle` beneath it. Nothing here requires a
 /// client change, which is the point — the clients that see it cannot be
 /// changed.
-
-export const UNAVAILABLE_TITLE = 'Temporarily unavailable'
 
 const LinkGroupSchema = z.object({
 	title: z.string(),

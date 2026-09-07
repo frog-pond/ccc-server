@@ -1,5 +1,6 @@
 import {test} from 'node:test'
-import {deprecatedEvents, RETIRED_TITLE} from './deprecated.ts'
+import {deprecatedEvents} from './deprecated.ts'
+import {RETIRED_TITLE} from '../ccc-lib/deprecated.ts'
 
 /// The clients that see these payloads are the ones that can no longer be
 /// changed, so the shape matters as much as the words: an event row renders

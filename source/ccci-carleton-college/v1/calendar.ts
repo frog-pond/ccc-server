@@ -1,6 +1,7 @@
 import {googleCalendar} from '../../calendar/google.ts'
 import {ical} from '../../calendar/ical.ts'
-import {deprecatedEvents, RETIRED_TITLE} from '../../calendar/deprecated.ts'
+import {deprecatedEvents} from '../../calendar/deprecated.ts'
+import {RETIRED_TITLE} from '../../ccc-lib/deprecated.ts'
 import {ONE_DAY, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import moment from 'moment'
 import type {Context} from '../../ccc-server/context.ts'
@@ -47,12 +48,15 @@ export function cave(ctx: Context) {
 	ctx.body = deprecatedEvents(RETIRED_TITLE, 'The Cave calendar is no longer published.')
 }
 
-export async function stolaf(ctx: Context) {
-	ctx.cacheControl(ONE_MINUTE)
-	if (ctx.cached(ONE_MINUTE)) return
+/// The Google calendar this mirrored St. Olaf's events through was deleted —
+/// the API answers 404 for it — and nothing republishes them to Carleton. St.
+/// Olaf's own copy of this route already answers with a notice; this one was
+/// left fetching a calendar that is gone.
+export function stolaf(ctx: Context) {
+	ctx.cacheControl(ONE_DAY)
+	if (ctx.cached(ONE_DAY)) return
 
-	let id = '5g91il39n0sv4c2bjdv1jrvcpq4ulm4r@import.calendar.google.com'
-	ctx.body = await getGoogleCalendar(id)
+	ctx.body = deprecatedEvents(RETIRED_TITLE, 'St. Olaf events are no longer published to Carleton.')
 }
 
 export async function northfield(ctx: Context) {
