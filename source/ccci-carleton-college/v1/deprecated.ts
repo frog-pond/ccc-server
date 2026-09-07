@@ -11,7 +11,8 @@ import {SortableCarletonStudentOrgSchema} from './orgs.ts'
 /// row draws its name and description, a job row its title and description.
 /// Nothing here needs a client change.
 
-const OUTAGE_TEXT = "Carleton is blocking this server, so the list can't be loaded. We know, and we're working on it."
+const OUTAGE_TEXT =
+	"Carleton is blocking this server, so the list can't be loaded. We know, and we're working on it."
 
 export function unavailableOrgs() {
 	return SortableCarletonStudentOrgSchema.array().parse([

@@ -25,7 +25,11 @@ void test('parseCalendar reads a calendar body', (t) => {
 
 void test('parseCalendar rejects an HTML page with the source in the message', (t) => {
 	t.assert.throws(
-		() => parseCalendar('<!DOCTYPE html>\n<html><body>Not a feed</body></html>', 'https://example.com/feed.ics'),
+		() =>
+			parseCalendar(
+				'<!DOCTYPE html>\n<html><body>Not a feed</body></html>',
+				'https://example.com/feed.ics',
+			),
 		(error: Error) => {
 			t.assert.match(error.message, /did not return a calendar/i)
 			t.assert.match(error.message, /example\.com\/feed\.ics/)
