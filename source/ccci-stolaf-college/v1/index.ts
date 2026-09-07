@@ -9,6 +9,7 @@ import * as faqs from './faqs.ts'
 import * as help from './help.ts'
 import * as hours from './hours.ts'
 import * as majors from './majors.ts'
+import * as map from './map.ts'
 import * as menus from './menu.ts'
 import * as news from './news.ts'
 import * as orgs from './orgs.ts'
@@ -94,6 +95,10 @@ api.get('/webcams', webcams.webcams)
 
 // jobs
 api.get('/jobs', deprecated.jobs)
+
+// map
+api.get('/map', map.map)
+api.get('/map/geojson', map.geojson)
 
 // orgs
 api.get('/orgs', orgs.orgs)
