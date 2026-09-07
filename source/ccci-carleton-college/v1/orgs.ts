@@ -6,15 +6,21 @@ import {z} from 'zod'
 import type {Context} from '../../ccc-server/context.ts'
 import {unavailableOrgs} from './deprecated.ts'
 
+/// An org with no website, or none we may administer, is ordinary rather than
+/// malformed, and `domToOrg` says so with ''. Demanding a URL outright threw on
+/// those, and `getOrgs` parses in an unguarded loop, so one such org emptied the
+/// whole list.
+const UrlOrBlank = z.union([z.string().url(), z.literal('')])
+
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
 	id: z.string(),
 	contacts: z.string().array(),
 	categories: z.string().array(),
 	socialLinks: z.string().url().array(),
-	adminLink: z.string().url(),
+	adminLink: UrlOrBlank,
 	description: z.string(),
-	website: z.string().url(),
+	website: UrlOrBlank,
 	name: z.string().min(1),
 })
 
