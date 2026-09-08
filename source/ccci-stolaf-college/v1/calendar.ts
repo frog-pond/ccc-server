@@ -1,7 +1,8 @@
 import {googleCalendar} from '../../calendar/google.ts'
 import {ical} from '../../calendar/ical.ts'
 import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
-import {deprecatedEvents, UNAVAILABLE_TITLE} from './deprecated.ts'
+import {deprecatedEvents} from '../../calendar/deprecated.ts'
+import {UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 export const getGoogleCalendar = googleCalendar

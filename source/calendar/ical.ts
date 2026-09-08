@@ -31,6 +31,20 @@ function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	})
 }
 
+/// A retired feed usually answers 200 with the site's HTML rather than a 404,
+/// so the body is the only evidence that we got a calendar at all. Checking it
+/// here turns that into one clear error naming the source, instead of a syntax
+/// error from inside ical.js that reads as a fault in this server.
+export function parseCalendar(body: string, source: string | URL) {
+	let text = body.trim()
+
+	if (!text.startsWith('BEGIN:VCALENDAR')) {
+		throw new Error(`${String(source)} did not return a calendar`)
+	}
+
+	return InternetCalendar.Component.fromString(text)
+}
+
 export async function ical(
 	url: string | URL,
 	{onlyFuture = true, maxEndDate}: {onlyFuture?: boolean; maxEndDate?: moment.Moment} = {},
@@ -38,7 +52,7 @@ export async function ical(
 ) {
 	let body = await getText(url, {headers: {accept: 'text/calendar'}})
 
-	let comp = InternetCalendar.Component.fromString(body)
+	let comp = parseCalendar(body, url)
 	let events = comp
 		.getAllSubcomponents('vevent')
 		.map((vevent) => new InternetCalendar.Event(vevent))

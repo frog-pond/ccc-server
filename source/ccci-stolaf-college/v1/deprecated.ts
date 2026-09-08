@@ -1,4 +1,5 @@
-import {EventSchema} from '../../calendar/types.ts'
+import {deprecatedEvents} from '../../calendar/deprecated.ts'
+import {DISCUSSION_URL, RETIRED_TITLE, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
 import {FeedItemSchema} from '../../feeds/types.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
@@ -14,14 +15,6 @@ import {z} from 'zod'
 /// event's title with `config.subtitle` beneath it. Nothing here requires a
 /// client change, which is the point — the clients that see it cannot be
 /// changed.
-
-const DISCUSSION_URL = 'https://github.com/frog-pond/ccc-server/discussions/564'
-
-export const UNAVAILABLE_TITLE = 'Temporarily unavailable'
-
-/// For sources that are genuinely gone rather than relocated, so the two cases
-/// stay distinguishable to whoever is reading the screen.
-const RETIRED_TITLE = 'No longer updated'
 
 const LinkGroupSchema = z.object({
 	title: z.string(),
@@ -118,24 +111,6 @@ export function deprecatedFeedItems(text: string, now = new Date()) {
 			featuredImage: null,
 			link: DISCUSSION_URL,
 			title: UNAVAILABLE_TITLE,
-		},
-	])
-}
-
-export function deprecatedEvents(title: string, text: string, now = new Date()) {
-	return EventSchema.array().parse([
-		{
-			dataSource: 'deprecated',
-			startTime: now.toISOString(),
-			endTime: now.toISOString(),
-			title,
-			description: text,
-			location: '',
-			isOngoing: false,
-			links: [DISCUSSION_URL],
-			// The times are meaningless here, so they stay hidden; the message
-			// goes in the subtitle slot, which the row renders under the title.
-			config: {startTime: false, endTime: false, subtitle: 'description'},
 		},
 	])
 }

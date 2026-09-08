@@ -4,6 +4,13 @@ import {JSDOM} from 'jsdom'
 import {sortBy} from 'lodash-es'
 import {z} from 'zod'
 import type {Context} from '../../ccc-server/context.ts'
+import {unavailableOrgs} from './deprecated.ts'
+
+/// An org with no website, or none we may administer, is ordinary rather than
+/// malformed, and `domToOrg` says so with ''. Demanding a URL outright threw on
+/// those, and `getOrgs` parses in an unguarded loop, so one such org emptied the
+/// whole list.
+const UrlOrBlank = z.union([z.string().url(), z.literal('')])
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
@@ -11,9 +18,9 @@ export const CarletonStudentOrgSchema = z.object({
 	contacts: z.string().array(),
 	categories: z.string().array(),
 	socialLinks: z.string().url().array(),
-	adminLink: z.string().url(),
+	adminLink: UrlOrBlank,
 	description: z.string(),
-	website: z.string().url(),
+	website: UrlOrBlank,
 	name: z.string().min(1),
 })
 
@@ -81,7 +88,9 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 	return SortableCarletonStudentOrgSchema.parse(orgObj)
 }
 
-async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
+/// Kept against the block being lifted: the page's shape has not changed,
+/// only our ability to reach it.
+export async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let body = await getText('https://apps.carleton.edu/student/orgs/')
 	let dom = new JSDOM(body)
 
@@ -113,9 +122,9 @@ async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	return sortBy(Array.from(allOrgs.values()), '$sortableName')
 }
 
-export async function orgs(ctx: Context) {
+export function orgs(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
 	if (ctx.cached(ONE_HOUR * 6)) return
 
-	ctx.body = await getOrgs()
+	ctx.body = unavailableOrgs()
 }
