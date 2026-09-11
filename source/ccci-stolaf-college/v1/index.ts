@@ -102,6 +102,7 @@ api.get('/map/geojson', map.geojson)
 
 // orgs
 api.get('/orgs', orgs.orgs)
+api.get('/orgs/categories', orgs.orgCategories)
 
 // news
 api.get('/news/rss', news.rss)

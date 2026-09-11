@@ -24,10 +24,25 @@ export const StudentOrgSchema = z.object({
 	lastUpdated: z.string(),
 	website: z.string().optional().nullable(),
 	name: z.string().min(1),
+	/** Presence's stable slug for the org, e.g. `"bird-alliance-3"` — not derivable
+	 * from `name`, so it's the only reliable key for matching an org to its
+	 * category memberships from the `/orgs/categories` route. */
+	organizationUri: z.string(),
+	/** Current member count, as Presence reports it. */
+	memberCount: z.number(),
 })
 
 export type SortableStudentOrgType = z.infer<typeof SortableStudentOrgSchema>
 export const SortableStudentOrgSchema = StudentOrgSchema.extend({
 	$sortableName: z.string(),
 	$groupableName: z.string(),
+})
+
+/** One of Presence's org categories, with every org uri that belongs to it. */
+export type OrgCategoryType = z.infer<typeof OrgCategorySchema>
+export const OrgCategorySchema = z.object({
+	/** Presence's stable id for the category, e.g. `"PBnP"`. */
+	catIdh: z.string(),
+	name: z.string(),
+	organizationUris: z.string().array(),
 })
