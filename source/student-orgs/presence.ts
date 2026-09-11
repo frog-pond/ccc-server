@@ -1,9 +1,14 @@
 import {getJson} from '../ccc-lib/http.ts'
-import {sortBy} from 'lodash-es'
+import {groupBy, sortBy, toPairs} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 import {z} from 'zod'
-import {SortableStudentOrgSchema, type SortableStudentOrgType} from './types.ts'
+import {
+	OrgCategorySchema,
+	SortableStudentOrgSchema,
+	type OrgCategoryType,
+	type SortableStudentOrgType,
+} from './types.ts'
 
 const BasicPresenceOrgSchema = z.object({
 	subdomain: z.string(),
@@ -53,6 +58,8 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 		meetings,
 		name,
 		website,
+		organizationUri: org.uri,
+		memberCount: org.memberCount,
 		$sortableName: sortableName,
 		$groupableName: sortableName.at(0)?.toLocaleUpperCase(),
 	})
@@ -75,4 +82,36 @@ export async function presence(school: string): Promise<SortableStudentOrgType[]
 	let cleaned = orgs.map((org) => cleanOrg(org, sortableRegex))
 
 	return sortBy(cleaned, '$sortableName')
+}
+
+/// One row per org-category membership — an org with two categories appears
+/// twice. `/organizations/categories` returns this flat, so a category tile
+/// with its org count means grouping it ourselves.
+const PresenceCategoryMembershipSchema = z.object({
+	catIdh: z.string(),
+	name: z.string(),
+	organizationUri: z.string(),
+})
+type PresenceCategoryMembershipType = z.infer<typeof PresenceCategoryMembershipSchema>
+
+export function groupCategories(memberships: PresenceCategoryMembershipType[]): OrgCategoryType[] {
+	let grouped = groupBy(memberships, (m) => m.catIdh)
+
+	let categories = toPairs(grouped).map(([catIdh, rows]) =>
+		OrgCategorySchema.parse({
+			catIdh,
+			name: rows.at(0)?.name ?? '',
+			organizationUris: rows.map((row) => row.organizationUri),
+		}),
+	)
+
+	return sortBy(categories, 'name')
+}
+
+export async function presenceCategories(school: string): Promise<OrgCategoryType[]> {
+	let categoriesUrl = `https://api.presence.io/${school}/v1/organizations/categories`
+
+	let memberships = PresenceCategoryMembershipSchema.array().parse(await getJson(categoriesUrl))
+
+	return groupCategories(memberships)
 }
