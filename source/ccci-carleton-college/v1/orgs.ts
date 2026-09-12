@@ -1,7 +1,7 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {JSDOM} from 'jsdom'
-import {sortBy} from 'lodash-es'
+import {groupableName, sortOrgs, sortableName} from '../../student-orgs/names.ts'
 import {z} from 'zod'
 import type {Context} from '../../ccc-server/context.ts'
 import {unavailableOrgs} from './deprecated.ts'
@@ -26,12 +26,12 @@ export const CarletonStudentOrgSchema = z.object({
 
 export type SortableCarletonStudentOrgType = z.infer<typeof SortableCarletonStudentOrgSchema>
 export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend({
-	/** The name, but with leading common prefixes stripped, such as "The" */
+	/** The name, folded for sorting: no leading prefix such as "The", no accents, no opening punctuation */
 	$sortableName: z.string(),
 	$groupableName: z.string(),
 })
 
-function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
+export function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
 	let name =
 		orgNode
 			.querySelector('h4')
@@ -70,7 +70,7 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 		return href ? [href] : []
 	})
 
-	let sortableName = name.replace(sortableRegex, '')
+	let sortable = sortableName(name, sortableRegex)
 
 	let orgObj: SortableCarletonStudentOrgType = {
 		id,
@@ -81,8 +81,8 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 		categories: [],
 		socialLinks,
 		adminLink,
-		$sortableName: sortableName,
-		$groupableName: sortableName.at(0)?.toLocaleUpperCase() ?? '',
+		$sortableName: sortable,
+		$groupableName: groupableName(sortable),
 	}
 
 	return SortableCarletonStudentOrgSchema.parse(orgObj)
@@ -119,7 +119,7 @@ export async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 		}
 	}
 
-	return sortBy(Array.from(allOrgs.values()), '$sortableName')
+	return sortOrgs(Array.from(allOrgs.values()))
 }
 
 export function orgs(ctx: Context) {
