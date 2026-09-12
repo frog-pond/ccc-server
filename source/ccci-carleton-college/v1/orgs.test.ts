@@ -1,5 +1,6 @@
 import {test} from 'node:test'
-import {SortableCarletonStudentOrgSchema} from './orgs.ts'
+import {JSDOM} from 'jsdom'
+import {domToOrg, SortableCarletonStudentOrgSchema} from './orgs.ts'
 
 /// `domToOrg` assigns '' for an org with no website and no admin link, which
 /// most orgs are. The schema demanded a URL for both, so parsing such an org
@@ -40,4 +41,37 @@ void test('an org with no admin link still parses', (t) => {
 
 void test('a website that is neither empty nor a URL is still rejected', (t) => {
 	t.assert.throws(() => SortableCarletonStudentOrgSchema.parse({...ORG, website: 'not a url'}))
+})
+
+/// The same indexed-list rules St. Olaf's orgs follow: an org whose name opens
+/// with punctuation files under its first letter, not under the punctuation.
+
+const sortableRegex = /^(Carleton( College)?|The) +/i
+
+function orgNode(name: string): Element {
+	let dom = new JSDOM(`<div class="orgContainer"><h4>${name}</h4></div>`)
+	let node = dom.window.document.querySelector('.orgContainer')
+	if (!node) {
+		throw new Error('the fixture markup has no org node')
+	}
+	return node
+}
+
+void test('an org whose name opens with punctuation groups under its first letter', (t) => {
+	let org = domToOrg(orgNode('¡Presente!'), sortableRegex)
+
+	t.assert.equal(org.$groupableName, 'P')
+	t.assert.equal(org.$sortableName, 'presente!')
+})
+
+void test('an org whose name opens with a digit groups under a number sign', (t) => {
+	let org = domToOrg(orgNode('4x4 Club'), sortableRegex)
+
+	t.assert.equal(org.$groupableName, '#')
+})
+
+void test('an accented initial keeps its letter', (t) => {
+	let org = domToOrg(orgNode('Étude Club'), sortableRegex)
+
+	t.assert.equal(org.$groupableName, 'E')
 })
