@@ -1,5 +1,5 @@
 import {getJson} from '../ccc-lib/http.ts'
-import {groupBy, sortBy, toPairs} from 'lodash-es'
+import {deburr, groupBy, sortBy, toPairs} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 import {z} from 'zod'
@@ -38,6 +38,35 @@ const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
 	}),
 )
 
+/**
+ * The key an org sorts and groups by: its name folded to plain lower-case
+ * letters, without the article or campus name a reader ignores, and without
+ * the punctuation some orgs open with — `¡Presente!` belongs under P.
+ */
+export function sortableName(name: string, ignoredPrefixes: RegExp): string {
+	return deburr(name)
+		.replace(ignoredPrefixes, '')
+		.replace(/^[^\p{Letter}\p{Number}]+/u, '')
+		.toLowerCase()
+}
+
+/**
+ * The section an org files under. Names that start with a digit, and names
+ * left with nothing to file under, share the number sign, which iOS lists
+ * after the letters.
+ */
+export function groupableName(sortableName: string): string {
+	let first = sortableName.at(0)
+	return first && /\p{Letter}/u.test(first) ? first.toLocaleUpperCase() : '#'
+}
+
+/** Orgs in list order: A through Z, then the number sign, the way iOS sorts an indexed list. */
+export function sortOrgs<T extends {$groupableName: string; $sortableName: string}>(
+	orgs: T[],
+): T[] {
+	return sortBy(orgs, [(org) => (org.$groupableName === '#' ? 1 : 0), '$sortableName'])
+}
+
 export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 	let name = org.name.trim()
 	let category = org.categories.join(', ')
@@ -48,7 +77,7 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 		website = `http://${website}`
 	}
 
-	let sortableName = name.replace(sortableRegex, '').toLowerCase()
+	let sortable = sortableName(name, sortableRegex)
 	return SortableStudentOrgSchema.parse({
 		advisors: [],
 		category,
@@ -60,8 +89,8 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 		website,
 		organizationUri: org.uri,
 		memberCount: org.memberCount,
-		$sortableName: sortableName,
-		$groupableName: sortableName.at(0)?.toLocaleUpperCase(),
+		$sortableName: sortable,
+		$groupableName: groupableName(sortable),
 	})
 }
 
@@ -81,7 +110,7 @@ export async function presence(school: string): Promise<SortableStudentOrgType[]
 
 	let cleaned = orgs.map((org) => cleanOrg(org, sortableRegex))
 
-	return sortBy(cleaned, '$sortableName')
+	return sortOrgs(cleaned)
 }
 
 /// One row per org-category membership — an org with two categories appears
