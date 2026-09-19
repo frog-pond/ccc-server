@@ -81,9 +81,116 @@ const AthleticsResponseSchema = z.object({
 	scores: z.array(ScoreSchema),
 })
 
+// ── Livestats schemas ────────────────────────────────────────────────────────
+
+const LivestatsTeamSchema = z.object({
+	Id: z.string(),
+	Name: z.string(),
+	Score: z.number(),
+})
+
+const LivestatsGameSchema = z.object({
+	GameId: z.number(),
+	Path: z.string(),
+	FullPath: z.string(),
+	Link: z.string(),
+	SportTitle: z.string(),
+	Opponent: z.string(),
+	Location: z.string(),
+	Time: z.string(),
+	HasStarted: z.boolean(),
+	IsComplete: z.boolean(),
+	ClockSeconds: z.number(),
+	ShowExtraPeriodsAsOT: z.boolean(),
+	PeriodsRegulation: z.number(),
+	Period: z.number(),
+	PeriodName: z.string(),
+	HomeTeam: LivestatsTeamSchema,
+	VisitingTeam: LivestatsTeamSchema,
+})
+
+const LivestatsResponseSchema = z.object({
+	Games: z.array(LivestatsGameSchema),
+})
+
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
+/**
+ * Derives the livestats URL from a scores URL by replacing the path.
+ * e.g. https://athletics.stolaf.edu/services/scores_chris.aspx?format=json
+ *   -> https://athletics.stolaf.edu/services/livestats.ashx
+ */
+function livestatsUrlFromScoresUrl(scoresUrl: string): string {
+	const url = new URL(scoresUrl)
+	url.pathname = '/services/livestats.ashx'
+	url.search = ''
+	return url.toString()
+}
+
+async function fetchLivestats(
+	livestatsUrl: string,
+): Promise<Map<string, z.infer<typeof LivestatsGameSchema>>> {
+	try {
+		const response = LivestatsResponseSchema.parse(await getJson(livestatsUrl))
+		const map = new Map<string, z.infer<typeof LivestatsGameSchema>>()
+		for (const game of response.Games) {
+			map.set(String(game.GameId), game)
+		}
+		return map
+	} catch {
+		// If livestats fails, continue without live data
+		return new Map()
+	}
+}
+
+/**
+ * Merges a score with live game data when the game is in progress.
+ * Updates status to 'O' (Ongoing) and populates live scores.
+ */
+export function mergeWithLiveData(
+	score: Score,
+	livestats: Map<string, z.infer<typeof LivestatsGameSchema>>,
+): Score {
+	const liveGame = livestats.get(score.id)
+	if (!liveGame) {
+		return score
+	}
+
+	// Only update if game has started but not completed
+	if (!liveGame.HasStarted || liveGame.IsComplete) {
+		return score
+	}
+
+	// If scores endpoint already has a final result, trust it over livestats
+	if (score.result === 'W' || score.result === 'L') {
+		return score
+	}
+
+	return {
+		...score,
+		status: {indicator: 'O', value: score.status.value},
+		team_score: String(liveGame.HomeTeam.Score),
+		opponent_score: String(liveGame.VisitingTeam.Score),
+	}
+}
+
+function normalizeCompletedGame(score: Score): Score {
+	// Upstream sometimes returns indicator 'O' (ongoing) with a final result — fix it
+	if ((score.result === 'W' || score.result === 'L') && score.status.indicator === 'O') {
+		return {...score, status: {...score.status, indicator: 'A'}}
+	}
+	return score
+}
+
 export async function fetchAthleticsScores(url: string): Promise<Score[]> {
-	const response = AthleticsResponseSchema.parse(await getJson(url))
-	return response.scores
+	const livestatsUrl = livestatsUrlFromScoresUrl(url)
+
+	const [scoresResponse, livestats] = await Promise.all([
+		getJson(url).then((data) => AthleticsResponseSchema.parse(data)),
+		fetchLivestats(livestatsUrl),
+	])
+
+	return scoresResponse.scores
+		.map((score) => mergeWithLiveData(score, livestats))
+		.map(normalizeCompletedGame)
 }
