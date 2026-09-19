@@ -1,10 +1,6 @@
 import {z} from 'zod'
 import {getJson} from '../ccc-lib/http.ts'
 
-// ── Livestats endpoint ───────────────────────────────────────────────────────
-
-const LIVESTATS_URL = 'https://athletics.stolaf.edu/services/livestats.ashx'
-
 // ── Zod schemas ──────────────────────────────────────────────────────────────
 
 const LocationInfoSchema = z.object({
@@ -119,9 +115,23 @@ const LivestatsResponseSchema = z.object({
 
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
-async function fetchLivestats(): Promise<Map<string, z.infer<typeof LivestatsGameSchema>>> {
+/**
+ * Derives the livestats URL from a scores URL by replacing the path.
+ * e.g. https://athletics.stolaf.edu/services/scores_chris.aspx?format=json
+ *   -> https://athletics.stolaf.edu/services/livestats.ashx
+ */
+function livestatsUrlFromScoresUrl(scoresUrl: string): string {
+	const url = new URL(scoresUrl)
+	url.pathname = '/services/livestats.ashx'
+	url.search = ''
+	return url.toString()
+}
+
+async function fetchLivestats(
+	livestatsUrl: string,
+): Promise<Map<string, z.infer<typeof LivestatsGameSchema>>> {
 	try {
-		const response = LivestatsResponseSchema.parse(await getJson(LIVESTATS_URL))
+		const response = LivestatsResponseSchema.parse(await getJson(livestatsUrl))
 		const map = new Map<string, z.infer<typeof LivestatsGameSchema>>()
 		for (const game of response.Games) {
 			map.set(String(game.GameId), game)
@@ -160,9 +170,11 @@ function mergeWithLiveData(
 }
 
 export async function fetchAthleticsScores(url: string): Promise<Score[]> {
+	const livestatsUrl = livestatsUrlFromScoresUrl(url)
+
 	const [scoresResponse, livestats] = await Promise.all([
 		getJson(url).then((data) => AthleticsResponseSchema.parse(data)),
-		fetchLivestats(),
+		fetchLivestats(livestatsUrl),
 	])
 
 	return scoresResponse.scores.map((score) => mergeWithLiveData(score, livestats))
