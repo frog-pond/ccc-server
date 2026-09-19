@@ -147,7 +147,7 @@ async function fetchLivestats(
  * Merges a score with live game data when the game is in progress.
  * Updates status to 'O' (Ongoing) and populates live scores.
  */
-function mergeWithLiveData(
+export function mergeWithLiveData(
 	score: Score,
 	livestats: Map<string, z.infer<typeof LivestatsGameSchema>>,
 ): Score {
@@ -161,12 +161,25 @@ function mergeWithLiveData(
 		return score
 	}
 
+	// If scores endpoint already has a final result, trust it over livestats
+	if (score.result === 'W' || score.result === 'L') {
+		return score
+	}
+
 	return {
 		...score,
 		status: {indicator: 'O', value: score.status.value},
 		team_score: String(liveGame.HomeTeam.Score),
 		opponent_score: String(liveGame.VisitingTeam.Score),
 	}
+}
+
+function normalizeCompletedGame(score: Score): Score {
+	// Upstream sometimes returns indicator 'O' (ongoing) with a final result — fix it
+	if ((score.result === 'W' || score.result === 'L') && score.status.indicator === 'O') {
+		return {...score, status: {...score.status, indicator: 'A'}}
+	}
+	return score
 }
 
 export async function fetchAthleticsScores(url: string): Promise<Score[]> {
@@ -177,5 +190,7 @@ export async function fetchAthleticsScores(url: string): Promise<Score[]> {
 		fetchLivestats(livestatsUrl),
 	])
 
-	return scoresResponse.scores.map((score) => mergeWithLiveData(score, livestats))
+	return scoresResponse.scores
+		.map((score) => mergeWithLiveData(score, livestats))
+		.map(normalizeCompletedGame)
 }
