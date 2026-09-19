@@ -1,6 +1,10 @@
 import {z} from 'zod'
 import {getJson} from '../ccc-lib/http.ts'
 
+// ── Livestats endpoint ───────────────────────────────────────────────────────
+
+const LIVESTATS_URL = 'https://athletics.stolaf.edu/services/livestats.ashx'
+
 // ── Zod schemas ──────────────────────────────────────────────────────────────
 
 const LocationInfoSchema = z.object({
@@ -81,9 +85,85 @@ const AthleticsResponseSchema = z.object({
 	scores: z.array(ScoreSchema),
 })
 
+// ── Livestats schemas ────────────────────────────────────────────────────────
+
+const LivestatsTeamSchema = z.object({
+	Id: z.string(),
+	Name: z.string(),
+	Score: z.number(),
+})
+
+const LivestatsGameSchema = z.object({
+	GameId: z.number(),
+	Path: z.string(),
+	FullPath: z.string(),
+	Link: z.string(),
+	SportTitle: z.string(),
+	Opponent: z.string(),
+	Location: z.string(),
+	Time: z.string(),
+	HasStarted: z.boolean(),
+	IsComplete: z.boolean(),
+	ClockSeconds: z.number(),
+	ShowExtraPeriodsAsOT: z.boolean(),
+	PeriodsRegulation: z.number(),
+	Period: z.number(),
+	PeriodName: z.string(),
+	HomeTeam: LivestatsTeamSchema,
+	VisitingTeam: LivestatsTeamSchema,
+})
+
+const LivestatsResponseSchema = z.object({
+	Games: z.array(LivestatsGameSchema),
+})
+
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
+async function fetchLivestats(): Promise<Map<string, z.infer<typeof LivestatsGameSchema>>> {
+	try {
+		const response = LivestatsResponseSchema.parse(await getJson(LIVESTATS_URL))
+		const map = new Map<string, z.infer<typeof LivestatsGameSchema>>()
+		for (const game of response.Games) {
+			map.set(String(game.GameId), game)
+		}
+		return map
+	} catch {
+		// If livestats fails, continue without live data
+		return new Map()
+	}
+}
+
+/**
+ * Merges a score with live game data when the game is in progress.
+ * Updates status to 'O' (Ongoing) and populates live scores.
+ */
+function mergeWithLiveData(
+	score: Score,
+	livestats: Map<string, z.infer<typeof LivestatsGameSchema>>,
+): Score {
+	const liveGame = livestats.get(score.id)
+	if (!liveGame) {
+		return score
+	}
+
+	// Only update if game has started but not completed
+	if (!liveGame.HasStarted || liveGame.IsComplete) {
+		return score
+	}
+
+	return {
+		...score,
+		status: {indicator: 'O', value: score.status.value},
+		team_score: String(liveGame.HomeTeam.Score),
+		opponent_score: String(liveGame.VisitingTeam.Score),
+	}
+}
+
 export async function fetchAthleticsScores(url: string): Promise<Score[]> {
-	const response = AthleticsResponseSchema.parse(await getJson(url))
-	return response.scores
+	const [scoresResponse, livestats] = await Promise.all([
+		getJson(url).then((data) => AthleticsResponseSchema.parse(data)),
+		fetchLivestats(),
+	])
+
+	return scoresResponse.scores.map((score) => mergeWithLiveData(score, livestats))
 }
