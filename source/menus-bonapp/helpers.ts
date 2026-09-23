@@ -1,3 +1,4 @@
+import moment from 'moment-timezone'
 import {
 	CafeInfoResponseSchema,
 	CafeMenuDayPartSchema,
@@ -5,15 +6,31 @@ import {
 	CafeMenuItemSchema,
 } from './types.ts'
 
+/**
+ * The zone both colleges keep time in. BonApp's cafe pages show the day it is
+ * on campus, so the day a response is dated has to be read on the same clock.
+ */
+const CAMPUS_TIMEZONE = 'America/Chicago'
+
+/**
+ * Today's date on campus, e.g. `2026-09-22`.
+ *
+ * Not the UTC date: from 7 PM (6 PM in winter) until midnight, UTC is already
+ * on the next day, and a response dated by it claims tomorrow for the dayparts
+ * BonApp is showing for today.
+ */
+export function campusToday(now: Date = new Date()): string {
+	return moment(now).tz(CAMPUS_TIMEZONE).format('YYYY-MM-DD')
+}
+
 export function CustomCafe(message: string) {
-	let today = new Date()
 	return CafeInfoResponseSchema.parse({
 		cafe: {
 			name: 'Café',
 			message,
 			days: [
 				{
-					date: today.toISOString().split('T')[0],
+					date: campusToday(),
 					dayparts: [],
 					message,
 				},
@@ -48,7 +65,6 @@ function CustomCafeMenuItem({
 }
 
 export function CafeMenuIsClosed() {
-	let today = new Date()
 	return CafeMenuResponseSchema.parse({
 		cor_icons: {},
 		items: {
@@ -61,7 +77,7 @@ export function CafeMenuIsClosed() {
 		},
 		days: [
 			{
-				date: today.toISOString().split('T')[0],
+				date: campusToday(),
 				cafe: {
 					name: 'Unknown',
 					menu_id: '1',
@@ -117,7 +133,6 @@ function CustomCafeDayPart({
 }
 
 export function CafeMenuWithError(error: unknown, label: string) {
-	let today = new Date()
 	return CafeMenuResponseSchema.parse({
 		cor_icons: {},
 		items: {
@@ -130,7 +145,7 @@ export function CafeMenuWithError(error: unknown, label: string) {
 		},
 		days: [
 			{
-				date: today.toISOString().split('T')[0],
+				date: campusToday(),
 				cafe: {
 					name: 'Unknown',
 					menu_id: '1',
