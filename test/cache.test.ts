@@ -125,3 +125,18 @@ void test('/ping answers pong', async (t) => {
 	t.assert.equal(response.status, 200)
 	t.assert.equal(body, 'pong')
 })
+
+// A client revalidating a stale copy sends If-None-Match to a data center that
+// may not have the route cached yet; that request still has to fill the cache.
+void test('a conditional request on a cold cache answers 304 and fills the cache', async (t) => {
+	let elsewhere = await worker(t)
+	let etag = (await elsewhere.get('/v1/cached')).response.headers.get('ETag')
+	if (!etag) throw new Error('the first response has no ETag')
+
+	let {hits, get} = await worker(t)
+	let conditional = await get('/v1/cached', {headers: {'If-None-Match': etag}})
+	let after = await get('/v1/cached')
+	t.assert.equal(conditional.response.status, 304)
+	t.assert.equal(after.response.headers.get('X-Cached-Response'), 'HIT')
+	t.assert.equal(hits.get('/data'), 1)
+})
