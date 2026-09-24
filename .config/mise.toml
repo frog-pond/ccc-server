@@ -17,14 +17,14 @@ run = "eslint --cache --max-warnings=0 ."
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks."stolaf-college"]
-run = "wrangler dev --env stolaf-college"
+run = "wrangler dev --env stolaf-college --persist-to .wrangler/state/stolaf-college"
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks."stolaf-college:mdns"]
 run = "node scripts/dev-mdns.ts stolaf-college"
 
 [tasks."carleton-college"]
-run = "wrangler dev --env carleton-college"
+run = "wrangler dev --env carleton-college --persist-to .wrangler/state/carleton-college"
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks."carleton-college:mdns"]

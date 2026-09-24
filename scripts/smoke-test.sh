@@ -10,7 +10,9 @@ trap "exit" INT TERM
 trap "kill 0" EXIT
 
 PORT=3000
-npx wrangler dev --env "$INSTITUTION" --port $PORT &
+# each school keeps its own local cache: both serve the same localhost URLs,
+# so a shared cache would answer one school's routes with the other's data
+npx wrangler dev --env "$INSTITUTION" --port $PORT --persist-to ".wrangler/state/$INSTITUTION" &
 
 # wait while the server starts up
 until curl -s "localhost:$PORT/ping" >/dev/null; do

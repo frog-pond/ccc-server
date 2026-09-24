@@ -19,8 +19,8 @@
     "p": "npm run pretty -- --no-write --check",
     "pretty": "prettier --write source scripts test",
     "lint": "eslint --cache --max-warnings=0 .",
-    "stolaf-college": "wrangler dev --env stolaf-college",
-    "carleton-college": "wrangler dev --env carleton-college",
+    "stolaf-college": "wrangler dev --env stolaf-college --persist-to .wrangler/state/stolaf-college",
+    "carleton-college": "wrangler dev --env carleton-college --persist-to .wrangler/state/carleton-college",
     "test:stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test:carleton-college": "./scripts/smoke-test.sh carleton-college",
     "test": "node --test 'source/**/*.test.ts' 'test/**/*.test.ts' 'scripts/**/*.test.ts'"

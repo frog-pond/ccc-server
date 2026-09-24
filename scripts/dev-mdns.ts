@@ -14,10 +14,22 @@ if (!institution || !SCHOOLS.includes(institution)) {
 }
 
 // 0.0.0.0 so a phone on the network can reach it; wrangler dev listens only on
-// localhost by default
+// localhost by default. Each school keeps its own local cache, since both serve
+// the same URLs and a shared cache would mix their data.
 const wrangler = spawn(
 	'npx',
-	['wrangler', 'dev', '--env', institution, '--ip', '0.0.0.0', '--port', String(PORT)],
+	[
+		'wrangler',
+		'dev',
+		'--env',
+		institution,
+		'--ip',
+		'0.0.0.0',
+		'--port',
+		String(PORT),
+		'--persist-to',
+		`.wrangler/state/${institution}`,
+	],
 	{stdio: 'inherit'},
 )
 
