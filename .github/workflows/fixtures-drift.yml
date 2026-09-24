@@ -1,0 +1,91 @@
+name: Refresh upstream fixtures
+
+on:
+  # Mondays at 12:00 UTC (7 AM in Northfield in summer), so a PR is waiting at
+  # the start of the week.
+  schedule:
+    - cron: '0 12 * * 1'
+  workflow_dispatch:
+  # Dry run on PRs that touch this workflow: record and summarize, open nothing.
+  pull_request:
+    paths:
+      - .github/workflows/fixtures-drift.yml
+      - scripts/record-fixtures.ts
+      - test/fixtures.ts
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  # PR dry runs get their own group, so they never cancel a scheduled refresh.
+  group: >-
+    ${{ github.event_name == 'pull_request'
+        && format('fixtures-dryrun-{0}', github.ref)
+        || 'fixtures-refresh' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - run: npm ci
+
+      - name: Record
+        env:
+          GOOGLE_CALENDAR_API_KEY: ${{ secrets.GOOGLE_CALENDAR_API_KEY }}
+        run: mise run fixtures:record 2>&1 | tee record.log
+
+      - name: Summarise
+        run: |
+          {
+            echo "## Upstream fixtures"
+            echo
+            if git diff --quiet -- test/fixtures && [ -z "$(git ls-files --others --exclude-standard test/fixtures)" ]; then
+              echo "No upstream changed."
+            else
+              echo "### Hosts that changed"
+              echo
+              { git diff --name-only -- test/fixtures; git ls-files --others --exclude-standard test/fixtures; } \
+                | cut -d/ -f3 | sort -u | sed 's/^/- /'
+            fi
+            echo
+            if grep -q '^kept old recordings for:' record.log; then
+              echo "> [!WARNING]"
+              echo "> $(grep '^kept old recordings for:' record.log)"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY" > summary.md
+
+      - name: Open or update the refresh PR
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- test/fixtures && [ -z "$(git ls-files --others --exclude-standard test/fixtures)" ]; then
+            echo "Nothing changed."
+            exit 0
+          fi
+
+          branch="fixtures/refresh-$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add test/fixtures
+          git commit -m "Refresh upstream fixtures ($(date -u +%Y-%m-%d))" \
+            -m "Recorded by ${GITHUB_WORKFLOW} (run ${GITHUB_RUN_ID})."
+          git push --force origin "$branch"
+
+          if ! gh pr view "$branch" >/dev/null 2>&1; then
+            gh pr create --head "$branch" --base master \
+              --title "Refresh upstream fixtures ($(date -u +%Y-%m-%d))" \
+              --body-file summary.md
+          fi
+
+          # PRs opened with GITHUB_TOKEN don't start pull_request workflows;
+          # workflow_dispatch is exempt, so run the checks on the branch directly.
+          gh workflow run node.js.yml --ref "$branch"
