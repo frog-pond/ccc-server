@@ -1,5 +1,6 @@
 import {getJson} from '../../ccc-lib/http.ts'
 import * as bonapp from '../../menus-bonapp/index.ts'
+import {bonAppJson} from '../../menus-bonapp/response.ts'
 import {GH_PAGES} from './gh-pages.ts'
 import {requireQuery} from '../../ccc-worker/query.ts'
 import type {Context} from '../../ccc-worker/env.ts'
@@ -53,11 +54,11 @@ export async function pauseMenu(c: Context) {
 }
 
 export async function bonAppMenu(c: Context) {
-	return c.json(await getMenu(requireCafeUrl(c)))
+	return bonAppJson(c, await getMenu(requireCafeUrl(c)))
 }
 
 export async function bonAppCafe(c: Context) {
-	return c.json(await getInfo(requireCafeUrl(c)))
+	return bonAppJson(c, await getInfo(requireCafeUrl(c)))
 }
 
 export async function bonAppNutrition(c: Context) {
@@ -65,73 +66,73 @@ export async function bonAppNutrition(c: Context) {
 }
 
 export async function stavCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.stav))
+	return bonAppJson(c, await getInfo(CAFE_URLS.stav))
 }
 
 export async function stavMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.stav))
+	return bonAppJson(c, await getMenu(CAFE_URLS.stav))
 }
 
 export async function cageCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.cage))
+	return bonAppJson(c, await getInfo(CAFE_URLS.cage))
 }
 
 export async function cageMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.cage))
+	return bonAppJson(c, await getMenu(CAFE_URLS.cage))
 }
 
 export async function kingsRoomCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.kingsRoom))
+	return bonAppJson(c, await getInfo(CAFE_URLS.kingsRoom))
 }
 
 export async function kingsRoomMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.kingsRoom))
+	return bonAppJson(c, await getMenu(CAFE_URLS.kingsRoom))
 }
 
 export async function caveCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.cave))
+	return bonAppJson(c, await getInfo(CAFE_URLS.cave))
 }
 
 export async function caveMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.cave))
+	return bonAppJson(c, await getMenu(CAFE_URLS.cave))
 }
 
 export async function burtonCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.burton))
+	return bonAppJson(c, await getInfo(CAFE_URLS.burton))
 }
 
 export async function burtonMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.burton))
+	return bonAppJson(c, await getMenu(CAFE_URLS.burton))
 }
 
 export async function ldcCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.ldc))
+	return bonAppJson(c, await getInfo(CAFE_URLS.ldc))
 }
 
 export async function ldcMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.ldc))
+	return bonAppJson(c, await getMenu(CAFE_URLS.ldc))
 }
 
 export async function saylesCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.sayles))
+	return bonAppJson(c, await getInfo(CAFE_URLS.sayles))
 }
 
 export async function saylesMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.sayles))
+	return bonAppJson(c, await getMenu(CAFE_URLS.sayles))
 }
 
 export async function weitzCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.weitz))
+	return bonAppJson(c, await getInfo(CAFE_URLS.weitz))
 }
 
 export async function weitzMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.weitz))
+	return bonAppJson(c, await getMenu(CAFE_URLS.weitz))
 }
 
 export async function schulzeCafe(c: Context) {
-	return c.json(await getInfo(CAFE_URLS.schulze))
+	return bonAppJson(c, await getInfo(CAFE_URLS.schulze))
 }
 
 export async function schulzeMenu(c: Context) {
-	return c.json(await getMenu(CAFE_URLS.schulze))
+	return bonAppJson(c, await getMenu(CAFE_URLS.schulze))
 }

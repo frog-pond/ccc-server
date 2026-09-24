@@ -27,6 +27,12 @@ api.get('/short', cacheFor(ONE_HOUR), async (c) => {
 
 api.get('/plain', (c) => c.json({plain: true}))
 
+api.get('/no-store', cacheFor(ONE_HOUR), async (c) => {
+	await fetch('https://upstream.test/no-store')
+	c.header('Cache-Control', 'no-store')
+	return c.json({stored: false})
+})
+
 api.get('/fails', cacheFor(ONE_HOUR), async (c) => {
 	let response = await fetch('https://upstream.test/fails')
 	return c.json({upstream: response.status}, 502)

@@ -42,7 +42,8 @@ export function cacheFor(ms: number): MiddlewareHandler<AppEnv> {
 
 		await next()
 
-		if (c.res.status !== 200) {
+		// the Cache API rejects a put the response itself forbids
+		if (c.res.status !== 200 || /\bno-store\b/.test(c.res.headers.get('Cache-Control') ?? '')) {
 			return
 		}
 		// the ETag has to be on the response before it is stored, or match()

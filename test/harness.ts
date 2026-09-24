@@ -1,6 +1,7 @@
 import {execFileSync} from 'node:child_process'
 import {mkdirSync, mkdtempSync, readFileSync} from 'node:fs'
 import path from 'node:path'
+import type {Readable} from 'node:stream'
 import {Miniflare, type Request, type Response} from 'miniflare'
 
 const ROOT = path.join(import.meta.dirname, '..')
@@ -45,17 +46,29 @@ export function bundleSchool(school: School): string {
 	return scriptPath
 }
 
+/// `output`, when given, collects what the Worker prints instead of letting it
+/// reach the test output, so a test that expects the Worker to log can check it.
 export async function startWorker(options: {
 	scriptPath: string
 	bindings: Record<string, string>
 	upstream: (request: Request) => Response | Promise<Response>
+	output?: string[]
 }): Promise<Miniflare> {
+	let output = options.output
 	let mf = new Miniflare({
 		modules: true,
 		scriptPath: options.scriptPath,
 		compatibilityDate: compatibilityDate(),
 		bindings: options.bindings,
 		outboundService: options.upstream,
+		...(output && {
+			handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+				for (let stream of [stdout, stderr]) {
+					stream.setEncoding('utf8')
+					stream.on('data', (chunk: string) => output.push(chunk))
+				}
+			},
+		}),
 	})
 	try {
 		await mf.ready

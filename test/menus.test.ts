@@ -1,5 +1,6 @@
 import {test} from 'node:test'
 import {bundleSchool, SCHOOLS, startWorker} from './harness.ts'
+import {Response, type Request} from 'miniflare'
 import {FIXTURES_DIR, replayUpstream} from './fixtures.ts'
 import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../source/menus-bonapp/types.ts'
 
@@ -40,5 +41,40 @@ for (let school of SCHOOLS) {
 			t.assert.doesNotThrow(() => CafeMenuResponseSchema.parse(menu), `menu ${cafe}`)
 		}
 		t.assert.deepEqual(replay.missing, [])
+	})
+}
+
+const STAV_HALL = 'https://stolaf.cafebonappetit.com/cafe/stav-hall/'
+
+for (let school of SCHOOLS) {
+	void test(`${school}: a BonApp outage is not cached once BonApp recovers`, async (t) => {
+		let replay = replayUpstream(FIXTURES_DIR)
+		let bonAppDown = true
+		let output: string[] = []
+		let mf = await startWorker({
+			output,
+			scriptPath: bundleSchool(school),
+			bindings: {INSTITUTION: school, GOOGLE_CALENDAR_API_KEY: 'replay'},
+			upstream: (request: Request) =>
+				bonAppDown && request.url === STAV_HALL
+					? new Response('bad gateway', {status: 502})
+					: replay.upstream(request),
+		})
+		t.after(() => mf.dispose())
+
+		let during = await mf.dispatchFetch('http://localhost/v1/food/named/cafe/stav-hall')
+		let duringBody = (await during.json()) as {cafe: {name: string}}
+		bonAppDown = false
+		let after = await mf.dispatchFetch('http://localhost/v1/food/named/cafe/stav-hall')
+		let afterBody = (await after.json()) as {cafe: {name: string}}
+
+		t.assert.equal(duringBody.cafe.name, 'Café', 'the outage answers with the fallback café')
+		t.assert.equal(during.headers.get('Cache-Control'), 'no-store')
+		t.assert.equal(after.headers.get('X-Cached-Response'), null)
+		t.assert.equal(afterBody.cafe.name, 'Stav Hall')
+		t.assert.match(
+			output.join(''),
+			/HTTPError: Request failed with status code 502: GET https:\/\/stolaf\.cafebonappetit\.com\/cafe\/stav-hall\//,
+		)
 	})
 }

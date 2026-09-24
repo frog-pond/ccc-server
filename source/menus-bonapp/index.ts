@@ -41,14 +41,21 @@ export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType
 	return cafeFromHtml(await getText(cafeUrl.toString()))
 }
 
+/// BonApp data, or a stand-in when BonApp can't be loaded. `fallback` says
+/// which, so the stand-in can be kept out of the cache.
+export interface BonAppResult<T> {
+	data: T
+	fallback: boolean
+}
+
 /// Errors become a café with a message instead of a failed request, so the app
 /// shows why the café is missing.
-export async function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
+export async function cafe(cafeUrl: string | URL): Promise<BonAppResult<CafeInfoResponseType>> {
 	try {
-		return await _cafe(cafeUrl)
+		return {data: await _cafe(cafeUrl), fallback: false}
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
-		return CustomCafe('Could not load café from BonApp')
+		return {data: CustomCafe('Could not load café from BonApp'), fallback: true}
 	}
 }
 
@@ -82,14 +89,15 @@ export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType
 	return menuFromHtml(await getText(cafeUrl.toString()))
 }
 
-export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
+export async function menu(cafeUrl: string | URL): Promise<BonAppResult<CafeMenuResponseType>> {
 	try {
-		return await _menu(cafeUrl)
+		return {data: await _menu(cafeUrl), fallback: false}
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
-		return CafeMenuWithError(
+		let data = CafeMenuWithError(
 			err && typeof err === 'object' && 'message' in err && err.message,
 			'Could not load the BonApp menu data',
 		)
+		return {data, fallback: true}
 	}
 }

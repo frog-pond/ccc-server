@@ -52,7 +52,8 @@ const UNREACHABLE = 'http://127.0.0.1:1/cafe/'
 void test('a café that cannot be fetched answers with a message instead of throwing', async (t) => {
 	let logged = t.mock.method(console, 'error', () => undefined)
 	let info = await cafe(UNREACHABLE)
-	t.assert.equal(info.cafe.message, 'Could not load café from BonApp')
+	t.assert.equal(info.fallback, true)
+	t.assert.equal(info.data.cafe.message, 'Could not load café from BonApp')
 	t.assert.equal(logged.mock.callCount(), 1)
 	t.assert.deepEqual(logged.mock.calls[0]?.arguments[1], {cafeUrl: UNREACHABLE})
 })
@@ -60,7 +61,8 @@ void test('a café that cannot be fetched answers with a message instead of thro
 void test('a menu that cannot be fetched answers with an error menu instead of throwing', async (t) => {
 	let logged = t.mock.method(console, 'error', () => undefined)
 	let menu = await bonAppMenu(UNREACHABLE)
-	t.assert.equal(menu.items['1']?.label, 'Could not load the BonApp menu data')
+	t.assert.equal(menu.fallback, true)
+	t.assert.equal(menu.data.items['1']?.label, 'Could not load the BonApp menu data')
 	t.assert.equal(logged.mock.callCount(), 1)
 	t.assert.deepEqual(logged.mock.calls[0]?.arguments[1], {cafeUrl: UNREACHABLE})
 })

@@ -140,3 +140,12 @@ void test('a conditional request on a cold cache answers 304 and fills the cache
 	t.assert.equal(after.response.headers.get('X-Cached-Response'), 'HIT')
 	t.assert.equal(hits.get('/data'), 1)
 })
+
+void test('a response marked no-store is not cached', async (t) => {
+	let {hits, get} = await worker(t)
+	let first = await get('/v1/no-store')
+	let second = await get('/v1/no-store')
+	t.assert.equal(first.response.status, 200)
+	t.assert.equal(second.response.headers.get('X-Cached-Response'), null)
+	t.assert.equal(hits.get('/no-store'), 2)
+})
