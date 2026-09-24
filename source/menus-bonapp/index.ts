@@ -1,6 +1,4 @@
 import {getJson, getText} from '../ccc-lib/http.ts'
-import {JSDOM, VirtualConsole} from 'jsdom'
-import * as Sentry from '@sentry/node'
 import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe, campusToday} from './helpers.ts'
 import {
 	CafeInfoResponseSchema,
@@ -10,33 +8,10 @@ import {
 } from './types.ts'
 
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
+import {extractBamco} from './extract-bamco.ts'
 
-async function getBonAppWebpage(url: string | URL) {
-	const virtualConsole = new VirtualConsole()
-	virtualConsole.forwardTo(console, {jsdomErrors: 'none'})
-	virtualConsole.on('jsdomError', (err) => {
-		let messagesToSkip = [
-			'Uncaught [ReferenceError: wp is not defined]',
-			'Uncaught [ReferenceError: jQuery is not defined]',
-		]
-		if (messagesToSkip.includes(err.message)) {
-			return
-		}
-		console.error(err)
-		Sentry.captureException(err)
-	})
-
-	const body = await getText(url.toString())
-	return new JSDOM(body, {
-		runScripts: 'dangerously',
-		virtualConsole,
-	})
-}
-
-export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
-	let dom = await getBonAppWebpage(cafeUrl)
-
-	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
+export function cafeFromHtml(html: string): CafeInfoResponseType {
+	let bamco = BamcoPageContentsSchema.parse(extractBamco(html))
 	if (typeof bamco === 'undefined') {
 		return CustomCafe('Café is closed')
 	}
@@ -62,13 +37,18 @@ export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType
 	})
 }
 
-export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
+export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
+	return cafeFromHtml(await getText(cafeUrl.toString()))
+}
+
+/// Errors become a café with a message instead of a failed request, so the app
+/// shows why the café is missing.
+export async function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	try {
-		return _cafe(cafeUrl)
+		return await _cafe(cafeUrl)
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
-		Sentry.captureException(err)
-		return Promise.resolve(CustomCafe('Could not load café from BonApp'))
+		return CustomCafe('Could not load café from BonApp')
 	}
 }
 
@@ -76,10 +56,8 @@ export function nutrition(itemId: string) {
 	return getJson('https://legacy.cafebonappetit.com/api/2/items', {searchParams: {item: itemId}})
 }
 
-export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
-	let dom = await getBonAppWebpage(cafeUrl)
-
-	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
+export function menuFromHtml(html: string): CafeMenuResponseType {
+	let bamco = BamcoPageContentsSchema.parse(extractBamco(html))
 	if (typeof bamco === 'undefined') {
 		return CafeMenuIsClosed()
 	}
@@ -100,17 +78,18 @@ export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType
 	})
 }
 
-export function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
+export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
+	return menuFromHtml(await getText(cafeUrl.toString()))
+}
+
+export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	try {
-		return _menu(cafeUrl)
+		return await _menu(cafeUrl)
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
-		Sentry.captureException(err)
-		return Promise.resolve(
-			CafeMenuWithError(
-				err && typeof err === 'object' && 'message' in err && err.message,
-				'Could not load the BonApp menu data',
-			),
+		return CafeMenuWithError(
+			err && typeof err === 'object' && 'message' in err && err.message,
+			'Could not load the BonApp menu data',
 		)
 	}
 }
