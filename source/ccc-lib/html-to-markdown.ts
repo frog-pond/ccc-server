@@ -1,5 +1,6 @@
 import Turndown from 'turndown'
 import {makeAbsoluteUrl} from './url.ts'
+import {parseHtml} from './dom.ts'
 
 interface TurndownOptions {
 	baseUrl?: string
@@ -40,7 +41,9 @@ function turndown(content: string, {baseUrl = ''}: TurndownOptions = {}): string
 		},
 	})
 
-	return t.turndown(content)
+	// turndown's own parser needs a global `document`, which Workers don't have,
+	// so hand it a node from our parser instead of a string.
+	return t.turndown(parseHtml(`<html><body>${content}</body></html>`).body)
 }
 
 export function htmlToMarkdown(htmlStr: string, opts?: TurndownOptions) {
