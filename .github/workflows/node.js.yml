@@ -1,6 +1,3 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
 name: Node.js CI
 
 on:
@@ -8,10 +5,20 @@ on:
     branches: ['master']
   pull_request:
   merge_group:
+  # The fixture-refresh workflow opens PRs with GITHUB_TOKEN, which doesn't
+  # trigger pull_request runs; it dispatches this workflow on the branch instead.
+  workflow_dispatch:
+
+concurrency:
+  # PRs cancel their own stale runs. Deploys from master never cancel mid-flight.
+  group: >-
+    ${{ github.ref == 'refs/heads/master'
+        && format('ci-master-{0}', github.sha)
+        || format('ci-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  # This job runs all the primary checks: linting, formatting, type checking, and unit tests.
-  # It is the equivalent of the old `build`, `test`, `lint`, and `format` jobs combined.
+  # Linting, formatting, type checking, unit tests, and the Worker replay tests.
   checks:
     runs-on: ubuntu-latest
     steps:
@@ -21,14 +28,70 @@ jobs:
       - run: npm ci
       - run: mise run check
 
-  smoke-test-stolaf:
-    runs-on: ubuntu-latest
+  # Uploads a version of each Worker without deploying it, and comments the
+  # preview URLs on the PR. Fork PRs get no secrets, so they get no preview.
+  preview:
     needs: checks
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ALIAS: pr-${{ github.event.pull_request.number }}
     steps:
-      - run: echo "Smoke tests temporarily disabled - skipping"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - run: npm ci
+      - name: Upload preview versions
+        id: upload
+        run: |
+          for school in stolaf-college carleton-college; do
+            npx wrangler versions upload --env "$school" --preview-alias "$ALIAS" | tee "upload-$school.log"
+            url=$(grep -o "https://${ALIAS}-[^ ]*\.workers\.dev" "upload-$school.log" | head -n 1)
+            if [ -z "$url" ]; then
+              echo "::error::no preview URL in the wrangler output for $school"
+              exit 1
+            fi
+            echo "$school=$url" >> "$GITHUB_OUTPUT"
+          done
+      - name: Comment the preview URLs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          STOLAF: ${{ steps.upload.outputs.stolaf-college }}
+          CARLETON: ${{ steps.upload.outputs.carleton-college }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          marker='<!-- ccc-server-preview -->'
+          body=$(printf '%s\n### Preview\n\n| School | URL |\n| --- | --- |\n| St. Olaf | %s/v1/routes |\n| Carleton | %s/v1/routes |\n\nUpdated for %s.\n' \
+            "$marker" "$STOLAF" "$CARLETON" "$HEAD_SHA")
+          existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)
+          if [ -n "$existing" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$existing" -f body="$body"
+          else
+            gh api --method POST "repos/$REPO/issues/$PR/comments" -f body="$body"
+          fi
 
-  smoke-test-carleton:
-    runs-on: ubuntu-latest
+  deploy:
     needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - run: echo "Smoke tests temporarily disabled - skipping"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - run: npm ci
+      - run: npx wrangler deploy --env stolaf-college
+      - run: npx wrangler deploy --env carleton-college
