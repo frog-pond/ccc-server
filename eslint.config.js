@@ -63,6 +63,6 @@ export default defineConfig(
 		...tseslint.configs.disableTypeChecked,
 	},
 	{
-		ignores: ['dist/*'],
+		ignores: ['dist/*', '.wrangler/*'],
 	},
 )

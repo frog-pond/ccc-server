@@ -1,0 +1,14 @@
+name = "ccc-server"
+main = "source/ccc-worker/index.ts"
+compatibility_date = "2026-08-06"
+
+[observability.logs]
+enabled = true
+
+[env.stolaf-college]
+name = "ccc-server-stolaf-college"
+vars = { INSTITUTION = "stolaf-college" }
+
+[env.carleton-college]
+name = "ccc-server-carleton-college"
+vars = { INSTITUTION = "carleton-college" }

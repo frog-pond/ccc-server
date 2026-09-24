@@ -18,3 +18,7 @@ npm-debug.log*
 # Typescript
 *.tsbuildinfo
 /dist/
+
+# wrangler
+.wrangler/
+.dev.vars
