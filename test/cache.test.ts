@@ -1,4 +1,4 @@
-import {test} from 'node:test'
+import {test, type TestContext} from 'node:test'
 import {Response, type Request, type RequestInit} from 'miniflare'
 import {bundle, startWorker} from './harness.ts'
 
@@ -19,7 +19,7 @@ function countingUpstream() {
 	return {hits, upstream}
 }
 
-async function worker(t: import('node:test').TestContext) {
+async function worker(t: TestContext) {
 	let {hits, upstream} = countingUpstream()
 	let mf = await startWorker({scriptPath, bindings: {}, upstream})
 	t.after(() => mf.dispose())
@@ -53,23 +53,34 @@ void test('a handler that sets Cache-Control keeps it', async (t) => {
 	t.assert.equal(response.headers.get('Cache-Control'), 'public, max-age=60')
 })
 
-void test('a cached response answers a matching If-None-Match with 304', async (t: import('node:test').TestContext) => {
-	let {get} = await worker(t)
+void test('a cached response answers a matching If-None-Match with 304', async (t: TestContext) => {
+	let {hits, get} = await worker(t)
 	let first = await get('/v1/cached')
 	let etag: string | null = first.response.headers.get('ETag')
 	t.assert.ok(etag, 'the first response has an ETag')
 	await get('/v1/cached')
 	let conditional = await get('/v1/cached', {headers: {'If-None-Match': etag}})
 	t.assert.equal(conditional.response.status, 304)
+	t.assert.equal(hits.get('/data'), 1, 'the 304 came from the cache, not a re-run handler')
 })
 
-void test('a route without cacheFor still answers a matching If-None-Match with 304', async (t: import('node:test').TestContext) => {
+void test('a route without cacheFor still answers a matching If-None-Match with 304', async (t: TestContext) => {
 	let {get} = await worker(t)
 	let first = await get('/v1/plain')
 	let etag: string | null = first.response.headers.get('ETag')
 	t.assert.ok(etag, 'the app-wide etag middleware set one')
 	let conditional = await get('/v1/plain', {headers: {'If-None-Match': etag}})
 	t.assert.equal(conditional.response.status, 304)
+})
+
+void test('the stored response carries the ETag it was cached with', async (t: TestContext) => {
+	let {get} = await worker(t)
+	let first = await get('/v1/cached')
+	let etag = first.response.headers.get('ETag')
+	t.assert.ok(etag, 'the first response has an ETag')
+	let stored = await get('/stored-etag?path=/v1/cached')
+	let storedEtag = (JSON.parse(stored.body) as {etag: string | null}).etag
+	t.assert.equal(storedEtag, etag)
 })
 
 void test('a stored response and a fresh one carry the same ETag', async (t) => {

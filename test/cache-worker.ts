@@ -32,4 +32,17 @@ api.get('/fails', cacheFor(ONE_HOUR), async (c) => {
 	return c.json({upstream: response.status}, 502)
 })
 
-export default createApp(api)
+let app = createApp(api)
+
+// test-only: reads the cache directly, so a test can pin what cacheFor
+// actually stored rather than only what a later request happens to return
+app.get('/stored-etag', async (c) => {
+	let path = c.req.query('path') ?? ''
+	// lib.dom's CacheStorage type doesn't know about the Workers-only `default`
+	// cache, so the global `caches` needs a cast to reach it.
+	let defaultCache = (caches as unknown as {default: Cache}).default
+	let stored = await defaultCache.match(`http://localhost${path}`)
+	return c.json({etag: stored?.headers.get('ETag') ?? null})
+})
+
+export default app
