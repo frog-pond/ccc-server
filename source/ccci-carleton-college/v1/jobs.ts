@@ -1,10 +1,9 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import {JSDOM} from 'jsdom'
+import {parseHtml, parseXml} from '../../ccc-lib/dom.ts'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
 import type {Context} from '../../ccc-server/context.ts'
-import assert from 'node:assert/strict'
 import {buildDetailMap} from '../../ccc-lib/html.ts'
 import {unavailableJobs} from './deprecated.ts'
 
@@ -14,21 +13,23 @@ const BOOLEAN_KEYS = ['Position available during term', 'Position available duri
 
 const PARAGRAPHICAL_KEYS = ['Description']
 
-export async function fetchJob(link: URL) {
+export function jobIdFromLink(link: URL): string {
 	let id = link.searchParams.get('job_id')
-	assert(id)
-
-	if (link.protocol === 'http:') {
-		link.protocol = 'https:'
+	if (!id) {
+		throw new Error(`no job_id in ${link.href}`)
 	}
+	return id
+}
 
-	const body = await getText(link)
-	const dom = new JSDOM(body)
-
-	const jobs = dom.window.document.querySelector('#jobs')
-	assert(jobs)
+export function parseJobPage(html: string, id: string, pageUrl: URL) {
+	const jobs = parseHtml(html).querySelector('#jobs')
+	if (!jobs) {
+		throw new Error(`no #jobs element in ${pageUrl.href}`)
+	}
 	const title = jobs.querySelector('h3')
-	assert(title)
+	if (!title) {
+		throw new Error(`no job title (#jobs h3) in ${pageUrl.href}`)
+	}
 
 	let titleText = title.textContent.trim()
 	const offCampus = titleText.startsWith('Off Campus')
@@ -55,17 +56,25 @@ export async function fetchJob(link: URL) {
 	}
 }
 
+export async function fetchJob(link: URL) {
+	let id = jobIdFromLink(link)
+
+	if (link.protocol === 'http:') {
+		link.protocol = 'https:'
+	}
+
+	return parseJobPage(await getText(link), id, link)
+}
+
 /// Kept against the block being lifted: the feed's shape has not changed,
 /// only our ability to reach it.
 export async function getAllJobs() {
 	let body = await getText(jobsUrl)
-	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
-		(link) => {
-			let href = link.textContent.trim()
-			return URL.canParse(href) ? [new URL(href)] : []
-		},
-	)
+	let doc = parseXml(body)
+	let jobLinks = Array.from(doc.querySelectorAll('rss channel item link')).flatMap((link) => {
+		let href = link.textContent.trim()
+		return URL.canParse(href) ? [new URL(href)] : []
+	})
 	return pMap(jobLinks, fetchJob, {concurrency: 4})
 }
 

@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {JSDOM} from 'jsdom'
+import {parseHtml} from '../../ccc-lib/dom.ts'
 import {domToOrg, SortableCarletonStudentOrgSchema} from './orgs.ts'
 
 /// `domToOrg` assigns '' for an org with no website and no admin link, which
@@ -49,8 +49,9 @@ void test('a website that is neither empty nor a URL is still rejected', (t) => 
 const sortableRegex = /^(Carleton( College)?|The) +/i
 
 function orgNode(name: string): Element {
-	let dom = new JSDOM(`<div class="orgContainer"><h4>${name}</h4></div>`)
-	let node = dom.window.document.querySelector('.orgContainer')
+	let node = parseHtml(`<div class="orgContainer"><h4>${name}</h4></div>`).querySelector(
+		'.orgContainer',
+	)
 	if (!node) {
 		throw new Error('the fixture markup has no org node')
 	}
