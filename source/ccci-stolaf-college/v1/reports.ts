@@ -1,11 +1,7 @@
 import {getJson} from '../../ccc-lib/http.ts'
-import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {GH_PAGES_FROM_REPO} from './gh-pages.ts'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 
-export async function stavMealtimeReport(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getJson(GH_PAGES_FROM_REPO('stav-mealtimes', 'two-weeks.json'))
+export async function stavMealtimeReport(c: Context) {
+	return c.json(await getJson(GH_PAGES_FROM_REPO('stav-mealtimes', 'two-weeks.json')))
 }

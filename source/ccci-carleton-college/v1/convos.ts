@@ -1,10 +1,10 @@
 import {getText} from '../../ccc-lib/http.ts'
-import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {makeAbsoluteUrl} from '../../ccc-lib/url.ts'
 import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.ts'
 import {parseHtml, parseXml, textFromHtml} from '../../ccc-lib/dom.ts'
+import {requireQuery} from '../../ccc-worker/query.ts'
 import moment from 'moment'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 
 function processConvo(event: Element) {
 	let title = textFromHtml(event.querySelector('title')?.textContent ?? '')
@@ -63,13 +63,9 @@ async function fetchUpcoming(eventId: string) {
 
 export const getUpcoming = fetchUpcoming
 
-export async function upcomingDetail(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-	if (ctx.cached(ONE_HOUR * 6)) return
-
-	let detailId = ctx.URL.searchParams.get('id')
-	ctx.assert(detailId, 400, '?id is required')
-	ctx.body = await getUpcoming(detailId)
+export async function upcomingDetail(c: Context) {
+	let detailId = requireQuery(c, 'id')
+	return c.json(await getUpcoming(detailId))
 }
 
 async function fetchArchived() {
@@ -82,9 +78,6 @@ async function fetchArchived() {
 
 export const getArchived = fetchArchived
 
-export async function archived(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-	if (ctx.cached(ONE_HOUR * 6)) return
-
-	ctx.body = await getArchived()
+export async function archived(c: Context) {
+	return c.json(await getArchived())
 }

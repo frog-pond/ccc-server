@@ -1,9 +1,8 @@
 import {getText} from '../../ccc-lib/http.ts'
-import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import {parseHtml, parseXml} from '../../ccc-lib/dom.ts'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 import {buildDetailMap} from '../../ccc-lib/html.ts'
 import {unavailableJobs} from './deprecated.ts'
 
@@ -78,9 +77,6 @@ export async function getAllJobs() {
 	return pMap(jobLinks, fetchJob, {concurrency: 4})
 }
 
-export function jobs(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-	if (ctx.cached(ONE_DAY)) return
-
-	ctx.body = unavailableJobs()
+export function jobs(c: Context) {
+	return c.json(unavailableJobs())
 }

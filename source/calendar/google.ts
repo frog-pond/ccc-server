@@ -49,7 +49,7 @@ function convertGoogleEvents(data: GoogleCalendarEventType[], now = moment()) {
 	})
 }
 
-export async function googleCalendar(calendarId: string, now = moment()) {
+export async function googleCalendar(calendarId: string, apiKey: string, now = moment()) {
 	let calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`
 
 	let params = {
@@ -58,7 +58,7 @@ export async function googleCalendar(calendarId: string, now = moment()) {
 		showDeleted: 'false',
 		singleEvents: 'true',
 		timeMin: now.toISOString(),
-		key: process.env['GOOGLE_CALENDAR_API_KEY'] ?? '',
+		key: apiKey,
 	}
 
 	let body = GoogleCalendarResultSchema.parse(await getJson(calendarUrl, {searchParams: params}))
