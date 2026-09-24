@@ -23,7 +23,7 @@
     "carleton-college": "wrangler dev --env carleton-college",
     "test:stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test:carleton-college": "./scripts/smoke-test.sh carleton-college",
-    "test": "node --test 'source/**/*.test.ts' 'test/**/*.test.ts'"
+    "test": "node --test 'source/**/*.test.ts' 'test/**/*.test.ts' 'scripts/**/*.test.ts'"
   },
   "dependencies": {
     "get-urls": "12.1.0",
