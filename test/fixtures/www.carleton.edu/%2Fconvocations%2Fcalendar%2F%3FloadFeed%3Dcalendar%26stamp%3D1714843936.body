@@ -1,0 +1,602 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Carleton College//Calendar Events//EN
+NAME:Carleton College: Convocations Events
+X-WR-CALNAME:Carleton College: Convocations Events
+TIMEZONE-ID:America/Chicago
+X-WR-TIMEZONE:America/Chicago
+REFRESH-INTERVAL;VALUE=DURATION:PT6H
+X-PUBLISHED-TTL:PT6H
+BEGIN:VEVENT
+UID:uh39e74bjhac3f8uvh9riu95tk
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20260925T105000
+DTEND:20260925T115000
+SUMMARY:A&amp\;I Convocation with Jeff Ondich
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:Jeff Ondich\, Professor of Computer Science and the Winifred a
+ nd Atherton Bean Professor of Science\, Technology\, and Society\, has tau
+ ght at Carleton since 1991. He has taught nearly all the required courses 
+ in the computer science major\, while focusing mostly on software developm
+ ent\, computer security\, and computer systems. He has supervised dozens o
+ f teams of computer science majors working on their senior projects ("comp
+ s"). He has\, via his students' comps projects and his own research\, coll
+ aborated widely across the college\, engaging in projects with people in C
+ arleton’s Facilities and Sustainability office\, the New Student Week te
+ am\, the sesquicentennial celebration team\, and the departments of Lingui
+ stics\, History\, Music\, Cinema and Media Studies\, Studio Art\, and Poli
+ tical Science.\n\nMuch of Professor Ondich’s professional work has invol
+ ved software design and development. His multi-lingual dictionary applicat
+ ions\, published by his company Ultralingua\, Inc.\, have been used by ten
+ s of millions of people. In addition\, the software engine that underlies 
+ these apps has been incorporated into many programs written by other devel
+ opers\, including Augmentative Alternative Communication (AAC) application
+ s that help people with speech disabilities to communicate efficiently and
+  effectively\; language-learning games and utilities\; an online Dakota-En
+ glish dictionary based on modern and historical datasets\; etc.\n\nProfess
+ or Ondich has served in a variety of elected and appointed positions at Ca
+ rleton\, including Faculty President\, co-chair of the Educational and Cur
+ riculum Committee\, and chair of one of the curricular design teams that d
+ eveloped the graduation requirements that went into effect in 2010. He ser
+ ved as informal co-chair for the computer science half of the Math/CS depa
+ rtment for a decade\, and later as chair of the Computer Science Departmen
+ t.\n\nProfessor Ondich earned a BA from St. Olaf College and a PhD in from
+  the University of Minnesota\, both in mathematics. He is an Offensive Sec
+ urity Certified Professional (i.e.\, he knows how to hack into computers).
+ \n\nThe title of Professor Ondich presentation is<strong><em> Tech minefie
+ lds\, expertise\, and the liberal arts. </em></strong>\n\nThis convocatio
+ n is also presented as a virtual webinar. <a href="https://carleton.zoom.
+ us/webinar/register/WN_LFV41VEiQr6dIBHsd4u5wg">Please register in advance 
+ if you would like to attend via Zoom.</a> After registering\, you will rec
+ eive a confirmation email containing information about joining the webinar
+ .\n\nView this event on the Carleton College website:\nhttps://www.carleto
+ n.edu/_c/ut8I
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T161649
+END:VEVENT
+BEGIN:VEVENT
+UID:f1dn1p0jsoqg1kb5v76hi3lfv4
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20261002T105000
+DTEND:20261002T115000
+SUMMARY:Convocation with Jonathan Capehart '89 &amp\; H'23
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:<div>\n<div class="gmail_default">\n<p dir="ltr">Jonathan Cape
+ hart is a Pulitzer Prize-winning journalist who is co-host of the morning 
+ edition of “The Weekend” on MS NOW (7am - 10am) and the New York Times
+  bestselling author of <a href="https://www.hachettebookgroup.com/titles/j
+ onathan-capehart/yet-here-i-am/9781538767061/" target="_blank" rel="noopen
+ er" data-saferedirecturl="https://www.google.com/url?q=https://www.hachett
+ ebookgroup.com/titles/jonathan-capehart/yet-here-i-am/9781538767061/&amp\;
+ source=gmail&amp\;ust=1787751025904000&amp\;usg=AOvVaw2sXVDWjQRttA3J2xVnd_
+ nr">“Yet Here I Am: Lessons from A Black Man’s Search for Home.”</a>
+  From 2020 until 2025\, he was the anchor of MSNBC’s <a href="https://ww
+ w.msnbc.com/capehart" target="_blank" rel="noopener" data-saferedirecturl=
+ "https://www.google.com/url?q=https://www.msnbc.com/capehart&amp\;source=g
+ mail&amp\;ust=1787751025904000&amp\;usg=AOvVaw2sakwMEblfiDLQrZvp7B9f">“T
+ he Saturday/Sunday Show with Jonathan Capehart.”</a> At PBS\, Capehart s
+ erves as a political analyst on “PBS News Hour” and is featured on the
+  popular Friday segment <a href="https://www.pbs.org/newshour/tag/brooks-a
+ nd-capehart" target="_blank" rel="noopener" data-saferedirecturl="https://
+ www.google.com/url?q=https://www.pbs.org/newshour/tag/brooks-and-capehart&
+ amp\;source=gmail&amp\;ust=1787751025904000&amp\;usg=AOvVaw02Gf_IeenMXO55E
+ I7mkDTQ">“Brooks and Capehart.”</a></p>\n<p dir="ltr">Capehart is a <a
+  href="https://www.washingtonpost.com/people/jonathan-capehart/" target="_
+ blank" rel="noopener" data-saferedirecturl="https://www.google.com/url?q=h
+ ttps://www.washingtonpost.com/people/jonathan-capehart/&amp\;source=gmail&
+ amp\;ust=1787751025904000&amp\;usg=AOvVaw07RRRh9BgrgcYx8frdL0HH">former As
+ sociate Editor</a> of The Washington Post\, where he served as an opinion 
+ writer for 18 years. He was deputy editorial page editor of the New York D
+ aily News (2002-2004) and served on its editorial board (1993-2000). His e
+ ditorial campaign in 1999 to save the Apollo Theater earned the board the 
+ Pulitzer Prize for Editorial Writing. My memoir\, <a href="https://www.gra
+ ndcentralpublishing.com/titles/jonathan-capehart/yet-here-i-am/97815387670
+ 61/" target="_blank" rel="noopener" data-saferedirecturl="https://www.goog
+ le.com/url?q=https://www.grandcentralpublishing.com/titles/jonathan-capeha
+ rt/yet-here-i-am/9781538767061/&amp\;source=gmail&amp\;ust=178775102590400
+ 0&amp\;usg=AOvVaw3BC_OXzuxFZiZ0eUjwLyEG">"Yet Here I Am\,"</a> is a New Yo
+ rk Times Best Seller!</p>\n\n</div>\n</div>\nWhile at Carleton\, Capehart 
+ wrote for <em>The</em> <em>Carletonian</em> and hosted a radio show on KR
+ LX. He received his BA in political science in 1989. It was with great ple
+ asure that Carleton College conferred upon Jonathan Capehart the degree Do
+ ctor of Humane Letters\, honoris causa in 2023.\n\nThis convocation is als
+ o presented as a virtual webinar. <a href="https://carleton.zoom.us/webin
+ ar/register/WN_WKncdqZUTJqcyqmomffX8g">Please register in advance if you w
+ ould like to attend via Zoom</a>. After registering\, you will receive a c
+ onfirmation email containing information about joining the webinar.\n\n<st
+ rong>Seating will be limited at this Convocation due to the nature of this
+  event. Doors will open at 10A.M.</strong>\n\nView this event on the Carle
+ ton College website:\nhttps://www.carleton.edu/_c/uujv
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T162025
+END:VEVENT
+BEGIN:VEVENT
+UID:0pvrq5gts7953fs5l80ldoa8b0
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20261009T105000
+DTEND:20261009T115000
+SUMMARY:Convocation with Valeria Luiselli
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:Valeria Luiselli was born in Mexico City and grew up in South 
+ Korea\, South Africa and India. An acclaimed writer of both fiction and no
+ nfiction\, she is the author of the essays <a>Tell Me How It Ends and <
+ /a><a>Sidewalks</a><a>\; the sonic essay </a><a>Echoes From the Borderlan
+ ds\;</a><a> </a>and the novels <a>Faces in the Crowd</a>\, <a>The Story
+  of My Teeth</a>\, <a>Lost Children Archive</a><a>\, </a><a>and </a><a>
+ Beginning Middle End.</a>\n\nShe is the recipient of a 2019 MacArthur Fell
+ owship and the winner of DUBLIN Literary Award\, two Los Angeles Times Boo
+ k Prizes\, The Carnegie Medal\, an American Book Award\,  and has been no
+ minated for the National Book Critics Circle Award\, the Kirkus Prize\, an
+ d the Booker Prize. She has been the recipient of a Bearing Witness Fellow
+ ship from the Art for Justice Fund\, a Guggenheim Fellowship and the Vilce
+ k Prize. Her work has appeared in The New Yorker\, The New York Times\,
+  Granta\, and McSweeney's\, among other publications\, and has been tran
+ slated into more than thirty languages. Her ongoing project in sound-scape
+ s and oral histories\, Echoes From the Borderlands\, has been featured at
+  the <a>DIA Chelsea</a> and the <a>Harvard Art Lab\, among other places
+ .</a>\n\nView this event on the Carleton College website:\nhttps://www.car
+ leton.edu/_c/ut5r
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T162200
+END:VEVENT
+BEGIN:VEVENT
+UID:hmv5qlstuv75jj8cohi2g8ij7c
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20261016T105000
+DTEND:20261016T115000
+SUMMARY:Family Weekend Convocation with Jack El-Hai '79
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:Jack El-Hai is a journalist who writes nonfiction books\, a
+ rticles\, and essays. He covers medicine\, history\, science\, and crime.\
+ n\nAmong his published books are The New York Times bestselling The Naz
+ i and the Psychiatrist (adapted in 2025 into the movie Nuremberg)\, The 
+ Lobotomist\, The Lost Brothers\, and Face in the Mirror. His new book
+  The Case of the Autographed Corpse: A Medicine Man and a Mystery Writer 
+ in Pursuit of Justice will be published by Pegasus Books in October 2026.
+  He has contributed essays and articles to Smithsonian\, The Atlantic\, 
+ GQ\, Wired\, Scientific American\, <span style="color: #0a061a\;font-size
+ : small">and many other publications. Since 2018\, he has published “Da
+ mn History\,” a free monthly newsletter for readers and writers of popul
+ ar history.</span>\n\nJack grew up in Los Angeles and is a past presiden
+ t of the American Society of Journalists and Authors. He is a two-time w
+ inner of the June Roth Award for medical journalism and has won two Minnes
+ ota Book Awards. He currently sits on the board of The Loft Literary Cente
+ r in Minneapolis. His website is <a href="https://el-hai.com/" target="_b
+ lank" rel="noopener" data-saferedirecturl="https://www.google.com/url?q=ht
+ tps://el-hai.com/&amp\;source=gmail&amp\;ust=1786482762721000&amp\;usg=AOv
+ Vaw1asd9KIguzxE_d1Cp1uC4O">https://el-hai.com</a>.\n\nHis presentation is 
+ titled <em><strong>Writing to Change Hearts and Minds.</strong></em>\n\nTh
+ is convocation was also presented as a virtual webinar. <a href="https://
+ carleton.zoom.us/webinar/register/WN_SthEX-kMSa6tdE7i4e5wuQ">Please regist
+ er in advance if you would like to attend via Zoom.</a> After registering
+ \, you will receive a confirmation email containing information about join
+ ing the webinar.\n\nView this event on the Carleton College website:\nhttp
+ s://www.carleton.edu/_c/ut2E
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T162349
+END:VEVENT
+BEGIN:VEVENT
+UID:23t6mcu6g0tfo7msao9fgguk9c
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20261023T105000
+DTEND:20261023T115000
+SUMMARY:Convocation with Chris Kratt '92
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:Chris Kratt '92 is a writer/director/producer\, wildlife filmm
+ aker\, author\, and educator with a degree in biology from Carleton Colleg
+ e. Dedicated to introducing people to wild animals and the natural world\,
+  Chris reaches audiences through all forms of media. Chris is co-creator a
+ nd co-host of several hit television series including <em>WILD KRATTS\, ZO
+ BOOMAFOO\,</em> and <em>KRATTS<wbr />’ CREATURES </em>on <em>PBS KIDS</
+ em> and <em>BE THE CREATURE</em> on the National Geographic Channel. He 
+ has executive produced over 320 episodes of television\, with numerous wri
+ ting and directing credits. His projects have garnered such industry and e
+ ducational honors as Emmy Award\, Parents’ Choice Award\, Kidscreen\, an
+ d Canadian Screen Award.  Chris co-founded the not-for-profit organizatio
+ n Kratt Bros. Creature Heroes and is honored to have the newly-discovere
+ d Amazonian praying mantis\, Liturgusa krattorum\, named after he and hi
+ s brother.\n\nThe title of Chris Kratt '92 presentation is<em> On the Crea
+ ture Trail: From the Arb to the Creaturefuge.</em><strong><em>\n</em></str
+ ong>\n<p data-path-to-node="2\,0"><strong>There will be no live animals pr
+ esent at Convocation. This event will not be recorded or available for fut
+ ure viewing.</strong></p>\n<p data-path-to-node="2\,1"><strong>Due to high
+  demand\, seating in the main venue will be limited\; doors open at 10:30 
+ AM. An overflow viewing location will also be available in Olin Hall 149.<
+ /strong></p>\nThis convocation is also presented as a virtual webinar. <a
+  href="https://carleton.zoom.us/webinar/register/WN_6K2Ki9bGSb2R7fA6i8nruw
+ ">Please register in advance if you would like to attend via Zoom</a>. Af
+ ter registering\, you will receive a confirmation email containing informa
+ tion about joining the webinar.\n\nView this event on the Carleton College
+  website:\nhttps://www.carleton.edu/_c/uujq
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T162538
+END:VEVENT
+BEGIN:VEVENT
+UID:08n9r3ei1djftc0kjh9vbup0ak
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20261030T105000
+DTEND:20261030T115000
+SUMMARY:Convocation with Lilliana Hall Mason
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:Lilliana Mason is an SNF Agora Institute Professor of Politica
+ l Science. She is the author of <a href="https://press.uchicago.edu/ucp/b
+ ooks/book/chicago/U/bo27527354.html" target="_blank" rel="noopener" data-s
+ aferedirecturl="https://www.google.com/url?q=https://press.uchicago.edu/uc
+ p/books/book/chicago/U/bo27527354.html&amp\;source=gmail&amp\;ust=17871626
+ 16298000&amp\;usg=AOvVaw18DkYmPGnykoOk2XNjfKep"><i>Uncivil Agreement: How 
+ Politics Became Our Identity</i></a> and co-author\, with Nathan P. Kalmo
+ e\, of <a href="https://press.uchicago.edu/ucp/books/book/chicago/R/bo163
+ 195227.html" target="_blank" rel="noopener" data-saferedirecturl="https://
+ www.google.com/url?q=https://press.uchicago.edu/ucp/books/book/chicago/R/b
+ o163195227.html&amp\;source=gmail&amp\;ust=1787162616298000&amp\;usg=AOvVa
+ w3AbVzoLsalnVU2LBSRX7qB"><i>Radical American Partisanship: Mapping Violent
+  Hostility\, Its Causes\, and the Consequences for Democracy</i></a><i>. 
+ </i>She received her PhD in political psychology from Stony Brook Universi
+ ty and her BA in politics from Princeton University. Her research on parti
+ san identity\, social sorting\, and political violence has been published 
+ in journals such as <i>American Political Science Review</i>\, <i>Americ
+ an Journal of Political Science</i>\, and <i>Journal of Politics</i>\, an
+ d featured in media outlets including <i>the</i> <i>New York Times</i>\,
+  <i>the Washington Post</i>\, <i>CNN</i>\, and <i>National Public Radio
+ </i>. Her work has been supported by the National Science Foundation\, the
+  Facebook Research Integrity Group\, the Democracy Fund\, and the Andrew C
+ arnegie Foundation (formerly Carnegie Corporation of New York).\n\nHer pre
+ sentation is called A New Look at Polarization: The American Divide Over P
+ luralism.\n\nThis convocation is also presented as a virtual webinar. <a 
+ href="https://carleton.zoom.us/webinar/register/WN_FwddI0MdR3m83cCRWRIA2Q"
+ >Please register in advance if you would like to attend via Zoom.</a> Afte
+ r registering\, you will receive a confirmation email containing informati
+ on about joining the webinar.\n\nView this event on the Carleton College w
+ ebsite:\nhttps://www.carleton.edu/_c/ut5O
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T162704
+END:VEVENT
+BEGIN:VEVENT
+UID:se7m5u85lf5qfqcdtpfb9lctb8
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20261106T105000
+DTEND:20261106T115000
+SUMMARY:Convocation with Winona LaDuke
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:A Native American activist\, Harvard-educated economist and au
+ thor\, Winona LaDuke has devoted her life to advocating for indigenous peo
+ ple’s rights\; environmental justice\; women's and children's rights\; r
+ ural development\, economic\, food\, and energy sovereignty.\n\nThe Convoc
+ ation presentation is called <strong><em>Creating a Multicultural Democrac
+ y - Religion\, Culture\, and Identity in America! </em></strong>\n\nIn 19
+ 85\, LaDuke co-founded and co-chaired the Indigenous Women’s Network (IW
+ N)\, a coalition dedicated to empowering women to take active roles in tri
+ bal politics and culture. In 1989\, she founded the White Earth Land Recov
+ ery Project (WELRP)\, a reservation-based land acquisition\, environmental
+  advocacy\, and cultural organization and one of the largest reservation-b
+ ased nonprofits in the country. She is a former board member of Greenpeace
+  USA. In 1993\, she collaborated with the Indigo Girls to co-found Honor t
+ he Earth\, an advocacy group working on behalf of Native environmental gro
+ ups.\n\nIn 1994\, LaDuke was nominated by <em>Time</em> Magazine as one 
+ of America’s 50 most promising leaders under the age of 40. She was awar
+ ded The Thomas Merton Award in 1996\, The Biha Community Service Award in 
+ n 1997\, The Ann Bancroft Award for Women’s Leadership Fellowship\, and 
+ The Reebok Human Rights Award (which she used to begin the White Earth Lan
+ d Recovery Project). LaDuke was a two-time Green Party running mate for Ra
+ lph Nader in 1996 and 2000\, and she is an international thought leader an
+ d lecturer in climate justice\, renewable energy and environmental justice
+ \, plus an advocate for protecting Indigenous plants and heritage foods fr
+ om patenting and genetic engineering.\n\nIn 1998\, <em>Ms.</em> Magazine
+  named her one of their Women of the Year. In 2021\, LaDuke was named to t
+ he first <em>Forbes</em> list of “50 Over 50 Women of Impact” in par
+ tnership with Mika Brzezinski’s “Know Your Value\,” a program dedica
+ ted to shining a light on women over the age of 50 who have achieved signi
+ ficant success later in life\, often overcoming formidable odds or barrier
+ s. She was a leader at the 2016 Dakota Access Pipeline protests that sough
+ t to protect water access and sacred Indigenous lands in North Dakota\, an
+ d her work inspired the 2017 documentary <em>First Daughter and the Black 
+ Snake. </em>In 2017\, LaDuke also won the University of California’s Ali
+ ce and Clifford Spendlove Prize in Social Justice\, Diplomacy and Toleranc
+ e.\n\nLaDuke has published six acclaimed nonfiction titles\, including: <e
+ m>The Militarization of Indian Country</em>\; <em>Recovering the Sacred: 
+ The Power of Naming and Claiming</em>\; <em>All Our Relations: Native Stru
+ ggles for Land and Life</em>\; <em>The Winona LaDuke Chronicles: Stories f
+ rom the Front Lines in the Battle for Environmental Justice\; The Winona L
+ aDuke Reader: A Collection of Essential Writings\; </em>and most recently\
+ , <em>To Be a Water Protector: Rise of the Wiindigoo Slayers</em>—a book
+  that deals with her activism battling Line 3\, an Enbridge tar sands oil 
+ pipeline in northern Minnesota. She is also the author of one novel\, <em
+ >Last Standing Woman.</em>\n\nToday\, Winona LaDuke lives and works on the
+  White Earth reservation in northern Minnesota\, and she is active with mu
+ ltiple organizations\, including the Anishinaabe Agriculture Institute\, A
+ kiing. Her latest effort is Winona’s Hemp and Heritage\, a farm and nonp
+ rofit agency whose mission is to create an Indigenous women-led economy th
+ at is kind to the Earth.\n\nThis convocation is also presented as a virtua
+ l webinar. <a href="https://carleton.zoom.us/webinar/register/WN_vZ2abnUv
+ Sain1FYmbbVplg">Please register in advance if you would like to attend via
+  Zoom.</a> After registering\, you will receive a confirmation email conta
+ ining information about joining the webinar.\n\nView this event on the Car
+ leton College website:\nhttps://www.carleton.edu/_c/ut5R
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T162827
+END:VEVENT
+BEGIN:VEVENT
+UID:92oj6nvt91c35nd8p8q0t1bato
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270108T105000
+DTEND:20270108T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1K
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T164030
+END:VEVENT
+BEGIN:VEVENT
+UID:vv0ca4nojtdqg2fb1q6j3rb6k0
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270115T105000
+DTEND:20270115T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1L
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T164314
+END:VEVENT
+BEGIN:VEVENT
+UID:m1mcr6c1b13il5i705b4plaqjo
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270122T105000
+DTEND:20270122T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1M
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T164524
+END:VEVENT
+BEGIN:VEVENT
+UID:d77ss6tjkm7hq6vhfabn9ftp14
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270122T105000
+DTEND:20270122T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1T
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T165400
+END:VEVENT
+BEGIN:VEVENT
+UID:ou6cpt5vvtoh2th9a01vvl4ccc
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270129T105000
+DTEND:20270129T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1N
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T164753
+END:VEVENT
+BEGIN:VEVENT
+UID:tq3ul676alltq49j09p1opje0o
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270205T105000
+DTEND:20270205T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1O
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T164936
+END:VEVENT
+BEGIN:VEVENT
+UID:u02uut0b9c2grnf57ohgck5e6c
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270212T105000
+DTEND:20270212T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1W
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T165613
+END:VEVENT
+BEGIN:VEVENT
+UID:75enb3t2qhslk1fhvu7np1fsm4
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270219T105000
+DTEND:20270219T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1Y
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T173337
+END:VEVENT
+BEGIN:VEVENT
+UID:nb8m8g466jpqt9mf3ei8qv6j74
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270226T105000
+DTEND:20270226T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Service
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut1Z
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T173718
+END:VEVENT
+BEGIN:VEVENT
+UID:clva2aefaltmvp3uda7cmimb30
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270409T105000
+DTEND:20270409T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut10
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T174257
+END:VEVENT
+BEGIN:VEVENT
+UID:1rt72vgrlveno0ec6cd68of484
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270416T105000
+DTEND:20270416T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut11
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T174444
+END:VEVENT
+BEGIN:VEVENT
+UID:e4p5gj69u9hkr6gni62ksgjcpc
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270423T105000
+DTEND:20270423T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut12
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T174647
+END:VEVENT
+BEGIN:VEVENT
+UID:s62fjtn6b8vig9v1qg55k5jms4
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270430T105000
+DTEND:20270430T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut13
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T174818
+END:VEVENT
+BEGIN:VEVENT
+UID:gttaf967ghiaut1em6mdkab11s
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270507T105000
+DTEND:20270507T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut14
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T174959
+END:VEVENT
+BEGIN:VEVENT
+UID:9uul4rfpvhjaa5cctmv9v3r0po
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270521T105000
+DTEND:20270521T115000
+SUMMARY:Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut15
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T175141
+END:VEVENT
+BEGIN:VEVENT
+UID:k0gib61ujto96ag5dsq9ssshk0
+SEQUENCE:0
+DTSTAMP:20260924T034659
+DTSTART:20270528T150000
+DTEND:20270528T160000
+SUMMARY:Honors Convocation
+TRANSP:TRANSPARENT
+LOCATION:Skinner Memorial Chapel
+DESCRIPTION:More details to come.\n\nView this event on the Carleton Colle
+ ge website:\nhttps://www.carleton.edu/_c/ut17
+ORGANIZER;CN="Convocations":mailto:g8h62604doarbi9ihcipmnhd04@group.calend
+ ar.google.com
+STATUS:CONFIRMED
+CREATED:20260806T175342
+END:VEVENT
+END:VCALENDAR
