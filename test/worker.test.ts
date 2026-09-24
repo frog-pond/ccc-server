@@ -3,6 +3,7 @@ import {request as httpRequest} from 'node:http'
 import type {RequestInit} from 'miniflare'
 import {bundleSchool, SCHOOLS, startWorker} from './harness.ts'
 import {FIXTURES_DIR, replayUpstream} from './fixtures.ts'
+import {testableRoutes} from './testable-routes.ts'
 
 const BINDINGS = {GOOGLE_CALENDAR_API_KEY: 'replay'}
 
@@ -142,5 +143,21 @@ for (let school of SCHOOLS) {
 			oversized,
 		)
 		t.assert.equal(status, 413)
+	})
+
+	void test(`${school}: every testable route answers 200 from recorded upstreams`, async (t) => {
+		let {get, missing} = await worker(t, school)
+		let routes = JSON.parse((await get('/v1/routes')).body) as {path: string}[]
+		// one route at a time, so a failure names its route
+		for (let path of testableRoutes(routes)) {
+			// eslint-disable-next-line no-await-in-loop
+			let {response, body} = await get(path)
+			t.assert.equal(
+				response.status,
+				200,
+				`${path} answered ${String(response.status)}: ${body.slice(0, 300)}`,
+			)
+		}
+		t.assert.deepEqual(missing, [], 'these upstream requests have no recording')
 	})
 }

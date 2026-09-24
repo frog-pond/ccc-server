@@ -68,3 +68,6 @@ run = "mise run typecheck --watch"
 
 [tasks.check]
 run = { tasks = ["p", "lint", "test", "typecheck"] }
+
+[tasks."fixtures:record"]
+run = "node scripts/record-fixtures.ts"
