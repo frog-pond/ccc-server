@@ -1,11 +1,11 @@
 # ccc-server
 
-cautious-computing-context: backend node caching server/proxy
+cautious-computing-context: a caching proxy for the college apps, running on Cloudflare Workers
 
 ## Getting Started
 
 Prerequisites
-- Node.js v24.11.0
+- [mise](https://mise.jdx.dev), which installs the Node version in `.config/mise.toml`
 - npm
 
 Install
@@ -14,25 +14,14 @@ Install
 git clone https://github.com/frog-pond/ccc-server.git
 cd ccc-server
 npm ci
+cp .dev.vars.example .dev.vars
 ```
 
-## Running the Server
+Fill in `GOOGLE_CALENDAR_API_KEY` in `.dev.vars` if you need the Google Calendar routes.
 
-### Development
+## Running Locally
 
-Watch mode (recommended): auto-recompile & restart on changes
-
-Run these in separate terminals:
-
-```sh
-# TypeScript compilation in watch mode
-mise run build:watch
-
-# Server with auto-restart
-mise run start:watch
-```
-
-Institution-specific servers
+Each school runs as its own Worker. `wrangler dev` serves it at `http://localhost:8787` and reloads on change.
 
 ```sh
 mise run stolaf-college
@@ -48,13 +37,7 @@ mise run stolaf-college:mdns
 mise run carleton-college:mdns
 ```
 
-This publishes a `_ccc-server._tcp` service (via `dns-sd` on macOS, `bonjour-service` elsewhere). The service name includes the hostname (e.g. `ccc-server (Gecko)`), and the TXT record contains the institution name and the `/v1/` path prefix. The advertisement is torn down cleanly on `SIGTERM`/`SIGINT`.
-
-You can also set `ADVERTISE_MDNS=1` manually alongside any start command:
-
-```sh
-ADVERTISE_MDNS=1 mise run stolaf-college
-```
+These run `scripts/dev-mdns.ts`, which starts `wrangler dev` on port 3000 on all interfaces and publishes a `_ccc-server._tcp` service (via `dns-sd` on macOS, `bonjour-service` elsewhere). The service name includes the hostname (e.g. `ccc-server (Gecko)`), and the TXT record contains the institution name and the `/v1/` path prefix. The advertisement is torn down cleanly on `SIGTERM`/`SIGINT`.
 
 To verify the advertisement is visible on the network:
 
@@ -62,28 +45,38 @@ To verify the advertisement is visible on the network:
 dns-sd -B _ccc-server._tcp local
 ```
 
-### Production
-
-```sh
-mise run build
-mise run start:prod
-```
-
 ## Testing
 
-All tests
+Unit tests, and replay tests that run each school's real Worker against recorded upstream responses (no network):
 
 ```sh
 mise run test
 ```
 
-Smoke tests
+Refresh the recorded upstream responses in `test/fixtures/` (hits the live sites):
 
 ```sh
-mise run test:stolaf-college
-mise run test:carleton-college
+mise run fixtures:record
+```
+
+Live smoke tests against the real upstreams:
+
+```sh
+mise run test:live:stolaf-college
+mise run test:live:carleton-college
 ```
 
 TDD workflow
 
-This repository practices TDD for agentic development: write a failing AVA test next to the implementation (`*.test.ts`), run `mise run test`, implement until green, then run smoke tests for integration checks.
+This repository practices TDD for agentic development: write a failing `node:test` test next to the implementation (`*.test.ts`), run `mise run test`, implement until green, then run the live smoke tests for integration checks.
+
+## Deploying
+
+Merges to `master` deploy both Workers through GitHub Actions. Pull requests get preview URLs, posted as a comment.
+
+Secrets are set once per Worker:
+
+```sh
+npx wrangler secret put GOOGLE_CALENDAR_API_KEY --env stolaf-college
+npx wrangler secret put GOOGLE_CALENDAR_API_KEY --env carleton-college
+```
