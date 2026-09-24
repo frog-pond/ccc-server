@@ -7,7 +7,17 @@ export async function htmlToMarkdown(c: Context) {
 		throw new HTTPException(415, {message: 'Unsupported Media Type'})
 	}
 
-	const body: unknown = await c.req.json()
+	const raw = await c.req.text()
+	if (!raw) {
+		throw new HTTPException(415, {message: 'Unsupported Media Type'})
+	}
+
+	let body: unknown
+	try {
+		body = JSON.parse(raw)
+	} catch {
+		throw new HTTPException(400, {message: 'request body must be JSON'})
+	}
 
 	if (!(body && typeof body === 'object' && 'text' in body && typeof body.text === 'string')) {
 		throw new HTTPException(400, {message: 'request body .text property is required'})
