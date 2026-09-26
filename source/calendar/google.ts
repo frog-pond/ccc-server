@@ -1,7 +1,7 @@
 import {getJson} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
-import {JSDOM} from 'jsdom'
+import {textFromHtml} from '../ccc-lib/dom.ts'
 import {EventSchema} from './types.ts'
 import {z} from 'zod'
 
@@ -29,7 +29,7 @@ function convertGoogleEvents(data: GoogleCalendarEventType[], now = moment()) {
 		const startTime = moment(event.start.date ?? event.start.dateTime)
 		const endTime = moment(event.end.date ?? event.end.dateTime)
 		let description = (event.description ?? '').replace('<br>', '\n')
-		description = JSDOM.fragment(description).textContent.trim()
+		description = textFromHtml(description)
 
 		return EventSchema.parse({
 			dataSource: 'google',
@@ -49,7 +49,7 @@ function convertGoogleEvents(data: GoogleCalendarEventType[], now = moment()) {
 	})
 }
 
-export async function googleCalendar(calendarId: string, now = moment()) {
+export async function googleCalendar(calendarId: string, apiKey: string, now = moment()) {
 	let calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`
 
 	let params = {
@@ -58,7 +58,7 @@ export async function googleCalendar(calendarId: string, now = moment()) {
 		showDeleted: 'false',
 		singleEvents: 'true',
 		timeMin: now.toISOString(),
-		key: process.env['GOOGLE_CALENDAR_API_KEY'] ?? '',
+		key: apiKey,
 	}
 
 	let body = GoogleCalendarResultSchema.parse(await getJson(calendarUrl, {searchParams: params}))

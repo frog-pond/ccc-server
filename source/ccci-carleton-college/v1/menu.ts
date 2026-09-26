@@ -1,8 +1,10 @@
 import {getJson} from '../../ccc-lib/http.ts'
-import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import * as bonapp from '../../menus-bonapp/index.ts'
+import {bonAppJson} from '../../menus-bonapp/response.ts'
 import {GH_PAGES} from './gh-pages.ts'
-import type {Context} from '../../ccc-server/context.ts'
+import {requireQuery} from '../../ccc-worker/query.ts'
+import type {Context} from '../../ccc-worker/env.ts'
+import {HTTPException} from 'hono/http-exception'
 
 const pauseMenuUrl = GH_PAGES('pause-menu.json')
 export const getPauseMenu = () => getJson(pauseMenuUrl)
@@ -37,172 +39,100 @@ function isKeyofCafeIdToUrl(s: string | number): s is keyof typeof CAFE_ID_TO_UR
 	return s in CAFE_ID_TO_URL
 }
 
-export async function pauseMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getPauseMenu()
+function requireCafeUrl(c: Context) {
+	let cafeId = requireQuery(c, 'cafeId')
+	if (!isKeyofCafeIdToUrl(cafeId)) {
+		throw new HTTPException(400, {
+			message: `?cafeId must be one of ${Object.values(CAFE_ID_TO_URL).join(', ')}`,
+		})
+	}
+	return CAFE_URLS[CAFE_ID_TO_URL[cafeId]]
 }
 
-export async function bonAppMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	let cafeId = ctx.URL.searchParams.get('cafeId')
-	ctx.assert(cafeId, 400, '?cafeId is required')
-	ctx.assert(
-		isKeyofCafeIdToUrl(cafeId),
-		400,
-		`?cafeId must be one of ${Object.values(CAFE_ID_TO_URL).join(', ')}`,
-	)
-	ctx.body = await getMenu(CAFE_URLS[CAFE_ID_TO_URL[cafeId]])
+export async function pauseMenu(c: Context) {
+	return c.json(await getPauseMenu())
 }
 
-export async function bonAppCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	let cafeId = ctx.URL.searchParams.get('cafeId')
-	ctx.assert(cafeId, 400, '?cafeId is required')
-	ctx.assert(
-		isKeyofCafeIdToUrl(cafeId),
-		400,
-		`?cafeId must be one of ${Object.values(CAFE_ID_TO_URL).join(', ')}`,
-	)
-	ctx.body = await getInfo(CAFE_URLS[CAFE_ID_TO_URL[cafeId]])
+export async function bonAppMenu(c: Context) {
+	return bonAppJson(c, await getMenu(requireCafeUrl(c)))
 }
 
-export async function bonAppNutrition(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	let itemId = ctx.URL.searchParams.get('itemId')
-	ctx.assert(itemId, 400, '?itemId is required')
-	ctx.body = await getNutrition(itemId)
+export async function bonAppCafe(c: Context) {
+	return bonAppJson(c, await getInfo(requireCafeUrl(c)))
 }
 
-export async function stavCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.stav)
+export async function bonAppNutrition(c: Context) {
+	return c.json(await getNutrition(requireQuery(c, 'itemId')))
 }
 
-export async function stavMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.stav)
+export async function stavCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.stav))
 }
 
-export async function cageCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.cage)
+export async function stavMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.stav))
 }
 
-export async function cageMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.cage)
+export async function cageCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.cage))
 }
 
-export async function kingsRoomCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.kingsRoom)
+export async function cageMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.cage))
 }
 
-export async function kingsRoomMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.kingsRoom)
+export async function kingsRoomCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.kingsRoom))
 }
 
-export async function caveCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.cave)
+export async function kingsRoomMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.kingsRoom))
 }
 
-export async function caveMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.cave)
+export async function caveCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.cave))
 }
 
-export async function burtonCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.burton)
+export async function caveMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.cave))
 }
 
-export async function burtonMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.burton)
+export async function burtonCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.burton))
 }
 
-export async function ldcCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.ldc)
+export async function burtonMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.burton))
 }
 
-export async function ldcMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.ldc)
+export async function ldcCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.ldc))
 }
 
-export async function saylesCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.sayles)
+export async function ldcMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.ldc))
 }
 
-export async function saylesMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.sayles)
+export async function saylesCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.sayles))
 }
 
-export async function weitzCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.weitz)
+export async function saylesMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.sayles))
 }
 
-export async function weitzMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getMenu(CAFE_URLS.weitz)
+export async function weitzCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.weitz))
 }
 
-export async function schulzeCafe(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
-	ctx.body = await getInfo(CAFE_URLS.schulze)
+export async function weitzMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.weitz))
 }
 
-export async function schulzeMenu(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
+export async function schulzeCafe(c: Context) {
+	return bonAppJson(c, await getInfo(CAFE_URLS.schulze))
+}
 
-	ctx.body = await getMenu(CAFE_URLS.schulze)
+export async function schulzeMenu(c: Context) {
+	return bonAppJson(c, await getMenu(CAFE_URLS.schulze))
 }

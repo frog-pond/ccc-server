@@ -1,16 +1,27 @@
+import {HTTPException} from 'hono/http-exception'
 import {htmlToMarkdown as toMarkdown} from '../../ccc-lib/html-to-markdown.ts'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 
-export async function htmlToMarkdown(ctx: Context) {
-	ctx.assert(ctx.request.is('json'), 415)
+export async function htmlToMarkdown(c: Context) {
+	if (!c.req.header('content-type')?.includes('application/json')) {
+		throw new HTTPException(415, {message: 'Unsupported Media Type'})
+	}
 
-	const body: unknown = await ctx.request.json('100kb')
+	const raw = await c.req.text()
+	if (!raw) {
+		throw new HTTPException(415, {message: 'Unsupported Media Type'})
+	}
 
-	ctx.assert(
-		body && typeof body === 'object' && 'text' in body && typeof body.text === 'string',
-		400,
-		'request body .text property is required',
-	)
+	let body: unknown
+	try {
+		body = JSON.parse(raw)
+	} catch {
+		throw new HTTPException(400, {message: 'request body must be JSON'})
+	}
 
-	ctx.response.body = toMarkdown(body.text)
+	if (!(body && typeof body === 'object' && 'text' in body && typeof body.text === 'string')) {
+		throw new HTTPException(400, {message: 'request body .text property is required'})
+	}
+
+	return c.text(toMarkdown(body.text))
 }

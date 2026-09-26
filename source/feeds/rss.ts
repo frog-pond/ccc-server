@@ -1,18 +1,15 @@
-import * as Sentry from '@sentry/node'
 import {getText} from '../ccc-lib/http.ts'
-import {JSDOM} from 'jsdom'
+import {parseXml, textFromHtml} from '../ccc-lib/dom.ts'
 import {FeedItemSchema, type FeedItemType} from './types.ts'
 import moment from 'moment'
 
 export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedItemType[]> {
 	try {
 		const body = await getText(url, {searchParams: query})
-		const dom = new JSDOM(body, {contentType: 'text/xml'})
-		return Array.from(dom.window.document.querySelectorAll('item')).map(convertRssItemToStory)
+		const doc = parseXml(body)
+		return Array.from(doc.querySelectorAll('item')).map(convertRssItemToStory)
 	} catch (error) {
 		console.error(`Failed to fetch RSS feed from ${String(url)}:`, error)
-		Sentry.captureException(error, {tags: {url: String(url)}}) // TODO: figure out how these interact - but need to see data in sentry first
-		Sentry.logger.error('Failed to fetch RSS feed', {url: String(url)})
 		return []
 	}
 }
@@ -30,7 +27,7 @@ export function convertRssItemToStory(item: Element) {
 	let link = item.querySelector('link')?.textContent ?? null
 
 	let title = item.querySelector('title')?.textContent ?? ''
-	title = JSDOM.fragment(title).textContent.trim() || '(no title)'
+	title = textFromHtml(title) || '(no title)'
 
 	let datePublished = item.querySelector('pubDate')?.textContent ?? null
 	if (datePublished) {
@@ -40,10 +37,10 @@ export function convertRssItemToStory(item: Element) {
 	let descriptionEl = item.querySelector('description')
 
 	let content = item.getAttribute('content:encoded') ?? descriptionEl?.textContent ?? '(no content)'
-	content = JSDOM.fragment(content).textContent.trim()
+	content = textFromHtml(content)
 
 	let excerpt: string | null = descriptionEl?.textContent ?? content.substring(0, 250)
-	excerpt = JSDOM.fragment(excerpt).textContent.trim() || null
+	excerpt = textFromHtml(excerpt) || null
 
 	let featuredImage = null
 	if (item.querySelector('enclosure')) {

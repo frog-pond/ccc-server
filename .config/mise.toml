@@ -6,7 +6,7 @@ run = "mise run pretty -- --no-write --check"
 alias = "pretty:check"
 
 [tasks.pretty]
-run = "prettier --write source scripts"
+run = "prettier --write source scripts test"
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks.format]
@@ -16,40 +16,28 @@ run = { task = "pretty" }
 run = "eslint --cache --max-warnings=0 ."
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
-[tasks.start]
-run = "node source/ccc-server/index.ts"
-
-[tasks."start:watch"]
-run = "node --watch source/ccc-server/index.ts"
-
-[tasks."start:prod"]
-run = { task = "start" }
-env = { NODE_ENV = "production" }
-
 [tasks."stolaf-college"]
-run = "mise run start"
-env = { INSTITUTION = "stolaf-college" }
+run = "wrangler dev --env stolaf-college --persist-to .wrangler/state/stolaf-college"
+env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks."stolaf-college:mdns"]
-run = "mise run start"
-env = { INSTITUTION = "stolaf-college", ADVERTISE_MDNS = "1" }
+run = "node scripts/dev-mdns.ts stolaf-college"
 
 [tasks."carleton-college"]
-run = "mise run start"
-env = { INSTITUTION = "carleton-college" }
+run = "wrangler dev --env carleton-college --persist-to .wrangler/state/carleton-college"
+env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
 [tasks."carleton-college:mdns"]
-run = "mise run start"
-env = { INSTITUTION = "carleton-college", ADVERTISE_MDNS = "1" }
+run = "node scripts/dev-mdns.ts carleton-college"
 
-[tasks."test:stolaf-college"]
+[tasks."test:live:stolaf-college"]
 run = "./scripts/smoke-test.sh stolaf-college"
 
-[tasks."test:carleton-college"]
+[tasks."test:live:carleton-college"]
 run = "./scripts/smoke-test.sh carleton-college"
 
 [tasks.test]
-run = "node --test 'source/**/*.test.ts'"
+run = "node --test 'source/**/*.test.ts' 'test/**/*.test.ts' 'scripts/**/*.test.ts'"
 
 [tasks.build]
 run = "tsc --build ."
@@ -68,3 +56,6 @@ run = "mise run typecheck --watch"
 
 [tasks.check]
 run = { tasks = ["p", "lint", "test", "typecheck"] }
+
+[tasks."fixtures:record"]
+run = "node scripts/record-fixtures.ts"

@@ -1,12 +1,10 @@
 import {getJson} from '../../ccc-lib/http.ts'
-import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 
-export async function departments(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-	if (ctx.cached(ONE_DAY)) return
-
-	ctx.body = await getJson('https://www.stolaf.edu/directory/departments', {
-		searchParams: {format: 'json'},
-	})
+export async function departments(c: Context) {
+	return c.json(
+		await getJson('https://www.stolaf.edu/directory/departments', {
+			searchParams: {format: 'json'},
+		}),
+	)
 }

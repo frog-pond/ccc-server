@@ -1,8 +1,7 @@
 import {deprecatedEvents} from '../../calendar/deprecated.ts'
 import {DISCUSSION_URL, RETIRED_TITLE, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
 import {FeedItemSchema} from '../../feeds/types.ts'
-import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 import {z} from 'zod'
 
 /// Where St. Olaf's WordPress blocks this server's IP, the app fetches those
@@ -27,11 +26,8 @@ export function deprecatedLinkGroups(text: string) {
 	])
 }
 
-export function atoz(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-	if (ctx.cached(ONE_DAY)) return
-
-	ctx.body = deprecatedLinkGroups("The A–Z index can't be loaded right now. Tap for details.")
+export function atoz(c: Context) {
+	return c.json(deprecatedLinkGroups("The A–Z index can't be loaded right now. Tap for details."))
 }
 
 /// The student job listings moved to Oracle Recruiting, which this server's
@@ -41,12 +37,9 @@ export function atoz(ctx: Context) {
 /// Shaped for the job screens those builds already ship: the list groups rows
 /// by `type` and labels them with `office`, so both have to carry something,
 /// and the detail screen parses `lastModified` with moment's `MMMM D, YYYY`.
-export function jobs(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-	if (ctx.cached(ONE_DAY)) return
-
-	ctx.body = deprecatedJobs(
-		"Student job listings can't be loaded in this version. Tap for details.",
+export function jobs(c: Context) {
+	return c.json(
+		deprecatedJobs("Student job listings can't be loaded in this version. Tap for details."),
 	)
 }
 
@@ -88,11 +81,8 @@ export function deprecatedJobs(text: string, now = new Date()) {
 /// The Google calendar behind this route was deleted upstream, and no app
 /// screen ever read it. The route stays anyway: retired endpoints answer with a
 /// notice here rather than a 404, the way the retired news sources do.
-export function olevilleCalendar(ctx: Context) {
-	ctx.cacheControl(ONE_DAY)
-	if (ctx.cached(ONE_DAY)) return
-
-	ctx.body = deprecatedEvents(RETIRED_TITLE, 'The Oleville calendar is no longer published.')
+export function olevilleCalendar(c: Context) {
+	return c.json(deprecatedEvents(RETIRED_TITLE, 'The Oleville calendar is no longer published.'))
 }
 
 /// Distinct from `deprecatedWpJson`, which tells the reader a source is dead.

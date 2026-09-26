@@ -1,9 +1,8 @@
 import {getText} from '../../ccc-lib/http.ts'
-import {ONE_HOUR} from '../../ccc-lib/constants.ts'
-import {JSDOM} from 'jsdom'
+import {parseHtml} from '../../ccc-lib/dom.ts'
 import {groupableName, sortOrgs, sortableName} from '../../student-orgs/names.ts'
 import {z} from 'zod'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 import {unavailableOrgs} from './deprecated.ts'
 
 /// An org with no website, or none we may administer, is ordinary rather than
@@ -92,9 +91,9 @@ export function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarle
 /// only our ability to reach it.
 export async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let body = await getText('https://apps.carleton.edu/student/orgs/')
-	let dom = new JSDOM(body)
+	let doc = parseHtml(body)
 
-	const allOrgWrappers = dom.window.document.querySelectorAll('.orgContainer, .careerField')
+	const allOrgWrappers = doc.querySelectorAll('.orgContainer, .careerField')
 
 	const allOrgs = new Map<string, SortableCarletonStudentOrgType>()
 	const sortableRegex = /^(Carleton( College)?|The) +/i
@@ -122,9 +121,6 @@ export async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	return sortOrgs(Array.from(allOrgs.values()))
 }
 
-export function orgs(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-	if (ctx.cached(ONE_HOUR * 6)) return
-
-	ctx.body = unavailableOrgs()
+export function orgs(c: Context) {
+	return c.json(unavailableOrgs())
 }

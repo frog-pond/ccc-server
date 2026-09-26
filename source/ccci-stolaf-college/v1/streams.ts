@@ -1,7 +1,6 @@
 import {getJson} from '../../ccc-lib/http.ts'
-import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import moment from 'moment-timezone'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../../ccc-worker/env.ts'
 import {z} from 'zod'
 
 const StreamEntry = z.object({
@@ -55,15 +54,12 @@ const getStreams = async (params: StOlafStreamsParamsType) => {
 	})
 }
 
-export async function upcoming(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
+export async function upcoming(c: Context) {
 	const {
 		dateFrom = moment().tz('America/Chicago').format('YYYY-MM-DD'),
 		dateTo = moment().add(2, 'month').tz('America/Chicago').format('YYYY-MM-DD'),
 		sort,
-	} = GetStreamsParamsSchema.parse(Object.fromEntries(ctx.URL.searchParams.entries()))
+	} = GetStreamsParamsSchema.parse(c.req.query())
 
 	const params = StOlafStreamsParamsSchema.parse({
 		class: 'current',
@@ -71,18 +67,15 @@ export async function upcoming(ctx: Context) {
 		date_to: dateTo,
 		sort,
 	})
-	ctx.body = await getStreams(params)
+	return c.json(await getStreams(params))
 }
 
-export async function archived(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
+export async function archived(c: Context) {
 	const {
 		dateFrom = moment().subtract(2, 'month').tz('America/Chicago').format('YYYY-MM-DD'),
 		dateTo = moment().tz('America/Chicago').format('YYYY-MM-DD'),
 		sort,
-	} = GetStreamsParamsSchema.parse(Object.fromEntries(ctx.URL.searchParams.entries()))
+	} = GetStreamsParamsSchema.parse(c.req.query())
 
 	const params = StOlafStreamsParamsSchema.parse({
 		class: 'archived',
@@ -91,5 +84,5 @@ export async function archived(ctx: Context) {
 		sort,
 	})
 
-	ctx.body = await getStreams(params)
+	return c.json(await getStreams(params))
 }

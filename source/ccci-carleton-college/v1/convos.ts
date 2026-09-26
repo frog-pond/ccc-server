@@ -1,18 +1,15 @@
 import {getText} from '../../ccc-lib/http.ts'
-import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {makeAbsoluteUrl} from '../../ccc-lib/url.ts'
 import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.ts'
-import {JSDOM} from 'jsdom'
+import {parseHtml, parseXml, textFromHtml} from '../../ccc-lib/dom.ts'
+import {requireQuery} from '../../ccc-worker/query.ts'
 import moment from 'moment'
-import type {Context} from '../../ccc-server/context.ts'
-import assert from 'node:assert/strict'
+import type {Context} from '../../ccc-worker/env.ts'
 
 function processConvo(event: Element) {
-	let title = JSDOM.fragment(event.querySelector('title')?.textContent ?? '').textContent.trim()
+	let title = textFromHtml(event.querySelector('title')?.textContent ?? '')
 
-	let description = JSDOM.fragment(
-		event.querySelector('description')?.textContent ?? '',
-	).textContent.trim()
+	let description = textFromHtml(event.querySelector('description')?.textContent ?? '')
 
 	let pubDate = moment(event.querySelector('pubDate')?.textContent)
 
@@ -28,15 +25,13 @@ function processConvo(event: Element) {
 	return {title, description, pubDate, enclosure}
 }
 
-async function fetchUpcoming(eventId: string) {
+export function parseUpcomingConvo(html: string, pageUrl: string) {
 	let baseUrl = 'https://www.carleton.edu/convocations/calendar/'
-	let url = 'https://www.carleton.edu/convocations/calendar/'
-	let body = await getText(url, {searchParams: {eId: eventId}})
 
-	let dom = new JSDOM(body)
-
-	let eventEl = dom.window.document.querySelector('.campus-calendar--event')
-	assert(eventEl)
+	let eventEl = parseHtml(html).querySelector('.campus-calendar--event')
+	if (!eventEl) {
+		throw new Error(`no .campus-calendar--event element in ${pageUrl}`)
+	}
 
 	let descText = htmlToMarkdown(eventEl.querySelector('.event_description')?.innerHTML ?? '', {
 		baseUrl,
@@ -60,32 +55,29 @@ async function fetchUpcoming(eventId: string) {
 	}
 }
 
+async function fetchUpcoming(eventId: string) {
+	let url = new URL('https://www.carleton.edu/convocations/calendar/')
+	url.searchParams.set('eId', eventId)
+	return parseUpcomingConvo(await getText(url), url.href)
+}
+
 export const getUpcoming = fetchUpcoming
 
-export async function upcomingDetail(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-	if (ctx.cached(ONE_HOUR * 6)) return
-
-	let detailId = ctx.URL.searchParams.get('id')
-	ctx.assert(detailId, 400, '?id is required')
-	ctx.body = await getUpcoming(detailId)
+export async function upcomingDetail(c: Context) {
+	let detailId = requireQuery(c, 'id')
+	return c.json(await getUpcoming(detailId))
 }
 
 async function fetchArchived() {
 	let body = await getText('https://feed.podbean.com/carletonconvos/feed.xml')
-	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	let convos = Array.from(dom.window.document.querySelectorAll('rss channel item')).map(
-		processConvo,
-	)
+	let doc = parseXml(body)
+	let convos = Array.from(doc.querySelectorAll('rss channel item')).map(processConvo)
 	convos = convos.slice(0, 100)
 	return convos
 }
 
 export const getArchived = fetchArchived
 
-export async function archived(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR * 6)
-	if (ctx.cached(ONE_HOUR * 6)) return
-
-	ctx.body = await getArchived()
+export async function archived(c: Context) {
+	return c.json(await getArchived())
 }

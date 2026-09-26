@@ -1,0 +1,624 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Carleton College//Calendar Events//EN
+NAME:Carleton College: Student Union Movie Organization Events
+X-WR-CALNAME:Carleton College: Student Union Movie Organization Events
+TIMEZONE-ID:America/Chicago
+X-WR-TIMEZONE:America/Chicago
+REFRESH-INTERVAL;VALUE=DURATION:PT6H
+X-PUBLISHED-TTL:PT6H
+BEGIN:VEVENT
+UID:qvji6fpc8p0pnp037jtasud7ug
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20260925T190000
+DTEND:20260925T210000
+SUMMARY:SUMO Movie: Obsession
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Obsession</em>. The movie will be shown twice on Friday and Saturday
+  nights at 7pm and 10pm. Closed captioning equipment and assistive listeni
+ ng devices are available for the Friday showings. The Saturday showings wi
+ ll be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nhttps:/
+ /www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carleton Co
+ llege website:\nhttps://www.carleton.edu/_c/ut5s
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T183149
+END:VEVENT
+BEGIN:VEVENT
+UID:l6sgkf6bmkh00rl7l8v8fp6kv8
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20260925T220000
+DTEND:20260925T235900
+SUMMARY:SUMO Movie: Obsession
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> Obsession</em>. The movie will be shown twice on Friday and Saturda
+ y nights at 7pm and 10pm. Closed captioning equipment and assistive listen
+ ing devices are available for the Friday showings. The Saturday showings w
+ ill be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nhttps:
+ //www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carleton C
+ ollege website:\nhttps://www.carleton.edu/_c/ut5u
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T183706
+END:VEVENT
+BEGIN:VEVENT
+UID:fghvdtm8vo013t5dvd67o60ef8
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20260926T190000
+DTEND:20260926T210000
+SUMMARY:SUMO Movie: Obsession
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Obsession</em>. The movie will be shown twice on Friday and Saturday
+  nights at 7pm and 10pm. Closed captioning equipment and assistive listeni
+ ng devices are available for the Friday showings. The Saturday showings wi
+ ll be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nhttps:/
+ /www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carleton Co
+ llege website:\nhttps://www.carleton.edu/_c/ut5t
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T183527
+END:VEVENT
+BEGIN:VEVENT
+UID:m7r6grrigp1dpp860v1tjvqo9o
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20260926T220000
+DTEND:20260926T235900
+SUMMARY:SUMO Movie: Obsession
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> Obsession</em>. The movie will be shown twice on Friday and Saturda
+ y nights at 7pm and 10pm. Closed captioning equipment and assistive listen
+ ing devices are available for the Friday showings. The Saturday showings w
+ ill be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nhttps:
+ //www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carleton C
+ ollege website:\nhttps://www.carleton.edu/_c/ut5z
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T185008
+END:VEVENT
+BEGIN:VEVENT
+UID:0917q5lj7m0el3n2n98cfaep3o
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261002T190000
+DTEND:20261002T203000
+SUMMARY:SUMO Movie: Minions and Monsters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Minions and Monsters</em>. The movie will be shown twice on Friday a
+ nd Saturday nights at 7pm and 10pm. Closed captioning equipment and assist
+ ive listening devices are available for the Friday showings. The Saturday 
+ showings will be open-captioned.\n\nThis movie is rated PG.\n\nEvent Detai
+ ls:\nhttps://www.carleton.edu/student/orgs/sumo/\n\nView this event on the
+  Carleton College website:\nhttps://www.carleton.edu/_c/ut5Q
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T193657
+END:VEVENT
+BEGIN:VEVENT
+UID:c7cokdd91hkh0p4af63qe2gsa4
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261002T220000
+DTEND:20261002T233000
+SUMMARY:SUMO Movie: Minions and Monsters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> Minions and Monsters</em>. The movie will be shown twice on Friday 
+ and Saturday nights at 7pm and 10pm. Closed captioning equipment and assis
+ tive listening devices are available for the Friday showings. The Saturday
+  showings will be open-captioned.\n\nThis movie is rated PG.\n\nEvent Deta
+ ils:\nhttps://www.carleton.edu/student/orgs/sumo/\n\nView this event on th
+ e Carleton College website:\nhttps://www.carleton.edu/_c/ut5D
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T193110
+END:VEVENT
+BEGIN:VEVENT
+UID:1nf9302kkkreevdsp6vju43s3s
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261003T190000
+DTEND:20261003T203000
+SUMMARY:SUMO Movie: Minions and Monsters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Minions and Monsters</em>. The movie will be shown twice on Friday a
+ nd Saturday nights at 7pm and 10pm. Closed captioning equipment and assist
+ ive listening devices are available for the Friday showings. The Saturday 
+ showings will be open-captioned.\n\nThis movie is rated PG.\n\nEvent Detai
+ ls:\nhttps://www.carleton.edu/student/orgs/sumo/\n\nView this event on the
+  Carleton College website:\nhttps://www.carleton.edu/_c/ut5P
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T194207
+END:VEVENT
+BEGIN:VEVENT
+UID:m5brpckj9vuarlfps7boscut28
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261003T220000
+DTEND:20261003T233000
+SUMMARY:SUMO Movie: Minions and Monsters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> Minions and Monsters</em>. The movie will be shown twice on Friday 
+ and Saturday nights at 7pm and 10pm. Closed captioning equipment and assis
+ tive listening devices are available for the Friday showings. The Saturday
+  showings will be open-captioned.\n\nThis movie is rated PG.\n\nEvent Deta
+ ils:\nhttps://www.carleton.edu/student/orgs/sumo/\n\nView this event on th
+ e Carleton College website:\nhttps://www.carleton.edu/_c/ut5F
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T193413
+END:VEVENT
+BEGIN:VEVENT
+UID:0oijaotpt1dtu05e8gli6e5v4o
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261009T190000
+DTEND:20261009T210000
+SUMMARY:SUMO Movie: I Love Boosters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> I Love Boosters</em>. The movie will be shown twice on Friday and Sa
+ turday nights at 7pm and 10pm. Closed captioning equipment and assistive l
+ istening devices are available for the Friday showings. The Saturday showi
+ ngs will be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nh
+ ttps://www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carle
+ ton College website:\nhttps://www.carleton.edu/_c/ut5L
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T194442
+END:VEVENT
+BEGIN:VEVENT
+UID:3tlotikp8kugldjnj776jhptrg
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261009T220000
+DTEND:20261009T235900
+SUMMARY:SUMO Movie: I Love Boosters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> I Love Boosters</em>. The movie will be shown twice on Friday and S
+ aturday nights at 7pm and 10pm. Closed captioning equipment and assistive 
+ listening devices are available for the Friday showings. The Saturday show
+ ings will be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\n
+ https://www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carl
+ eton College website:\nhttps://www.carleton.edu/_c/ut5N
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T195152
+END:VEVENT
+BEGIN:VEVENT
+UID:o9noaf8strvv2v656arlfqcv50
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261010T190000
+DTEND:20261010T210000
+SUMMARY:SUMO Movie: I Love Boosters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> I Love Boosters</em>. The movie will be shown twice on Friday and Sa
+ turday nights at 7pm and 10pm. Closed captioning equipment and assistive l
+ istening devices are available for the Friday showings. The Saturday showi
+ ngs will be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nh
+ ttps://www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carle
+ ton College website:\nhttps://www.carleton.edu/_c/ut5J
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T194718
+END:VEVENT
+BEGIN:VEVENT
+UID:0oepnlrnshht5eef24ollhmkc8
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261010T220000
+DTEND:20261010T235900
+SUMMARY:SUMO Movie: I Love Boosters
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> I Love Boosters</em>. The movie will be shown twice on Friday and S
+ aturday nights at 7pm and 10pm. Closed captioning equipment and assistive 
+ listening devices are available for the Friday showings. The Saturday show
+ ings will be open-captioned.\n\nThis movie is rated R.\n\nEvent Details:\n
+ https://www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carl
+ eton College website:\nhttps://www.carleton.edu/_c/ut5M
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T195010
+END:VEVENT
+BEGIN:VEVENT
+UID:fvqncf385dld83oaoniejh2p7o
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261016T190000
+DTEND:20261016T203500
+SUMMARY:SUMO Movie: Song of the Sea
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Song of the Sea</em>. The movie will be open captioned. Due to rest
+ rictions with this license placed on us by the distributor\, this movie ca
+ n only be shown to staff\, students and their families\, and faculty. Memb
+ ers of the general public are asked to refrain from attending movies this 
+ weekend.\n\nThis movie is rated PG.\n\nEvent Details:\nhttps://www.carleto
+ n.edu/student/orgs/sumo/\n\nView this event on the Carleton College websit
+ e:\nhttps://www.carleton.edu/_c/ut5T
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T201308
+END:VEVENT
+BEGIN:VEVENT
+UID:tn55doib7mh4gjbv37h4de3rvo
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261016T220000
+DTEND:20261016T233000
+SUMMARY:SUMO Movie: My Neighbor Totoro
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> My Neighbor Totoro</em>. The movie will be open captioned. Due to 
+ restrictions with this license placed on us by the distributor\, this movi
+ e can only be shown to staff\, students and their families\, and faculty. 
+ Members of the general public are asked to refrain from attending movies t
+ his weekend.\n\nThis movie is rated G.\n\nEvent Details:\nhttps://www.carl
+ eton.edu/student/orgs/sumo/\n\nView this event on the Carleton College web
+ site:\nhttps://www.carleton.edu/_c/ut5S
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T200302
+END:VEVENT
+BEGIN:VEVENT
+UID:f8h5ouo2ofonsgssmbcanvntbg
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261017T190000
+DTEND:20261017T203000
+SUMMARY:SUMO Movie: My Neighbor Totoro
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> My Neighbor Totoro</em>. The movie will be open captioned. Due to r
+ estrictions with this license placed on us by the distributor\, this movie
+  can only be shown to staff\, students and their families\, and faculty. M
+ embers of the general public are asked to refrain from attending movies th
+ is weekend.\n\nThis movie is rated G.\n\nEvent Details:\nhttps://www.carle
+ ton.edu/student/orgs/sumo/\n\nView this event on the Carleton College webs
+ ite:\nhttps://www.carleton.edu/_c/ut53
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T151542
+END:VEVENT
+BEGIN:VEVENT
+UID:mmer2kels4fmmb84lin8i4dulc
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261017T220000
+DTEND:20261017T233500
+SUMMARY:SUMO Movie: Song of the Sea
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> Song of the Sea</em>. The movie will be open captioned. Due to res
+ trictions with this license placed on us by the distributor\, this movie c
+ an only be shown to staff\, students and their families\, and faculty. Mem
+ bers of the general public are asked to refrain from attending movies this
+  weekend.\n\nThis movie is rated PG.\n\nEvent Details:\nhttps://www.carlet
+ on.edu/student/orgs/sumo/\n\nView this event on the Carleton College websi
+ te:\nhttps://www.carleton.edu/_c/ut5U
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260818T203257
+END:VEVENT
+BEGIN:VEVENT
+UID:74knqq03da3ghr0vnpa27dalq8
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261023T190000
+DTEND:20261023T203000
+SUMMARY:SUMO Movie: Leviticus
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Leviticus</em>. Closed captioning equipment and assistive listening
+  devices are available. The Saturday 10pm showing will be open-captioned.\
+ n\nThis movie is rated R.\n\nEvent Details:\nhttps://www.carleton.edu/stud
+ ent/orgs/sumo/\n\nView this event on the Carleton College website:\nhttps:
+ //www.carleton.edu/_c/ut55
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T152053
+END:VEVENT
+BEGIN:VEVENT
+UID:3j9p709v94jh9qotbmg5kgruqk
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261023T220000
+DTEND:20261023T233500
+SUMMARY:SUMO Movie: Girls Like Girls
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Girls Like Girls</em>. Closed captioning equipment and assistive li
+ stening devices are available. The Saturday showing will be open-captione
+ d.\n\nThis movie is rated R.\n\nEvent Details:\nhttps://www.carleton.edu/s
+ tudent/orgs/sumo/\n\nView this event on the Carleton College website:\nhtt
+ ps://www.carleton.edu/_c/ut58
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T153143
+END:VEVENT
+BEGIN:VEVENT
+UID:o8vuicos9lc3qkv72rg30ok988
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261024T190000
+DTEND:20261024T203500
+SUMMARY:SUMO Movie: Girls Like Girls
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Girls Like Girls</em>. The Saturday showing will be open-captioned.\
+ n\nThis movie is rated R.\n\nEvent Details:\nhttps://www.carleton.edu/stud
+ ent/orgs/sumo/\n\nView this event on the Carleton College website:\nhttps:
+ //www.carleton.edu/_c/ut56
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T152650
+END:VEVENT
+BEGIN:VEVENT
+UID:kgku7b1kikv1hesnbdbkqhrb9o
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261024T220000
+DTEND:20261024T233000
+SUMMARY:SUMO Movie: Leviticus
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> Leviticus</em>. The Saturday showing will be open-captioned.\n\nThi
+ s movie is rated R.\n\nEvent Details:\nhttps://www.carleton.edu/student/or
+ gs/sumo/\n\nView this event on the Carleton College website:\nhttps://www.
+ carleton.edu/_c/ut57
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T152814
+END:VEVENT
+BEGIN:VEVENT
+UID:6oakblrego167mhrcjd6n8qs78
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261030T190000
+DTEND:20261030T202000
+SUMMARY:SUMO Movie: Corpse Bride
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> Corpse Bride</em>. Closed captioning equipment and assistive listen
+ ing devices are available. The Saturday 10pm showing will be open-captione
+ d.\n\nThis movie is rated PG.\n\nEvent Details:\nhttps://www.carleton.edu/
+ student/orgs/sumo/\n\nView this event on the Carleton College website:\nht
+ tps://www.carleton.edu/_c/ut59
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T154050
+END:VEVENT
+BEGIN:VEVENT
+UID:5di5v4vf9e1s62742gs6si5e3k
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261030T220000
+DTEND:20261031T003000
+SUMMARY:SUMO Movie: The Shining
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> The Shining</em>. Closed captioning equipment and assistive listeni
+ ng devices are available. The Saturday showing will be open-captioned.\n\n
+ This movie is rated R.\n\nEvent Details:\nhttps://www.carleton.edu/student
+ /orgs/sumo/\n\nView this event on the Carleton College website:\nhttps://w
+ ww.carleton.edu/_c/ut6b
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T154526
+END:VEVENT
+BEGIN:VEVENT
+UID:noqlvfg1qh08f8occ1am9l6g84
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261031T190000
+DTEND:20261031T213000
+SUMMARY:SUMO Movie: The Shining
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema for this week's Sumo movie\,<em> T
+ he Shining</em>. The Saturday showing will be open-captioned.\n\nThis movi
+ e is rated R.\n\nEvent Details:\nhttps://www.carleton.edu/student/orgs/sum
+ o/\n\nView this event on the Carleton College website:\nhttps://www.carlet
+ on.edu/_c/ut6c
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T154701
+END:VEVENT
+BEGIN:VEVENT
+UID:a1jck0og5pjbhm0gk3i2qk9jb8
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261031T220000
+DTEND:20261031T232000
+SUMMARY:SUMO Movie: Corpse Bride
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 10pm for this week's Sumo movie
+ \,<em> Corpse Bride</em>. The Saturday showing will be open-captioned.\n\n
+ This movie is rated PG.\n\nEvent Details:\nhttps://www.carleton.edu/studen
+ t/orgs/sumo/\n\nView this event on the Carleton College website:\nhttps://
+ www.carleton.edu/_c/ut6a
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T154237
+END:VEVENT
+BEGIN:VEVENT
+UID:ad054cqvdmbv0a0uhi7bnit0d0
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261106T190000
+DTEND:20261106T204500
+SUMMARY:SUMO Movie: 10 Things I Hate About You
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at 7pm for this week's Sumo movie\
+ ,<em> 10 Things I Hate About You</em>. Closed captioning equipment and as
+ sistive listening devices are available. The Saturday 10pm showing will be
+  open-captioned.\n\nThis movie is rated PG-13.\n\nEvent Details:\nhttps://
+ www.carleton.edu/student/orgs/sumo/\n\nView this event on the Carleton Col
+ lege website:\nhttps://www.carleton.edu/_c/ut6d
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T155042
+END:VEVENT
+BEGIN:VEVENT
+UID:f9b79pcer47lnbknqot6qjd598
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261106T220000
+DTEND:20261106T233500
+SUMMARY:SUMO Movie: (500) Days of Summer
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema for this week's Sumo movie\,<em> (
+ 500) Days of Summer</em>. Closed captioning equipment and assistive listen
+ ing devices are available. The Saturday showing will be open-captioned.\n\
+ nThis movie is rated PG-13.\n\nEvent Details:\nhttps://www.carleton.edu/st
+ udent/orgs/sumo/\n\nView this event on the Carleton College website:\nhttp
+ s://www.carleton.edu/_c/ut6f
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T155558
+END:VEVENT
+BEGIN:VEVENT
+UID:prfh71a9fnb4n108hvcgl7eg74
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261107T190000
+DTEND:20261107T203500
+SUMMARY:SUMO Movie: (500) Days of Summer
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema for this week's Sumo movie\,<em> (
+ 500) Days of Summer</em>. Closed captioning equipment and assistive listen
+ ing devices are available. The Saturday showing will be open-captioned.\n\
+ nThis movie is rated PG-13.\n\nEvent Details:\nhttps://www.carleton.edu/st
+ udent/orgs/sumo/\n\nView this event on the Carleton College website:\nhttp
+ s://www.carleton.edu/_c/ut6g
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T155704
+END:VEVENT
+BEGIN:VEVENT
+UID:q56tlo9pci3u6eqqp095aq62js
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261107T220000
+DTEND:20261107T234500
+SUMMARY:SUMO Movie: 10 Things I Hate About You
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema for this week's Sumo movie\,<em> 1
+ 0 Things I Hate About You</em>. The Saturday 10pm showing will be open-cap
+ tioned.\n\nThis movie is rated PG-13.\n\nEvent Details:\nhttps://www.carle
+ ton.edu/student/orgs/sumo/\n\nView this event on the Carleton College webs
+ ite:\nhttps://www.carleton.edu/_c/ut6e
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T155203
+END:VEVENT
+BEGIN:VEVENT
+UID:nu9fjff6aptv8agergf37vqebc
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261113T200000
+DTEND:20261113T230000
+SUMMARY:SUMO Movie: The Odyssey
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at a special time of 8pm for this 
+ week's Sumo movie\,<em> The Odyssey</em>. Closed captioning equipment and 
+ assistive listening devices are available. The Saturday showing will be op
+ en-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nhttps://www.car
+ leton.edu/student/orgs/sumo/\n\nView this event on the Carleton College we
+ bsite:\nhttps://www.carleton.edu/_c/ut6h
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T160044
+END:VEVENT
+BEGIN:VEVENT
+UID:b95aou3b7vdnekah4ak9thme3g
+SEQUENCE:0
+DTSTAMP:20260924T050427
+DTSTART:20261114T200000
+DTEND:20261114T230000
+SUMMARY:SUMO Movie: The Odyssey
+TRANSP:TRANSPARENT
+LOCATION:Weitz Cinema\, Weitz Center for Creativity
+DESCRIPTION:Join us in the Weitz Cinema at a special time of 8pm for this 
+ week's Sumo movie\,<em> The Odyssey</em>. The Saturday showing will be ope
+ n-captioned.\n\nThis movie is rated R.\n\nEvent Details:\nhttps://www.carl
+ eton.edu/student/orgs/sumo/\n\nView this event on the Carleton College web
+ site:\nhttps://www.carleton.edu/_c/ut6i
+ORGANIZER;CN="Student Union Movie Organization":mailto:0okrhdulkvvdodic4jv
+ 26r51kk@group.calendar.google.com
+STATUS:CONFIRMED
+CREATED:20260819T160151
+END:VEVENT
+END:VCALENDAR
