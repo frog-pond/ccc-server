@@ -325,9 +325,14 @@ void test('needsFrequentRefresh: false for games further off and finished games'
 	t.assert.equal(needsFrequentRefresh([makeGame('scheduled'), makeGame('final')], now), false)
 })
 
-void test('needsFrequentRefresh: false for all-day events and unreadable dates', (t) => {
-	const now = new Date('2026-09-19T00:00:00.000Z')
-	const games = [makeGame('scheduled', '9/19/2026'), makeGame('scheduled', 'TBA')]
+void test('needsFrequentRefresh: false for an all-day event', (t) => {
+	// Four minutes before the instant a bare date would parse to, in any
+	// time zone: were the date read as a kickoff, the game would count.
+	const now = new Date(new Date('9/19/2026').getTime() - 4 * 60 * 1000)
 
-	t.assert.equal(needsFrequentRefresh(games, now), false)
+	t.assert.equal(needsFrequentRefresh([makeGame('scheduled', '9/19/2026')], now), false)
+})
+
+void test('needsFrequentRefresh: false for an unreadable date', (t) => {
+	t.assert.equal(needsFrequentRefresh([makeGame('scheduled', 'TBA')], AFTER_KICKOFF), false)
 })
