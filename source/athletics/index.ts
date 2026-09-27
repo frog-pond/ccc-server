@@ -76,7 +76,14 @@ export const ScoreSchema = z.object({
 	coverage: z.record(z.unknown()),
 })
 
-export type Score = z.infer<typeof ScoreSchema>
+/** A game record as the scores feed sends it, after parsing. */
+export type FeedScore = z.infer<typeof ScoreSchema>
+
+/** Where a game stands, decided from the scores feed, livestats and the clock. */
+export type GameState = 'scheduled' | 'started' | 'live' | 'unofficial-final' | 'final'
+
+/** A game as this server returns it. */
+export type Score = Omit<FeedScore, 'status'> & {status: {indicator: GameState; value: string}}
 
 const AthleticsResponseSchema = z.object({
 	timestamp: z.unknown(),
@@ -116,7 +123,7 @@ const LivestatsResponseSchema = z.object({
 	Games: z.array(LivestatsGameSchema),
 })
 
-type LiveGame = z.infer<typeof LivestatsGameSchema>
+export type LiveGame = z.infer<typeof LivestatsGameSchema>
 
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
@@ -133,39 +140,46 @@ function livestatsUrlFromScoresUrl(scoresUrl: string): string {
 }
 
 /**
- * Merges a score with live game data when the game is in progress.
- * Updates status to 'O' (Ongoing) and populates live scores.
+ * A timed game's kickoff. All-day events carry a bare date, which
+ * `parseDateUtcField` leaves as it came, so they have no kickoff; nor does a
+ * date that does not parse.
  */
-export function mergeWithLiveData(score: Score, livestats: Map<string, LiveGame>): Score {
-	const liveGame = livestats.get(score.id)
-	if (!liveGame) {
-		return score
+function kickoffTime(score: {date_utc: string}): Date | undefined {
+	if (!score.date_utc.includes('T')) {
+		return undefined
 	}
-
-	// Only update if game has started but not completed
-	if (!liveGame.HasStarted || liveGame.IsComplete) {
-		return score
-	}
-
-	// If scores endpoint already has a final result, trust it over livestats
-	if (score.result === 'W' || score.result === 'L') {
-		return score
-	}
-
-	return {
-		...score,
-		status: {indicator: 'O', value: score.status.value},
-		team_score: String(liveGame.HomeTeam.Score),
-		opponent_score: String(liveGame.VisitingTeam.Score),
-	}
+	const kickoff = new Date(score.date_utc)
+	return Number.isNaN(kickoff.getTime()) ? undefined : kickoff
 }
 
-function normalizeCompletedGame(score: Score): Score {
-	// Upstream sometimes returns indicator 'O' (ongoing) with a final result — fix it
-	if ((score.result === 'W' || score.result === 'L') && score.status.indicator === 'O') {
-		return {...score, status: {...score.status, indicator: 'A'}}
+/**
+ * Decides where a game stands. The first rule that matches wins: a posted
+ * result, then livestats, then the clock. The scores feed's own 'A'/'O' play
+ * no part — across two recorded game days its 'O' arrived only together with
+ * a result.
+ */
+export function gameState(score: FeedScore, liveGame: LiveGame | undefined, now: Date): Score {
+	const withState = (indicator: GameState): Score => ({
+		...score,
+		status: {indicator, value: score.status.value},
+	})
+
+	if (score.result !== '') {
+		return withState('final')
 	}
-	return score
+
+	if (liveGame && (liveGame.IsComplete || liveGame.HasStarted)) {
+		// Both feeds list the home side first, whichever side St. Olaf is on.
+		return {
+			...withState(liveGame.IsComplete ? 'unofficial-final' : 'live'),
+			team_score: String(liveGame.HomeTeam.Score),
+			opponent_score: String(liveGame.VisitingTeam.Score),
+		}
+	}
+
+	const kickoff = kickoffTime(score)
+	const hasKickedOff = kickoff !== undefined && kickoff.getTime() <= now.getTime()
+	return {...withState(hasKickedOff ? 'started' : 'scheduled'), team_score: '', opponent_score: ''}
 }
 
 /**
@@ -180,12 +194,12 @@ function liveGamesById(livestatsJson: unknown): Map<string, LiveGame> {
 	return new Map(parsed.data.Games.map((game) => [String(game.GameId), game]))
 }
 
-/** Turns the two feeds' bodies into the scores this server returns. */
-export function scoresFromFeeds(scoresJson: unknown, livestatsJson: unknown): Score[] {
+/** Turns the two feeds' bodies into the scores this server returns, as of `now`. */
+export function scoresFromFeeds(scoresJson: unknown, livestatsJson: unknown, now: Date): Score[] {
 	const liveGames = liveGamesById(livestatsJson)
-	return AthleticsResponseSchema.parse(scoresJson)
-		.scores.map((score) => mergeWithLiveData(score, liveGames))
-		.map(normalizeCompletedGame)
+	return AthleticsResponseSchema.parse(scoresJson).scores.map((score) =>
+		gameState(score, liveGames.get(score.id), now),
+	)
 }
 
 export async function fetchAthleticsScores(url: string): Promise<Score[]> {
@@ -194,5 +208,5 @@ export async function fetchAthleticsScores(url: string): Promise<Score[]> {
 		// A failed livestats request counts as no live games.
 		getJson(livestatsUrlFromScoresUrl(url)).catch(() => null),
 	])
-	return scoresFromFeeds(scoresJson, livestatsJson)
+	return scoresFromFeeds(scoresJson, livestatsJson, new Date())
 }

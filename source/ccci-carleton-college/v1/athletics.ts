@@ -9,7 +9,7 @@ const FIVE_MINUTES = ONE_MINUTE * 5
 function hasLiveOrUpcomingGame(scores: Score[]): boolean {
 	const now = Date.now()
 	return scores.some((s) => {
-		if (s.status.indicator === 'O') return true
+		if (s.status.indicator === 'live') return true
 		const startTime = new Date(s.date_utc).getTime()
 		return startTime > now && startTime - now < 5 * ONE_MINUTE
 	})
