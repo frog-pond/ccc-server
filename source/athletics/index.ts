@@ -3,11 +3,14 @@ import {getJson} from '../ccc-lib/http.ts'
 
 // ── Zod schemas ──────────────────────────────────────────────────────────────
 
-const LocationInfoSchema = z.object({
-	location: z.string(),
-	homeAway: z.enum(['H', 'A', 'N']).optional(),
-	facility: z.string(),
-})
+/** The feed calls home/away `HAN`; the output calls it `homeAway`. */
+const LocationInfoSchema = z
+	.object({
+		location: z.string(),
+		HAN: z.enum(['H', 'A', 'N']).optional(),
+		facility: z.string(),
+	})
+	.transform(({HAN, ...location}) => (HAN === undefined ? location : {...location, homeAway: HAN}))
 
 const StatusInfoSchema = z.object({
 	indicator: z.enum(['O', 'A']),

@@ -1,5 +1,24 @@
 import {test} from 'node:test'
-import {mergeWithLiveData, type Score} from './index.ts'
+import {readFileSync} from 'node:fs'
+import {mergeWithLiveData, ScoreSchema, type Score} from './index.ts'
+
+function readFixture(path: string): unknown {
+	return JSON.parse(readFileSync(new URL(`./fixtures/${path}`, import.meta.url), 'utf8'))
+}
+
+void test("ScoreSchema carries the feed's HAN through as location.homeAway", (t) => {
+	const feed = readFixture('2026-09-23-away-games/20260924T013855Z-scores.json') as {
+		scores: unknown[]
+	}
+
+	const score = ScoreSchema.parse(feed.scores[0])
+
+	t.assert.deepEqual(score.location, {
+		location: 'Decorah, Iowa / Luther Soccer Field',
+		facility: '',
+		homeAway: 'A',
+	})
+})
 
 function makeScore(overrides: Partial<Score> = {}): Score {
 	return {
