@@ -56,3 +56,11 @@ void test('unitNumberOfDescription reads each saved posting', (t) => {
 		t.assert.equal(unitNumberOfDescription(descriptionOf(name)), unit, name)
 	}
 })
+
+/// With no whitespace between paragraphs, the next paragraph's digits must
+/// not run on into the unit.
+void test('unitNumberOfDescription keeps a unit apart from the paragraph after it', (t) => {
+	let html = '<p><strong>Unit Number:</strong> 11725</p><p>2026-27 academic year</p>'
+
+	t.assert.equal(unitNumberOfDescription(html), '11725')
+})

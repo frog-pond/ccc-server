@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {postingUnits, type UnitCache} from './units.ts'
+import {mostlyNull, postingUnits, type UnitCache} from './units.ts'
 
 function sources(board: string[], units: Record<string, string | null | Error>) {
 	let reads: string[] = []
@@ -31,16 +31,29 @@ void test('reads only postings it has not read before', async (t) => {
 	t.assert.deepEqual(result, {'1': '11725', '2': '22005'})
 })
 
-/// A posting with no unit is an answer, not a failure, so it is not re-read.
-void test('keeps a null unit and does not re-read it', async (t) => {
+/// A null unit is usually a typo or a blank an editor may yet correct, so it
+/// is read again rather than kept for the posting's whole life.
+void test('re-reads a null unit on the next request', async (t) => {
 	let cache: UnitCache = new Map()
 	await postingUnits(sources(['1'], {'1': null}), cache)
 	let s = sources(['1'], {'1': '11725'})
 
 	let result = await postingUnits(s, cache)
 
-	t.assert.deepEqual(s.reads, [])
-	t.assert.deepEqual(result, {'1': null})
+	t.assert.deepEqual(s.reads, ['1'])
+	t.assert.deepEqual(result, {'1': '11725'})
+})
+
+/// On a fresh deploy, every request in the cold window would otherwise read
+/// every posting's detail from Oracle.
+void test('requests that arrive together share one read of each posting', async (t) => {
+	let cache: UnitCache = new Map()
+	let s = sources(['1', '2'], {'1': '11725', '2': '22005'})
+
+	let [first, second] = await Promise.all([postingUnits(s, cache), postingUnits(s, cache)])
+
+	t.assert.deepEqual(s.reads.toSorted(), ['1', '2'])
+	t.assert.deepEqual(first, second)
 })
 
 void test('leaves out a posting whose detail failed, and retries it next time', async (t) => {
@@ -84,4 +97,18 @@ void test('fails when the board itself cannot be read', async (t) => {
 	}
 
 	await t.assert.rejects(postingUnits(s, new Map()), /board down/u)
+})
+
+/// Most postings losing their unit at once means the description template
+/// changed under the parser, not that most postings lack one.
+void test('mostlyNull flags a map where most units are null', (t) => {
+	t.assert.equal(mostlyNull({'1': null, '2': null, '3': '11725'}), true)
+})
+
+void test('mostlyNull passes the few nulls a normal board has', (t) => {
+	t.assert.equal(mostlyNull({'1': null, '2': '22005', '3': '11725'}), false)
+})
+
+void test('mostlyNull passes an empty board', (t) => {
+	t.assert.equal(mostlyNull({}), false)
 })
