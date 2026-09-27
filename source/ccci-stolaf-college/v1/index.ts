@@ -17,6 +17,7 @@ import * as printing from './printing.ts'
 import * as reports from './reports.ts'
 import * as sources from './sources.ts'
 import * as streams from './streams.ts'
+import * as studentWork from './student-work.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
@@ -103,6 +104,7 @@ api.get('/map/geojson', map.geojson)
 // orgs
 api.get('/orgs', orgs.orgs)
 api.get('/orgs/categories', orgs.orgCategories)
+api.get('/student-work/units', studentWork.units)
 
 // news
 api.get('/news/rss', news.rss)
