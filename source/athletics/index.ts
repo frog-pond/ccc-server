@@ -116,6 +116,8 @@ const LivestatsResponseSchema = z.object({
 	Games: z.array(LivestatsGameSchema),
 })
 
+type LiveGame = z.infer<typeof LivestatsGameSchema>
+
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
 /**
@@ -130,30 +132,11 @@ function livestatsUrlFromScoresUrl(scoresUrl: string): string {
 	return url.toString()
 }
 
-async function fetchLivestats(
-	livestatsUrl: string,
-): Promise<Map<string, z.infer<typeof LivestatsGameSchema>>> {
-	try {
-		const response = LivestatsResponseSchema.parse(await getJson(livestatsUrl))
-		const map = new Map<string, z.infer<typeof LivestatsGameSchema>>()
-		for (const game of response.Games) {
-			map.set(String(game.GameId), game)
-		}
-		return map
-	} catch {
-		// If livestats fails, continue without live data
-		return new Map()
-	}
-}
-
 /**
  * Merges a score with live game data when the game is in progress.
  * Updates status to 'O' (Ongoing) and populates live scores.
  */
-export function mergeWithLiveData(
-	score: Score,
-	livestats: Map<string, z.infer<typeof LivestatsGameSchema>>,
-): Score {
+export function mergeWithLiveData(score: Score, livestats: Map<string, LiveGame>): Score {
 	const liveGame = livestats.get(score.id)
 	if (!liveGame) {
 		return score
@@ -185,15 +168,31 @@ function normalizeCompletedGame(score: Score): Score {
 	return score
 }
 
-export async function fetchAthleticsScores(url: string): Promise<Score[]> {
-	const livestatsUrl = livestatsUrlFromScoresUrl(url)
+/**
+ * Indexes the livestats games by id. Live data only adds to what the scores
+ * feed says, so a body that does not parse counts as no live games.
+ */
+function liveGamesById(livestatsJson: unknown): Map<string, LiveGame> {
+	const parsed = LivestatsResponseSchema.safeParse(livestatsJson)
+	if (!parsed.success) {
+		return new Map()
+	}
+	return new Map(parsed.data.Games.map((game) => [String(game.GameId), game]))
+}
 
-	const [scoresResponse, livestats] = await Promise.all([
-		getJson(url).then((data) => AthleticsResponseSchema.parse(data)),
-		fetchLivestats(livestatsUrl),
-	])
-
-	return scoresResponse.scores
-		.map((score) => mergeWithLiveData(score, livestats))
+/** Turns the two feeds' bodies into the scores this server returns. */
+export function scoresFromFeeds(scoresJson: unknown, livestatsJson: unknown): Score[] {
+	const liveGames = liveGamesById(livestatsJson)
+	return AthleticsResponseSchema.parse(scoresJson)
+		.scores.map((score) => mergeWithLiveData(score, liveGames))
 		.map(normalizeCompletedGame)
+}
+
+export async function fetchAthleticsScores(url: string): Promise<Score[]> {
+	const [scoresJson, livestatsJson] = await Promise.all([
+		getJson(url),
+		// A failed livestats request counts as no live games.
+		getJson(livestatsUrlFromScoresUrl(url)).catch(() => null),
+	])
+	return scoresFromFeeds(scoresJson, livestatsJson)
 }

@@ -1,6 +1,6 @@
 import {test} from 'node:test'
 import {readFileSync} from 'node:fs'
-import {mergeWithLiveData, ScoreSchema, type Score} from './index.ts'
+import {mergeWithLiveData, ScoreSchema, scoresFromFeeds, type Score} from './index.ts'
 
 function readFixture(path: string): unknown {
 	return JSON.parse(readFileSync(new URL(`./fixtures/${path}`, import.meta.url), 'utf8'))
@@ -119,4 +119,25 @@ void test('mergeWithLiveData returns original score when no matching livestats e
 	const merged = mergeWithLiveData(score, livestats)
 
 	t.assert.equal(merged, score, 'should return original score unchanged')
+})
+
+void test('scoresFromFeeds takes live scores from livestats by game id', (t) => {
+	const scores = scoresFromFeeds(
+		readFixture('2026-09-26-home-games/20260926T180249Z-scores.json'),
+		readFixture('2026-09-26-home-games/20260926T180249Z-livestats.json'),
+	)
+
+	const womensSoccer = scores.find((score) => score.id === '21076')
+	t.assert.equal(womensSoccer?.team_score, '1')
+	t.assert.equal(womensSoccer?.opponent_score, '0')
+})
+
+void test('scoresFromFeeds treats an unreadable livestats body as empty', (t) => {
+	const scoresJson = readFixture('2026-09-26-home-games/20260926T180249Z-scores.json')
+
+	t.assert.deepEqual(
+		scoresFromFeeds(scoresJson, {Games: 'not a list'}),
+		scoresFromFeeds(scoresJson, {Games: []}),
+	)
+	t.assert.deepEqual(scoresFromFeeds(scoresJson, null), scoresFromFeeds(scoresJson, {Games: []}))
 })
