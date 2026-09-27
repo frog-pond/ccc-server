@@ -109,6 +109,15 @@ void test('gameState: a game livestats reports complete, with no result yet, is 
 	t.assert.deepEqual([game.team_score, game.opponent_score], ['3', '1'])
 })
 
+void test('gameState: livestats reporting complete is enough for an unofficial final', (t) => {
+	const liveGame = makeLiveGame({HasStarted: false, IsComplete: true})
+
+	t.assert.equal(
+		gameState(makeFeedScore(), liveGame, AFTER_KICKOFF).status.indicator,
+		'unofficial-final',
+	)
+})
+
 void test('gameState: a game livestats reports started is live, home score first', (t) => {
 	const game = gameState(makeFeedScore(), makeLiveGame(), AFTER_KICKOFF)
 
@@ -117,7 +126,9 @@ void test('gameState: a game livestats reports started is live, home score first
 })
 
 void test('gameState: past kickoff with no live data and no result is started, without a score', (t) => {
-	const game = gameState(makeFeedScore(), undefined, AFTER_KICKOFF)
+	const score = makeFeedScore({team_score: '1', opponent_score: '0'})
+
+	const game = gameState(score, undefined, AFTER_KICKOFF)
 
 	t.assert.equal(game.status.indicator, 'started')
 	t.assert.deepEqual([game.team_score, game.opponent_score], ['', ''])
@@ -323,6 +334,10 @@ void test('needsFrequentRefresh: false for games further off and finished games'
 	const now = new Date('2026-09-19T17:50:00.000Z')
 
 	t.assert.equal(needsFrequentRefresh([makeGame('scheduled'), makeGame('final')], now), false)
+})
+
+void test('needsFrequentRefresh: false once every game past kickoff is final', (t) => {
+	t.assert.equal(needsFrequentRefresh([makeGame('final')], AFTER_KICKOFF), false)
 })
 
 void test('needsFrequentRefresh: false for an all-day event', (t) => {
