@@ -18,11 +18,12 @@ export function unitNumber(value: string): string | null {
 /// The template's label, with or without its "(5 digits)" hint.
 const LABEL = /unit number(?:\s*\(5 digits\))?\s*:/iu
 
-/// The unit a posting's description names. The description is HTML whose
-/// paragraphs run together in its text, so the value is read up to the fifth
-/// digit rather than to the end of a line.
+/// The unit a posting's description names. Its top-level elements are joined
+/// with spaces, as the app joins them, so a paragraph starting with digits
+/// cannot run on into the unit before it. Within one element text still runs
+/// together, so the value is read up to its fifth digit.
 export function unitNumberOfDescription(html: string): string | null {
-	let text = JSDOM.fragment(html).textContent
+	let text = Array.from(JSDOM.fragment(html).childNodes, (node) => node.textContent ?? '').join(' ')
 	let label = LABEL.exec(text)
 	if (!label) return null
 	return unitNumber(text.slice(label.index + label[0].length))

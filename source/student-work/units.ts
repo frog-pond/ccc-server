@@ -5,8 +5,8 @@ import pMap from 'p-map'
 /// out, so a client can read that one itself.
 export type PostingUnits = Record<string, string | null>
 
-/// What has been learned of each posting's unit. A posting's unit does not
-/// change, so an entry lasts as long as the posting stays on the board.
+/// What has been learned of each posting's unit. A unit, once read, lasts as
+/// long as its posting stays on the board.
 export type UnitCache = Map<string, string | null>
 
 export interface UnitSources {
@@ -17,7 +17,19 @@ export interface UnitSources {
 /// Oracle served eight at a time without complaint in manual testing.
 const CONCURRENCY = 8
 
-export async function postingUnits(sources: UnitSources, cache: UnitCache): Promise<PostingUnits> {
+/// The run in progress for each cache, which requests arriving together share.
+const running = new WeakMap<UnitCache, Promise<PostingUnits>>()
+
+export function postingUnits(sources: UnitSources, cache: UnitCache): Promise<PostingUnits> {
+	let run = running.get(cache)
+	if (!run) {
+		run = readUnits(sources, cache).finally(() => running.delete(cache))
+		running.set(cache, run)
+	}
+	return run
+}
+
+async function readUnits(sources: UnitSources, cache: UnitCache): Promise<PostingUnits> {
 	let ids = await sources.boardIds()
 
 	let onBoard = new Set(ids)
@@ -25,7 +37,9 @@ export async function postingUnits(sources: UnitSources, cache: UnitCache): Prom
 		if (!onBoard.has(id)) cache.delete(id)
 	}
 
-	let unread = ids.filter((id) => !cache.has(id))
+	// A null unit is read again each run: it is usually a typo or a blank that
+	// an editor may yet correct.
+	let unread = ids.filter((id) => typeof cache.get(id) !== 'string')
 	await pMap(
 		unread,
 		async (id) => {
@@ -44,4 +58,13 @@ export async function postingUnits(sources: UnitSources, cache: UnitCache): Prom
 		if (unit !== undefined) units[id] = unit
 	}
 	return units
+}
+
+/// Whether most of the board's postings came back with no unit. A normal
+/// board has a handful; most at once means the description template changed
+/// under the parser, and every area would read empty.
+export function mostlyNull(units: PostingUnits): boolean {
+	let values = Object.values(units)
+	let nulls = values.filter((unit) => unit === null).length
+	return nulls > values.length / 2
 }
