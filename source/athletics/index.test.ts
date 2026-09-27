@@ -2,6 +2,7 @@ import {test} from 'node:test'
 import {readdirSync, readFileSync} from 'node:fs'
 import {
 	gameState,
+	needsFrequentRefresh,
 	ScoreSchema,
 	scoresFromFeeds,
 	type FeedScore,
@@ -295,4 +296,38 @@ void test('2026-09-23: an away game reads as started while its result is pending
 		timeline.map(({score}) => score.status.indicator),
 	)
 	t.assert.equal(states.includes('started'), true, states.join(', '))
+})
+
+/** A game in the given state, kicking off at `kickoff`. */
+function makeGame(indicator: GameState, kickoff = KICKOFF): Score {
+	const game = gameState(makeFeedScore({date_utc: kickoff}), undefined, AFTER_KICKOFF)
+	return {...game, status: {indicator, value: ''}}
+}
+
+for (const indicator of ['started', 'live', 'unofficial-final'] as const) {
+	void test(`needsFrequentRefresh: true while a game is ${indicator}`, (t) => {
+		t.assert.equal(
+			needsFrequentRefresh([makeGame('final'), makeGame(indicator)], AFTER_KICKOFF),
+			true,
+		)
+	})
+}
+
+void test('needsFrequentRefresh: true when a game kicks off within five minutes', (t) => {
+	const now = new Date('2026-09-19T17:56:00.000Z')
+
+	t.assert.equal(needsFrequentRefresh([makeGame('scheduled')], now), true)
+})
+
+void test('needsFrequentRefresh: false for games further off and finished games', (t) => {
+	const now = new Date('2026-09-19T17:50:00.000Z')
+
+	t.assert.equal(needsFrequentRefresh([makeGame('scheduled'), makeGame('final')], now), false)
+})
+
+void test('needsFrequentRefresh: false for all-day events and unreadable dates', (t) => {
+	const now = new Date('2026-09-19T00:00:00.000Z')
+	const games = [makeGame('scheduled', '9/19/2026'), makeGame('scheduled', 'TBA')]
+
+	t.assert.equal(needsFrequentRefresh(games, now), false)
 })

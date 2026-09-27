@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {ONE_MINUTE} from '../ccc-lib/constants.ts'
 import {getJson} from '../ccc-lib/http.ts'
 
 // ── Zod schemas ──────────────────────────────────────────────────────────────
@@ -180,6 +181,30 @@ export function gameState(score: FeedScore, liveGame: LiveGame | undefined, now:
 	const kickoff = kickoffTime(score)
 	const hasKickedOff = kickoff !== undefined && kickoff.getTime() <= now.getTime()
 	return {...withState(hasKickedOff ? 'started' : 'scheduled'), team_score: '', opponent_score: ''}
+}
+
+const FIVE_MINUTES = 5 * ONE_MINUTE
+
+/** States in which a game can change from one minute to the next. */
+const IN_PLAY: ReadonlySet<GameState> = new Set(['started', 'live', 'unofficial-final'])
+
+/**
+ * Whether the scores should be re-read every minute rather than every five:
+ * a game is under way or waiting for its official result, or one kicks off
+ * within five minutes.
+ */
+export function needsFrequentRefresh(scores: Score[], now: Date): boolean {
+	return scores.some((score) => {
+		if (IN_PLAY.has(score.status.indicator)) {
+			return true
+		}
+		const kickoff = kickoffTime(score)
+		if (kickoff === undefined) {
+			return false
+		}
+		const untilKickoff = kickoff.getTime() - now.getTime()
+		return untilKickoff > 0 && untilKickoff < FIVE_MINUTES
+	})
 }
 
 /**
