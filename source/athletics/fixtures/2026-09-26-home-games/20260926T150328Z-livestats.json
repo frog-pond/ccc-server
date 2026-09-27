@@ -1,0 +1,33 @@
+{
+  "Games": [
+    {
+      "GameId": 21147,
+      "Path": "wvball",
+      "FullPath": "http://static.sidearmstats.com/schools/stolaf/wvball/",
+      "Link": "https://sidearmstats.com/stolaf/wvball/",
+      "SportTitle": "Volleyball",
+      "Opponent": "University of Wisconsin-Stout Polytechnic",
+      "Location": "Northfield, Minn.",
+      "Time": "9 a.m.",
+      "HasStarted": true,
+      "IsComplete": false,
+      "ClockSeconds": -1,
+      "ShowExtraPeriodsAsOT": true,
+      "PeriodsRegulation": 5,
+      "Period": 3,
+      "PeriodName": "Set",
+      "HomeTeam": {
+        "Id": "STO",
+        "Name": "#25 St. Olaf",
+        "Score": 1,
+        "SetScore": 0
+      },
+      "VisitingTeam": {
+        "Id": "UWS",
+        "Name": "Wisconsin-Stout Polytechnic",
+        "Score": 1,
+        "SetScore": 0
+      }
+    }
+  ]
+}

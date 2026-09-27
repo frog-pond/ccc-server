@@ -1,0 +1,69 @@
+[
+  {
+    "coverage": {},
+    "date": "9.23",
+    "dateFormatted": "9.23",
+    "date_end_utc": "",
+    "date_utc": "2026-09-24T00:00:00.000Z",
+    "hometeam": "Luther College",
+    "hometeam_logo": "https://athletics.stolaf.edu/images/logos/Luther_College.png",
+    "id": "21096",
+    "ip_time": "",
+    "links": {},
+    "location": {
+      "facility": "",
+      "location": "Decorah, Iowa / Luther Soccer Field"
+    },
+    "opponent": "Oles",
+    "opponent_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+    "opponent_score": "3",
+    "postscore_info": "",
+    "prescore_info": "",
+    "result": "W",
+    "sport": "Men's Soccer",
+    "sport_abbrev": "MSOC",
+    "status": {
+      "indicator": "A",
+      "value": ""
+    },
+    "team_score": "1",
+    "time": "7 p.m.",
+    "timestamp": 1790208000
+  },
+  {
+    "coverage": {},
+    "date": "9.23",
+    "dateFormatted": "9.23",
+    "date_end_utc": "",
+    "date_utc": "2026-09-24T00:00:00.000Z",
+    "hometeam": "Carleton College",
+    "hometeam_logo": "https://athletics.stolaf.edu/images/logos/Carleton-College.png",
+    "id": "21117",
+    "ip_time": "",
+    "links": {
+      "boxscore": {
+        "text": "Box",
+        "url": "https://athletics.stolaf.edu/boxscore.aspx?id=21117"
+      }
+    },
+    "location": {
+      "facility": "",
+      "location": "Northfield, Minn. / West Gym"
+    },
+    "opponent": "Oles",
+    "opponent_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+    "opponent_score": "3",
+    "postscore_info": "",
+    "prescore_info": "",
+    "result": "W",
+    "sport": "Volleyball",
+    "sport_abbrev": "VB",
+    "status": {
+      "indicator": "A",
+      "value": ""
+    },
+    "team_score": "0",
+    "time": "7 p.m.",
+    "timestamp": 1790208000
+  }
+]
