@@ -1,0 +1,154 @@
+[
+  {
+    "coverage": {},
+    "date": "9.26",
+    "dateFormatted": "9.26",
+    "date_end_utc": "",
+    "date_utc": "2026-09-26T14:00:00.000Z",
+    "hometeam": "Oles",
+    "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+    "id": "21147",
+    "ip_time": "",
+    "links": {
+      "boxscore": {
+        "text": "Box",
+        "url": "https://athletics.stolaf.edu/boxscore.aspx?id=21147"
+      }
+    },
+    "location": {
+      "facility": "Bob Gelle Court at Skoglund Center",
+      "location": "Northfield, Minn."
+    },
+    "opponent": "University of Wisconsin-Stout Polytechnic",
+    "opponent_logo": "https://athletics.stolaf.edu/images/logos/UW_Stout.png",
+    "opponent_score": "1",
+    "postscore_info": "",
+    "prescore_info": "",
+    "result": "W",
+    "sport": "Volleyball",
+    "sport_abbrev": "VB",
+    "status": {
+      "indicator": "A",
+      "value": ""
+    },
+    "team_score": "3",
+    "time": "9 a.m.",
+    "timestamp": 1790431200
+  },
+  {
+    "coverage": {},
+    "date": "9.26",
+    "dateFormatted": "9.26",
+    "date_end_utc": "",
+    "date_utc": "2026-09-26T18:00:00.000Z",
+    "hometeam": "Oles",
+    "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+    "id": "21037",
+    "ip_time": "",
+    "links": {
+      "boxscore": {
+        "text": "Box",
+        "url": "https://athletics.stolaf.edu/boxscore.aspx?id=21037"
+      }
+    },
+    "location": {
+      "facility": "Klein Field at Manitou",
+      "location": "Northfield, Minn."
+    },
+    "opponent": "Carleton College",
+    "opponent_logo": "https://athletics.stolaf.edu/images/logos/Carleton-College.png",
+    "opponent_score": "37",
+    "postscore_info": "",
+    "prescore_info": "",
+    "result": "L",
+    "sport": "Football",
+    "sport_abbrev": "FB",
+    "status": {
+      "indicator": "A",
+      "value": ""
+    },
+    "team_score": "7",
+    "time": "1 p.m.",
+    "timestamp": 1790445600
+  },
+  {
+    "coverage": {},
+    "date": "9.26",
+    "dateFormatted": "9.26",
+    "date_end_utc": "",
+    "date_utc": "2026-09-26T18:00:00.000Z",
+    "hometeam": "Oles",
+    "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+    "id": "21076",
+    "ip_time": "",
+    "links": {
+      "livestats": {
+        "text": "Live Stats",
+        "url": "https://athletics.stolaf.edu/sidearmstats/wsoc/summary"
+      },
+      "streaming_video": {
+        "text": "Live Video",
+        "url": "https://miacsportsnetwork.com/stolaf/"
+      }
+    },
+    "location": {
+      "facility": "Rolf Mellby Field",
+      "location": "Northfield, Minn. "
+    },
+    "opponent": "Augsburg University",
+    "opponent_logo": "https://athletics.stolaf.edu/images/logos/Augsburg-Spirit-Logo.png",
+    "opponent_score": "",
+    "postscore_info": "",
+    "prescore_info": "",
+    "result": "",
+    "sport": "Women's Soccer",
+    "sport_abbrev": "WSOC",
+    "status": {
+      "indicator": "A",
+      "value": ""
+    },
+    "team_score": "",
+    "time": "1 p.m.",
+    "timestamp": 1790445600
+  },
+  {
+    "coverage": {},
+    "date": "9.26",
+    "dateFormatted": "9.26",
+    "date_end_utc": "",
+    "date_utc": "2026-09-26T20:30:00.000Z",
+    "hometeam": "Oles",
+    "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+    "id": "21097",
+    "ip_time": "",
+    "links": {
+      "livestats": {
+        "text": "Live Stats",
+        "url": "https://athletics.stolaf.edu/sidearmstats/msoc/summary"
+      },
+      "streaming_video": {
+        "text": "Live Video",
+        "url": "https://miacsportsnetwork.com/stolaf/"
+      }
+    },
+    "location": {
+      "facility": "Rolf Mellby Field",
+      "location": "Northfield, Minn."
+    },
+    "opponent": "Augsburg University",
+    "opponent_logo": "https://athletics.stolaf.edu/images/logos/Augsburg-Spirit-Logo.png",
+    "opponent_score": "0",
+    "postscore_info": "",
+    "prescore_info": "",
+    "result": "",
+    "sport": "Men's Soccer",
+    "sport_abbrev": "MSOC",
+    "status": {
+      "indicator": "O",
+      "value": ""
+    },
+    "team_score": "1",
+    "time": "3:30 p.m.",
+    "timestamp": 1790454600
+  }
+]

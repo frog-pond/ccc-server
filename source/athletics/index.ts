@@ -1,13 +1,17 @@
 import {z} from 'zod'
+import {ONE_MINUTE} from '../ccc-lib/constants.ts'
 import {getJson} from '../ccc-lib/http.ts'
 
 // ── Zod schemas ──────────────────────────────────────────────────────────────
 
-const LocationInfoSchema = z.object({
-	location: z.string(),
-	homeAway: z.enum(['H', 'A', 'N']).optional(),
-	facility: z.string(),
-})
+/** The feed calls home/away `HAN`; the output calls it `homeAway`. */
+const LocationInfoSchema = z
+	.object({
+		location: z.string(),
+		HAN: z.enum(['H', 'A', 'N']).optional(),
+		facility: z.string(),
+	})
+	.transform(({HAN, ...location}) => (HAN === undefined ? location : {...location, homeAway: HAN}))
 
 const StatusInfoSchema = z.object({
 	indicator: z.enum(['O', 'A']),
@@ -73,7 +77,14 @@ export const ScoreSchema = z.object({
 	coverage: z.record(z.unknown()),
 })
 
-export type Score = z.infer<typeof ScoreSchema>
+/** A game record as the scores feed sends it, after parsing. */
+export type FeedScore = z.infer<typeof ScoreSchema>
+
+/** Where a game stands, decided from the scores feed, livestats and the clock. */
+export type GameState = 'scheduled' | 'started' | 'live' | 'unofficial-final' | 'final'
+
+/** A game as this server returns it. */
+export type Score = Omit<FeedScore, 'status'> & {status: {indicator: GameState; value: string}}
 
 const AthleticsResponseSchema = z.object({
 	timestamp: z.unknown(),
@@ -113,6 +124,8 @@ const LivestatsResponseSchema = z.object({
 	Games: z.array(LivestatsGameSchema),
 })
 
+export type LiveGame = z.infer<typeof LivestatsGameSchema>
+
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
 /**
@@ -127,70 +140,98 @@ function livestatsUrlFromScoresUrl(scoresUrl: string): string {
 	return url.toString()
 }
 
-async function fetchLivestats(
-	livestatsUrl: string,
-): Promise<Map<string, z.infer<typeof LivestatsGameSchema>>> {
-	try {
-		const response = LivestatsResponseSchema.parse(await getJson(livestatsUrl))
-		const map = new Map<string, z.infer<typeof LivestatsGameSchema>>()
-		for (const game of response.Games) {
-			map.set(String(game.GameId), game)
-		}
-		return map
-	} catch {
-		// If livestats fails, continue without live data
-		return new Map()
+/**
+ * A timed game's kickoff. All-day events carry a bare date, which
+ * `parseDateUtcField` leaves as it came, so they have no kickoff; nor does a
+ * date that does not parse.
+ */
+function kickoffTime(score: {date_utc: string}): Date | undefined {
+	if (!score.date_utc.includes('T')) {
+		return undefined
 	}
+	const kickoff = new Date(score.date_utc)
+	return Number.isNaN(kickoff.getTime()) ? undefined : kickoff
 }
 
 /**
- * Merges a score with live game data when the game is in progress.
- * Updates status to 'O' (Ongoing) and populates live scores.
+ * Decides where a game stands. The first rule that matches wins: a posted
+ * result, then livestats, then the clock. The scores feed's own 'A'/'O' play
+ * no part — across two recorded game days its 'O' arrived only together with
+ * a result.
  */
-export function mergeWithLiveData(
-	score: Score,
-	livestats: Map<string, z.infer<typeof LivestatsGameSchema>>,
-): Score {
-	const liveGame = livestats.get(score.id)
-	if (!liveGame) {
-		return score
-	}
-
-	// Only update if game has started but not completed
-	if (!liveGame.HasStarted || liveGame.IsComplete) {
-		return score
-	}
-
-	// If scores endpoint already has a final result, trust it over livestats
-	if (score.result === 'W' || score.result === 'L') {
-		return score
-	}
-
-	return {
+export function gameState(score: FeedScore, liveGame: LiveGame | undefined, now: Date): Score {
+	const withState = (indicator: GameState): Score => ({
 		...score,
-		status: {indicator: 'O', value: score.status.value},
-		team_score: String(liveGame.HomeTeam.Score),
-		opponent_score: String(liveGame.VisitingTeam.Score),
+		status: {indicator, value: score.status.value},
+	})
+
+	if (score.result !== '') {
+		return withState('final')
 	}
+
+	if (liveGame && (liveGame.IsComplete || liveGame.HasStarted)) {
+		// Both feeds list the home side first, whichever side St. Olaf is on.
+		return {
+			...withState(liveGame.IsComplete ? 'unofficial-final' : 'live'),
+			team_score: String(liveGame.HomeTeam.Score),
+			opponent_score: String(liveGame.VisitingTeam.Score),
+		}
+	}
+
+	const kickoff = kickoffTime(score)
+	const hasKickedOff = kickoff !== undefined && kickoff.getTime() <= now.getTime()
+	return {...withState(hasKickedOff ? 'started' : 'scheduled'), team_score: '', opponent_score: ''}
 }
 
-function normalizeCompletedGame(score: Score): Score {
-	// Upstream sometimes returns indicator 'O' (ongoing) with a final result — fix it
-	if ((score.result === 'W' || score.result === 'L') && score.status.indicator === 'O') {
-		return {...score, status: {...score.status, indicator: 'A'}}
+const FIVE_MINUTES = 5 * ONE_MINUTE
+
+/** States in which a game can change from one minute to the next. */
+const IN_PLAY: ReadonlySet<GameState> = new Set(['started', 'live', 'unofficial-final'])
+
+/**
+ * Whether the scores should be re-read every minute rather than every five:
+ * a game is under way or waiting for its official result, or one kicks off
+ * within five minutes.
+ */
+export function needsFrequentRefresh(scores: Score[], now: Date): boolean {
+	return scores.some((score) => {
+		if (IN_PLAY.has(score.status.indicator)) {
+			return true
+		}
+		const kickoff = kickoffTime(score)
+		if (kickoff === undefined) {
+			return false
+		}
+		const untilKickoff = kickoff.getTime() - now.getTime()
+		return untilKickoff > 0 && untilKickoff < FIVE_MINUTES
+	})
+}
+
+/**
+ * Indexes the livestats games by id. Live data only adds to what the scores
+ * feed says, so a body that does not parse counts as no live games.
+ */
+function liveGamesById(livestatsJson: unknown): Map<string, LiveGame> {
+	const parsed = LivestatsResponseSchema.safeParse(livestatsJson)
+	if (!parsed.success) {
+		return new Map()
 	}
-	return score
+	return new Map(parsed.data.Games.map((game) => [String(game.GameId), game]))
+}
+
+/** Turns the two feeds' bodies into the scores this server returns, as of `now`. */
+export function scoresFromFeeds(scoresJson: unknown, livestatsJson: unknown, now: Date): Score[] {
+	const liveGames = liveGamesById(livestatsJson)
+	return AthleticsResponseSchema.parse(scoresJson).scores.map((score) =>
+		gameState(score, liveGames.get(score.id), now),
+	)
 }
 
 export async function fetchAthleticsScores(url: string): Promise<Score[]> {
-	const livestatsUrl = livestatsUrlFromScoresUrl(url)
-
-	const [scoresResponse, livestats] = await Promise.all([
-		getJson(url).then((data) => AthleticsResponseSchema.parse(data)),
-		fetchLivestats(livestatsUrl),
+	const [scoresJson, livestatsJson] = await Promise.all([
+		getJson(url),
+		// A failed livestats request counts as no live games.
+		getJson(livestatsUrlFromScoresUrl(url)).catch(() => null),
 	])
-
-	return scoresResponse.scores
-		.map((score) => mergeWithLiveData(score, livestats))
-		.map(normalizeCompletedGame)
+	return scoresFromFeeds(scoresJson, livestatsJson, new Date())
 }

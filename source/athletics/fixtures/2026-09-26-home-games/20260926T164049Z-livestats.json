@@ -1,0 +1,31 @@
+{
+  "Games": [
+    {
+      "GameId": 21097,
+      "Path": "msoc",
+      "FullPath": "http://static.sidearmstats.com/schools/stolaf/msoc/",
+      "Link": "https://sidearmstats.com/stolaf/msoc/",
+      "SportTitle": "Men's Soccer",
+      "Opponent": "Augsburg University",
+      "Location": "Northfield, Minn.",
+      "Time": "3:30 p.m.",
+      "HasStarted": false,
+      "IsComplete": false,
+      "ClockSeconds": 0,
+      "ShowExtraPeriodsAsOT": true,
+      "PeriodsRegulation": 2,
+      "Period": 1,
+      "PeriodName": "Half",
+      "HomeTeam": {
+        "Id": "TeamB",
+        "Name": "#1 St. Olaf",
+        "Score": 0
+      },
+      "VisitingTeam": {
+        "Id": "TeamA",
+        "Name": "Augsburg",
+        "Score": 0
+      }
+    }
+  ]
+}
