@@ -1,5 +1,6 @@
 import {googleCalendar} from '../../calendar/google.ts'
 import {ical} from '../../calendar/ical.ts'
+import {weeklySchedule} from '../../calendar/weekly-schedule.ts'
 import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {deprecatedEvents} from '../../calendar/deprecated.ts'
 import {UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
@@ -52,11 +53,12 @@ export async function krlx(ctx: Context) {
 	ctx.body = await getGoogleCalendar('krlxradio88.1@gmail.com')
 }
 
+/// KSTO's Google Calendar stopped at spring 2019. The station's current
+/// schedule lives in its Now Playing post, which AAO-React-Native scrapes and
+/// publishes each week.
 export async function ksto(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = await getGoogleCalendar(
-		'stolaf.edu_7u3lgo4rr3o9dchr50q982ribk@group.calendar.google.com',
-	)
+	ctx.body = await weeklySchedule('https://stolaf.dev/AAO-React-Native/ksto-schedule.json')
 }
