@@ -8,20 +8,27 @@ import {EventSchema} from './types.ts'
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
 
-const ClockSchema = z.string().regex(/^([01]\d|2[0-4]):00$/)
+const hourOf = (clock: string) => Number(clock.slice(0, 2))
 
-const SlotSchema = z.object({
-	day: z.enum(DAYS),
-	start: ClockSchema,
-	end: ClockSchema,
-	title: z.string(),
-	genre: z.string().optional(),
-	poster: z.string().url().optional(),
-})
+const ClockSchema = z.string().regex(/^([01]\d|2[0-3]):00$/)
+
+/** A slot lies within its own day: it ends after it starts, and by midnight (24:00). */
+const SlotSchema = z
+	.object({
+		day: z.enum(DAYS),
+		start: ClockSchema,
+		end: z.union([ClockSchema, z.literal('24:00')]),
+		title: z.string(),
+		genre: z.string().optional(),
+		poster: z.string().url().optional(),
+	})
+	.refine((slot) => hourOf(slot.end) > hourOf(slot.start), {
+		message: 'A slot must end after it starts, by midnight',
+	})
 
 export const WeeklyScheduleSchema = z.object({
 	updated: z.string().datetime(),
-	timezone: z.string(),
+	timezone: z.string().refine((zone) => moment.tz.zone(zone) !== null, 'Unknown timezone'),
 	shows: SlotSchema.array(),
 })
 
@@ -30,8 +37,6 @@ export type WeeklySchedule = z.infer<typeof WeeklyScheduleSchema>
 /** How far ahead to list shows, and at most how many, as the Google reader does. */
 const DAYS_AHEAD = 14
 const MAX_EVENTS = 50
-
-const hourOf = (clock: string) => Number(clock.slice(0, 2))
 
 /** The moment `clock` falls on the station's calendar day `day`; 24:00 is the next midnight. */
 function at(day: Moment, clock: string) {
