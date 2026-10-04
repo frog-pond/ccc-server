@@ -164,3 +164,46 @@ void test('only a web address passes as a link', (t) => {
 void test('additional information is read as plain text', (t) => {
 	t.assert.equal(plainText('<p>Everyone is <b>welcome</b>!</p>'), 'Everyone is welcome!')
 })
+
+/// Habitat for Humanity's, as its officers wrote it: a name to a paragraph.
+const HABITAT =
+	'<p style="font-size: 14px;">Executive Committee: 2026 Fall</p><p style="font-size: 14px;">Yousef Abualatta</p><p style="font-size: 14px;">Esosa Edo-Ohonba</p><p style="font-size: 14px;"><!--StartFragment--><span style="font-size: 14px;float: none;">Alex Walk</span></p><p style="font-size: 14px;"><!--EndFragment-->Sam Fineran<br/><br/><br/></p>'
+
+void test('each paragraph of additional information keeps a line of its own', (t) => {
+	t.assert.equal(
+		plainText(HABITAT),
+		'Executive Committee: 2026 Fall\nYousef Abualatta\nEsosa Edo-Ohonba\nAlex Walk\nSam Fineran',
+	)
+})
+
+void test('a line break, a heading and a list each keep their lines', (t) => {
+	t.assert.equal(
+		plainText(
+			'<h4>Ways to Get Involved</h4><ul><li>Come to <b>meetings</b></li><li>Volunteer</li></ul>Fridays<br>4-5pm',
+		),
+		'Ways to Get Involved\n• Come to meetings\n• Volunteer\nFridays\n4-5pm',
+	)
+})
+
+void test("a list item's own paragraph stays on its bullet's line", (t) => {
+	t.assert.equal(
+		plainText(
+			'<ul><li><p><b>Workshops:</b> soldering and CAD</p></li><li><p>Projects</p></li></ul>',
+		),
+		'• Workshops: soldering and CAD\n• Projects',
+	)
+})
+
+void test('zero-width characters the editor leaves behind are dropped', (t) => {
+	t.assert.equal(
+		plainText('<p>\u200BYou can also join us</p><p>\u200B</p>'),
+		'You can also join us',
+	)
+})
+
+void test('inline tags do not break a line, or a word', (t) => {
+	t.assert.equal(
+		plainText('<p><b>W</b>affles &amp; <i>more</i>\n  today</p>'),
+		'Waffles & more today',
+	)
+})

@@ -105,4 +105,62 @@ export function urlOrBlank(text: string): string {
 	return URL.canParse(text) && /^https?:/u.test(text) ? text : ''
 }
 
-export const plainText = (html: string): string => JSDOM.fragment(html).textContent.trim()
+/// Tags that start a line of their own. Officers write a list of names as one
+/// `<p>` each, which `textContent` would run together into one line.
+const BLOCKS = new Set([
+	'P',
+	'DIV',
+	'H1',
+	'H2',
+	'H3',
+	'H4',
+	'H5',
+	'H6',
+	'BLOCKQUOTE',
+	'TR',
+	'UL',
+	'OL',
+])
+
+/// HTML as plain text that keeps its lines: a paragraph, heading or list item
+/// on a line of its own, a list item marked "• ", `<br>` a line break. Spaces
+/// within a line are evened out, and blank lines dropped.
+export function plainText(html: string): string {
+	let text = ''
+	let walk = (node: Node) => {
+		if (node.nodeType === node.TEXT_NODE) {
+			// A newline in the source is only whitespace; the tags make the lines.
+			text += (node.textContent ?? '').replace(/\s+/gu, ' ')
+			return
+		}
+		if (node.nodeType !== node.ELEMENT_NODE) {
+			return
+		}
+		let tag = (node as Element).tagName
+		if (tag === 'BR') {
+			text += '\n'
+			return
+		}
+		let isBlock = BLOCKS.has(tag) || tag === 'LI'
+		// A list item's own paragraph stays on its bullet's line.
+		if (isBlock && !text.endsWith('• ')) text += '\n'
+		if (tag === 'LI') text += '• '
+		node.childNodes.forEach(walk)
+		if (isBlock) text += '\n'
+	}
+	JSDOM.fragment(html).childNodes.forEach(walk)
+
+	return (
+		text
+			.split('\n')
+			// Zero-width characters the portal's editor leaves behind are not spaces to `\s`.
+			.map((line) =>
+				line
+					.replace(/[\u200B-\u200D\uFEFF]/gu, '')
+					.replace(/\s+/gu, ' ')
+					.trim(),
+			)
+			.filter(Boolean)
+			.join('\n')
+	)
+}
