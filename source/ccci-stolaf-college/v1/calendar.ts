@@ -4,6 +4,7 @@ import {weeklySchedule} from '../../calendar/weekly-schedule.ts'
 import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {deprecatedEvents} from '../../calendar/deprecated.ts'
 import {UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
+import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 export const getGoogleCalendar = googleCalendar
@@ -60,5 +61,5 @@ export async function ksto(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = await weeklySchedule('https://stolaf.dev/AAO-React-Native/ksto-schedule.json')
+	ctx.body = await weeklySchedule(GH_PAGES('ksto-schedule.json').href)
 }

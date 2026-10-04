@@ -1,4 +1,5 @@
 import Router from '@koa/router'
+import * as appData from './app-data.ts'
 import * as athletics from './athletics.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
@@ -72,6 +73,7 @@ api.get('/calendar/named/ksto-schedule', calendar.ksto)
 // a-to-z — St. Olaf's WordPress blocks this server's IP; the app fetches it
 // directly now.
 api.get('/a-to-z', deprecated.atoz)
+api.get('/a-to-z/extras', appData.aToZExtras)
 
 // sources
 api.get('/sources', sources.sources)
@@ -104,11 +106,15 @@ api.get('/jobs', deprecated.jobs)
 // map
 api.get('/map', map.map)
 api.get('/map/geojson', map.geojson)
+api.get('/map/categories', appData.mapCategories)
 
 // orgs
 api.get('/orgs', orgs.orgs)
 api.get('/orgs/categories', orgs.orgCategories)
+api.get('/orgs/category-styles', appData.orgCategoryStyles)
 api.get('/student-work/units', studentWork.units)
+api.get('/student-work/areas', appData.studentWorkAreas)
+api.get('/student-work/wages', appData.studentWorkWages)
 
 // news
 api.get('/news/rss', news.rss)
