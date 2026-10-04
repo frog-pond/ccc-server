@@ -26,9 +26,10 @@ void test('imageUrl points at the Pages site under img/', (t: TestContext) => {
 	)
 })
 
-const makeContext = (group: string, name: string) =>
+const makeContext = (group: string, name: string, querystring = '') =>
 	({
 		params: {group, name},
+		querystring,
 		cacheControl: noop,
 		cached: () => false,
 		throw: (status: number, message: string) => {
@@ -69,10 +70,14 @@ void test('image', async (t) => {
 		})
 
 		const ctx = makeContext('spaces', 'nowhere.webp')
+		const cacheControl = mock.fn()
+		ctx.cacheControl = cacheControl
 		await image(ctx)
 
 		t.assert.equal(ctx.status, 404)
 		t.assert.equal(ctx.body, null)
+		// a file Pages has not deployed yet must not be held for a day
+		t.assert.equal(cacheControl.mock.callCount(), 0)
 	})
 
 	await t.test(
@@ -100,5 +105,45 @@ void test('image', async (t) => {
 		})
 
 		await t.assert.rejects(image(makeContext('spaces', 'boe.webp')), /502/u)
+	})
+
+	await t.test('is a 404 for a query string, without asking Pages', async (t: TestContext) => {
+		const fetch = mock.method(globalThis, 'fetch', () => Promise.resolve(new Response('')))
+		t.after(() => {
+			fetch.mock.restore()
+		})
+
+		const ctx = makeContext('spaces', 'boe.webp', '1')
+		await image(ctx)
+
+		t.assert.equal(ctx.status, 404)
+		t.assert.equal(fetch.mock.callCount(), 0)
+	})
+
+	await t.test('is a 502 when Pages cannot be reached', async (t: TestContext) => {
+		const fetch = mock.method(globalThis, 'fetch', () =>
+			Promise.reject(new TypeError('fetch failed')),
+		)
+		t.after(() => {
+			fetch.mock.restore()
+		})
+
+		await t.assert.rejects(image(makeContext('spaces', 'boe.webp')), /502/u)
+	})
+
+	await t.test('sets Cache-Control on a file it serves', async (t: TestContext) => {
+		const fetch = mock.method(globalThis, 'fetch', () =>
+			Promise.resolve(new Response(new Uint8Array([1]))),
+		)
+		t.after(() => {
+			fetch.mock.restore()
+		})
+
+		const ctx = makeContext('spaces', 'boe.webp')
+		const cacheControl = mock.fn()
+		ctx.cacheControl = cacheControl
+		await image(ctx)
+
+		t.assert.equal(cacheControl.mock.callCount(), 1)
 	})
 })

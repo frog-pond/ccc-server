@@ -26,15 +26,28 @@ export const imageUrl = (group: string, name: string): URL =>
 
 export async function image(ctx: Context) {
 	const {group = '', name = ''} = ctx.params
-	if (!isPublishedImage(group, name)) {
+	// The response cache keys on the whole URL, query string included, and each
+	// entry here is a whole image: `?1`, `?2`, ... would each store another copy.
+	if (ctx.querystring || !isPublishedImage(group, name)) {
 		ctx.status = 404
 		return
 	}
 
-	ctx.cacheControl(ONE_DAY)
-	if (ctx.cached(ONE_DAY)) return
+	if (ctx.cached(ONE_DAY)) {
+		ctx.cacheControl(ONE_DAY)
+		return
+	}
 
-	const response = await http.get(imageUrl(group, name), {throwHttpErrors: false})
+	let response
+	try {
+		response = await http.get(imageUrl(group, name), {throwHttpErrors: false})
+	} catch (error) {
+		// a timeout, or a connection that never got an answer
+		ctx.throw(502, `GitHub Pages could not be reached for ${group}/${name}`, {cause: error})
+	}
+
+	// Cache-Control is set only on a file, so that a 404 for an image Pages has
+	// not deployed yet is not held by the app or a proxy for a day.
 	if (response.status === 404) {
 		ctx.status = 404
 		return
@@ -43,6 +56,7 @@ export async function image(ctx: Context) {
 		ctx.throw(502, `GitHub Pages answered ${response.status.toFixed(0)} for ${group}/${name}`)
 	}
 
+	ctx.cacheControl(ONE_DAY)
 	ctx.type = 'image/webp'
 	ctx.body = Buffer.from(await response.arrayBuffer())
 }
