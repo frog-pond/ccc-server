@@ -5,20 +5,26 @@ import type {SearchParamsOption} from 'ky'
 import {z} from 'zod'
 import moment from 'moment'
 
-type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
-const WpJsonFeedEntrySchema = z.object({
+export type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
+export const WpJsonFeedEntrySchema = z.object({
 	_embedded: z.optional(
 		z.object({
 			author: z.array(z.object({id: z.unknown(), name: z.string().or(z.undefined())})).optional(),
+			/// Where WordPress cannot show a post's image -- the attachment was
+			/// deleted, or is private -- it embeds an error (`{code, message,
+			/// data}`) in its place, with none of the media fields. Such a post
+			/// has no featured image rather than failing the whole feed.
 			'wp:featuredmedia': z
 				.array(
 					z.object({
-						id: z.unknown(),
-						media_type: z.union([z.literal('image'), z.string()]),
-						media_details: z.object({
-							sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
-						}),
-						source_url: z.string().url(),
+						id: z.unknown().optional(),
+						media_type: z.union([z.literal('image'), z.string()]).optional(),
+						media_details: z
+							.object({
+								sizes: z.optional(z.record(z.string(), z.object({source_url: z.url()}))),
+							})
+							.optional(),
+						source_url: z.url().optional(),
 					}),
 				)
 				.nullable()
@@ -33,7 +39,7 @@ const WpJsonFeedEntrySchema = z.object({
 	excerpt: z.object({rendered: z.string()}),
 	title: z.object({rendered: z.string()}),
 	date_gmt: z.string(),
-	link: z.string().url(),
+	link: z.url(),
 })
 
 const WpJsonFeedResponseSchema = z.array(WpJsonFeedEntrySchema)
@@ -62,8 +68,9 @@ export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
 
 		if (featuredMediaInfo) {
 			featuredImage =
-				featuredMediaInfo.media_details.sizes?.['medium_large']?.source_url ??
-				featuredMediaInfo.source_url
+				featuredMediaInfo.media_details?.sizes?.['medium_large']?.source_url ??
+				featuredMediaInfo.source_url ??
+				null
 		}
 	}
 

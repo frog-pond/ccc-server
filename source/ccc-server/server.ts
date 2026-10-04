@@ -7,6 +7,8 @@ import * as Sentry from '@sentry/node'
 import {z} from 'zod'
 import type {ContextState, RouterState} from './context.ts'
 import {accessLog} from '../ccc-koa/access-log.ts'
+import {BEHIND_NGINX} from '../ccc-koa/behind-proxy.ts'
+import {ignoreClientHangUps} from '../ccc-koa/client-abort.ts'
 import {conditionalGet} from '../ccc-koa/conditional-get.ts'
 import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
 import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
@@ -43,7 +45,8 @@ async function main() {
 			break
 	}
 
-	const app = new Koa()
+	const app = new Koa(BEHIND_NGINX)
+	ignoreClientHangUps(app)
 
 	//
 	// set up the routes
@@ -127,8 +130,6 @@ async function main() {
 	// hook in the router
 	app.use(router.routes())
 	app.use(router.allowedMethods())
-
-	Sentry.setupKoaErrorHandler(app)
 
 	//
 	// start the app

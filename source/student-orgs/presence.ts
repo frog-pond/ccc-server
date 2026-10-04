@@ -45,9 +45,11 @@ const BasicPresenceOrgSchema = z.object({
 type PresenceOrgType = z.infer<typeof BasicPresenceOrgSchema>
 
 /// Presence publishes no date an org was last edited -- not in the list, an
-/// org's record, its portal view, or a Last-Modified header -- and the app
-/// never shows one. The field stays, with this stand-in, because builds
-/// already shipped type it as a required string.
+/// org's record, its portal view, or a Last-Modified header. Current builds
+/// never show the field, but AAO 2.7's detail screen prints it as "Last
+/// updated", parsed with moment's `MMMM, DD YYYY HH:mm:ss`: this stand-in
+/// reads there as 01/20/2000, where an empty string would read "Invalid
+/// date". So it stays, and stays a string, as every shipped build types it.
 const NO_LAST_UPDATED_DATE = '2000-01-01'
 
 export function cleanOrg(org: PresenceOrgType, sortableRegex: RegExp) {
@@ -86,6 +88,10 @@ export function cleanOrg(org: PresenceOrgType, sortableRegex: RegExp) {
 	})
 }
 
+export function withoutDemoOrgs(orgs: SortableStudentOrgType[]): SortableStudentOrgType[] {
+	return orgs.filter((org) => !org.category.split(', ').includes('Demo'))
+}
+
 const SORTABLE_PREFIXES = /^(St\.? Olaf(?: College)?|The) +/i
 
 /// Every org, from Presence's list alone. Each org's own record adds nothing
@@ -122,6 +128,21 @@ export function groupCategories(memberships: PresenceCategoryMembershipType[]): 
 	)
 
 	return sortBy(categories, 'name')
+}
+
+export function withoutDemoCategory(categories: OrgCategoryType[]): OrgCategoryType[] {
+	let demoOrgUris = new Set(
+		categories
+			.filter((category) => category.name === 'Demo')
+			.flatMap((category) => category.organizationUris),
+	)
+
+	return categories
+		.filter((category) => category.name !== 'Demo')
+		.map((category) => ({
+			...category,
+			organizationUris: category.organizationUris.filter((uri) => !demoOrgUris.has(uri)),
+		}))
 }
 
 export async function presenceCategories(school: string): Promise<OrgCategoryType[]> {

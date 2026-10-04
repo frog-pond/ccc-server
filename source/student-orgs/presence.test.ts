@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {cleanOrg, groupCategories} from './presence.ts'
+import {cleanOrg, groupCategories, withoutDemoCategory, withoutDemoOrgs} from './presence.ts'
 import {SortableStudentOrgSchema, OrgCategorySchema} from './types.ts'
 
 const RAW_ORG = {
@@ -25,6 +25,18 @@ void test('cleanOrg carries the org’s Presence slug as organizationUri', (t) =
 	let org = cleanOrg(RAW_ORG, sortableRegex)
 
 	t.assert.equal(org.organizationUri, 'agape')
+})
+
+void test('cleanOrg separates the meeting location from the meeting time', (t) => {
+	let org = cleanOrg(RAW_ORG, sortableRegex)
+
+	t.assert.equal(org.meetings, 'Norway Room, 7pm-8pm')
+})
+
+void test('cleanOrg lists a lone meeting time without a separator', (t) => {
+	let org = cleanOrg({...RAW_ORG, regularMeetingLocation: undefined}, sortableRegex)
+
+	t.assert.equal(org.meetings, '7pm-8pm')
 })
 
 void test('cleanOrg carries the member count', (t) => {
@@ -129,4 +141,27 @@ void test('groupCategories sorts categories by name', (t) => {
 		categories.map((c) => c.name),
 		['Departments', 'Performance'],
 	)
+})
+
+void test('withoutDemoOrgs removes orgs in the Demo category', (t) => {
+	let orgs = [
+		{...cleanOrg(RAW_ORG, sortableRegex), category: 'Religious'},
+		{...cleanOrg(RAW_ORG, sortableRegex), name: 'Balloon Animals Club', category: 'Demo'},
+	]
+
+	t.assert.deepEqual(
+		withoutDemoOrgs(orgs).map((org) => org.name),
+		['Agape'],
+	)
+})
+
+void test('withoutDemoCategory removes Demo and its orgs from other categories', (t) => {
+	let categories = [
+		{catIdh: 'demo', name: 'Demo', organizationUris: ['balloon-animals']},
+		{catIdh: 'clubs', name: 'Clubs', organizationUris: ['balloon-animals', 'chess']},
+	]
+
+	t.assert.deepEqual(withoutDemoCategory(categories), [
+		{catIdh: 'clubs', name: 'Clubs', organizationUris: ['chess']},
+	])
 })

@@ -1,22 +1,16 @@
-import isAbsoluteUrl from 'is-absolute-url'
 import normalizeUrl from 'normalize-url'
 
-function getBaseUrl(urlStr: string): string {
-	// removes everything but the base url
-	let urlObj = new URL(urlStr)
-	if (!urlObj.hostname && !urlObj.pathname) {
-		throw new Error('Invalid URL')
-	}
-	urlObj.pathname = ''
-	urlObj.hash = ''
-	urlObj.search = ''
-	return urlObj.toString()
-}
-
+/// Resolves a link against the page at `baseUrl`, the way a browser would:
+/// `speaker.jpg` lands beside the page, `//cdn…` keeps its own host, and a
+/// `mailto:` stays a `mailto:`. A relative link with no page to resolve it
+/// against is left as written.
 export function makeAbsoluteUrl(urlStr: string, {baseUrl = ''} = {}) {
-	if (!isAbsoluteUrl(urlStr)) {
-		baseUrl = getBaseUrl(baseUrl)
-		urlStr = `${baseUrl}${urlStr}`
+	let url = URL.parse(urlStr, baseUrl || undefined)
+	if (!url) {
+		return urlStr
 	}
-	return normalizeUrl(urlStr, {stripWWW: false, stripHash: false})
+	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+		return url.href
+	}
+	return normalizeUrl(url.href, {stripWWW: false, stripHash: false})
 }

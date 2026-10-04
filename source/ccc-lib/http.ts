@@ -4,11 +4,11 @@ export const USER_AGENT = 'ccc-server/0.2.0'
 
 const IS_DEBUG_KY = process.env['TRACE']?.split(',').includes('ky')
 
-const traceBeforeHook: BeforeRequestHook = (request) => {
+const traceBeforeHook: BeforeRequestHook = ({request}) => {
 	console.log(`${request.method} ${request.url}`)
 }
 
-const traceAfterHook: AfterResponseHook = (_request, _, response) => {
+const traceAfterHook: AfterResponseHook = ({response}) => {
 	console.log(`got ${response.url}`)
 }
 

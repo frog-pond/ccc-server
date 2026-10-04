@@ -5,13 +5,13 @@ export const ContactPersonSchema = z.object({
 	lastName: z.string(),
 	firstName: z.string(),
 	title: z.string(),
-	email: z.string().email(),
+	email: z.email(),
 })
 
 export type AdvisorType = z.infer<typeof AdvisorSchema>
 export const AdvisorSchema = z.object({
 	name: z.string(),
-	email: z.string().email(),
+	email: z.email(),
 })
 
 export type StudentOrgType = z.infer<typeof StudentOrgSchema>
@@ -53,8 +53,8 @@ export const SortableStudentOrgSchema = StudentOrgSchema.extend({
 export type DetailedStudentOrgType = z.infer<typeof DetailedStudentOrgSchema>
 export const DetailedStudentOrgSchema = SortableStudentOrgSchema.extend({
 	/** Instagram profiles, as URLs. */
-	socialLinks: z.string().url().array(),
-	constitutionUrl: z.union([z.string().url(), z.literal('')]),
+	socialLinks: z.url().array(),
+	constitutionUrl: z.union([z.url(), z.literal('')]),
 	officeHours: z.string(),
 	officeLocation: z.string(),
 	/** Plain text, like `description`. */

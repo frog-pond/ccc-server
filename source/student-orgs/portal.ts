@@ -26,7 +26,7 @@ const PortalFieldSchema = z.object({label: z.string(), value: z.unknown()})
 
 /// Fields sit in groups' `items`, or stand alone as a group of one.
 const PortalViewSchema = z.object({
-	fieldData: z.array(z.object({items: z.array(z.unknown()).optional()}).passthrough()),
+	fieldData: z.array(z.looseObject({items: z.array(z.unknown()).optional()})),
 })
 
 /// The allowlisted fields' text values, by our name for each. A field left

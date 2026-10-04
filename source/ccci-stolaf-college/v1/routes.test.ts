@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import Koa from 'koa'
 import {noop} from 'lodash-es'
+import {withBodyParsers} from '@koa/body-parsers'
 import {api} from './index.ts'
 
 /// The routes the app is pointed at; each must exist, or the app's
@@ -24,22 +25,41 @@ for (const route of ROUTES) {
 	})
 }
 
-void test('/orgs/uri/:uri refuses a slug Presence could not have, without asking Presence', async (t) => {
+/// The v1 routes behind a bare app, with the server's caching stubbed out.
+async function serve(t: test.TestContext) {
 	let app = new Koa()
 	app.context['cacheControl'] = noop
 	app.context['cached'] = () => false
+	withBodyParsers(app)
 	app.use(api.routes())
+
 	let server = app.listen(0)
 	t.after(() => server.close())
 	await new Promise((resolve) => server.once('listening', resolve))
+
 	let address = server.address()
 	if (!address || typeof address === 'string') throw new Error('no port')
+	return `http://localhost:${String(address.port)}`
+}
+
+void test('/util/html-to-md accepts its HTML by POST', async (t) => {
+	let base = await serve(t)
+	let response = await fetch(`${base}/v1/util/html-to-md`, {
+		method: 'POST',
+		headers: {'content-type': 'application/json'},
+		body: JSON.stringify({text: '<b>hi</b>'}),
+	})
+	assert.equal(response.status, 200)
+	assert.equal(await response.text(), '**hi**')
+})
+
+void test('/orgs/uri/:uri refuses a slug Presence could not have, without asking Presence', async (t) => {
+	let base = `${await serve(t)}/v1/orgs/uri`
 
 	// The test's own requests go through the real fetch; any the server makes
 	// to Presence would go through the mock.
 	let send = globalThis.fetch.bind(globalThis)
 	let upstream = t.mock.method(globalThis, 'fetch')
-	let base = `http://localhost:${String(address.port)}/v1/orgs/uri`
 	let slugs = ['Agape', 'a_b', '-agape', '..%2F..%2Fsecret']
 	let statuses = await Promise.all(
 		slugs.map(async (slug) => (await send(`${base}/${slug}`)).status),
@@ -47,4 +67,68 @@ void test('/orgs/uri/:uri refuses a slug Presence could not have, without asking
 
 	assert.deepEqual(statuses, [404, 404, 404, 404])
 	assert.equal(upstream.mock.callCount(), 0)
+})
+
+/// Presence as `/orgs/uri/:uri` reads it: the list, and each org's portal view.
+function fakePresence(t: test.TestContext) {
+	let org = (uri: string, categories: string[]) => ({
+		subdomain: 'stolaf',
+		campusName: 'St. Olaf College',
+		name: uri,
+		uri,
+		hasCoverImage: false,
+		photoUri: '',
+		photoUriWithVersion: '',
+		memberCount: 3,
+		categories,
+		hasUpcomingEvents: true,
+		description: 'An org.',
+	})
+	let list = [org('chess-club', ['Recreational']), org('balloon-animals', ['Demo'])]
+	let portal = {
+		fieldData: [
+			{
+				items: [
+					{label: 'Primary Organization Contact', value: 'Ole Olson'},
+					{label: 'Primary Organization Contact Email', value: 'olson1@stolaf.edu'},
+				],
+			},
+		],
+	}
+
+	let real = globalThis.fetch.bind(globalThis)
+	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+		let url = input instanceof Request ? input.url : String(input)
+		if (url.endsWith('/v1/organizations')) return Promise.resolve(Response.json(list))
+		if (url.includes('/grid/portal-view/')) return Promise.resolve(Response.json(portal))
+		return real(input, init)
+	})
+}
+
+void test('/orgs/uri/:uri serves an org with its portal fields', async (t) => {
+	let base = await serve(t)
+	fakePresence(t)
+
+	let response = await fetch(`${base}/v1/orgs/uri/chess-club`)
+	assert.equal(response.status, 200)
+	let org = (await response.json()) as {hasUpcomingEvents: boolean; contacts: {email: string}[]}
+	assert.equal(org.hasUpcomingEvents, true)
+	assert.deepEqual(
+		org.contacts.map((c) => c.email),
+		['olson1@stolaf.edu'],
+	)
+})
+
+void test('/orgs/uri/:uri hides a Demo org, as /orgs does', async (t) => {
+	let base = await serve(t)
+	fakePresence(t)
+
+	assert.equal((await fetch(`${base}/v1/orgs/uri/balloon-animals`)).status, 404)
+})
+
+void test('/orgs/uri/:uri is a 404 for an org Presence does not list', async (t) => {
+	let base = await serve(t)
+	fakePresence(t)
+
+	assert.equal((await fetch(`${base}/v1/orgs/uri/no-such-club`)).status, 404)
 })

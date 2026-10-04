@@ -10,14 +10,14 @@ import {unavailableOrgs} from './deprecated.ts'
 /// malformed, and `domToOrg` says so with ''. Demanding a URL outright threw on
 /// those, and `getOrgs` parses in an unguarded loop, so one such org emptied the
 /// whole list.
-const UrlOrBlank = z.union([z.string().url(), z.literal('')])
+const UrlOrBlank = z.union([z.url(), z.literal('')])
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
 	id: z.string(),
 	contacts: z.string().array(),
 	categories: z.string().array(),
-	socialLinks: z.string().url().array(),
+	socialLinks: z.url().array(),
 	adminLink: UrlOrBlank,
 	description: z.string(),
 	website: UrlOrBlank,

@@ -34,7 +34,7 @@ export const CAFE_ID_TO_URL = {
 } as const
 
 function isKeyofCafeIdToUrl(s: string | number): s is keyof typeof CAFE_ID_TO_URL {
-	return s in CAFE_ID_TO_URL
+	return Object.hasOwn(CAFE_ID_TO_URL, s)
 }
 
 export async function pauseMenu(ctx: Context) {
@@ -48,12 +48,11 @@ export async function bonAppMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	let cafeId = ctx.URL.searchParams.get('cafeId')
-	ctx.assert(cafeId, 400, '?cafeId is required')
+	let {cafeId = ''} = ctx.params
 	ctx.assert(
 		isKeyofCafeIdToUrl(cafeId),
 		400,
-		`?cafeId must be one of ${Object.values(CAFE_ID_TO_URL).join(', ')}`,
+		`cafeId must be one of ${Object.keys(CAFE_ID_TO_URL).join(', ')}`,
 	)
 	ctx.body = await getMenu(CAFE_URLS[CAFE_ID_TO_URL[cafeId]])
 }
@@ -62,12 +61,11 @@ export async function bonAppCafe(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	let cafeId = ctx.URL.searchParams.get('cafeId')
-	ctx.assert(cafeId, 400, '?cafeId is required')
+	let {cafeId = ''} = ctx.params
 	ctx.assert(
 		isKeyofCafeIdToUrl(cafeId),
 		400,
-		`?cafeId must be one of ${Object.values(CAFE_ID_TO_URL).join(', ')}`,
+		`cafeId must be one of ${Object.keys(CAFE_ID_TO_URL).join(', ')}`,
 	)
 	ctx.body = await getInfo(CAFE_URLS[CAFE_ID_TO_URL[cafeId]])
 }
@@ -76,8 +74,8 @@ export async function bonAppNutrition(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	let itemId = ctx.URL.searchParams.get('itemId')
-	ctx.assert(itemId, 400, '?itemId is required')
+	let {itemId = ''} = ctx.params
+	ctx.assert(itemId, 400, 'itemId is required')
 	ctx.body = await getNutrition(itemId)
 }
 

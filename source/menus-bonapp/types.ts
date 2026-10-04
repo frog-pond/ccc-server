@@ -1,7 +1,7 @@
 import {z} from 'zod'
 
 const zodYesNo = z.union([z.literal('Y'), z.literal('N')])
-const zodNumericString = z.string().regex(/d*/)
+const zodNumericString = z.string().regex(/^\d*$/)
 const zodCurrencyString = z.string() //.regex(/^\$.*/)
 const zodHtmlString = z.string()
 const zod24Time = z.string().regex(/\d\d:\d\d/)
@@ -38,7 +38,7 @@ const CafeInfoSchema = z.object({
 	weekly_schedule: z.string().default(''),
 	days: z.array(
 		z.object({
-			date: z.string().date(),
+			date: z.iso.date(),
 			status: z.union([z.literal('open'), z.literal('closed'), z.string()]).default(''),
 			message: z.union([z.literal(false), z.string()]).default(false),
 			dayparts: z.array(CafeInfoDayPartSchema),
@@ -93,7 +93,7 @@ const CafeMenuItemNutritionDetailContainerSchema = z.object({
 export type CafeMenuItemType = z.infer<typeof CafeMenuItemSchema>
 export const CafeMenuItemSchema = z.object({
 	connector: z.string().default(''),
-	cor_icon: z.union([z.array(z.unknown()), z.record(z.string())]).default({}),
+	cor_icon: z.union([z.array(z.unknown()), z.record(z.string(), z.string())]).default({}),
 	description: z.string(),
 	id: z.unknown(),
 	label: z.string(),
@@ -101,7 +101,7 @@ export const CafeMenuItemSchema = z.object({
 	nutrition: CafeMenuItemNutritionSchema,
 	nutrition_details: z.optional(CafeMenuItemNutritionDetailContainerSchema),
 	nutrition_link: z.string().default(''),
-	options: z.union([z.array(z.unknown()), z.record(z.unknown())]).default({}),
+	options: z.union([z.array(z.unknown()), z.record(z.string(), z.unknown())]).default({}),
 	price: zodCurrencyString.default(''),
 	rating: zodNumericString,
 	special: zodNumericBoolean,
@@ -147,7 +147,7 @@ const CorIconSchema = z.object({
 	allergen: z.unknown(),
 	description: z.string(),
 	id: z.unknown(),
-	image: z.string().url(),
+	image: z.url(),
 	is_filter: zodYesNo,
 	label: z.string(),
 	position: zodNumericString,
@@ -159,7 +159,7 @@ const CorIconSchema = z.object({
 
 export type CafeMenuResponseType = z.infer<typeof CafeMenuResponseSchema>
 export const CafeMenuResponseSchema = z.object({
-	cor_icons: z.record(CorIconSchema),
-	days: z.array(z.object({date: z.string().date(), cafe: CafeMenuSchema})),
-	items: z.record(CafeMenuItemSchema),
+	cor_icons: z.record(z.string(), CorIconSchema),
+	days: z.array(z.object({date: z.iso.date(), cafe: CafeMenuSchema})),
+	items: z.record(z.string(), CafeMenuItemSchema),
 })

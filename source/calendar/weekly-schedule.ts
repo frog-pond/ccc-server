@@ -20,14 +20,14 @@ const SlotSchema = z
 		end: z.union([ClockSchema, z.literal('24:00')]),
 		title: z.string(),
 		genre: z.string().optional(),
-		poster: z.string().url().optional(),
+		poster: z.url().optional(),
 	})
 	.refine((slot) => hourOf(slot.end) > hourOf(slot.start), {
 		message: 'A slot must end after it starts, by midnight',
 	})
 
 export const WeeklyScheduleSchema = z.object({
-	updated: z.string().datetime(),
+	updated: z.iso.datetime(),
 	timezone: z.string().refine((zone) => moment.tz.zone(zone) !== null, 'Unknown timezone'),
 	shows: SlotSchema.array(),
 })

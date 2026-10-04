@@ -79,7 +79,7 @@ export const ScoreSchema = z.object({
 	prescore_info: z.string(),
 	postscore_info: z.string(),
 	links: LinksSchema,
-	coverage: z.record(z.unknown()),
+	coverage: z.record(z.string(), z.unknown()),
 })
 
 /** A game record as the scores feed sends it, after parsing. */
@@ -92,8 +92,8 @@ export type GameState = 'scheduled' | 'started' | 'live' | 'unofficial-final' | 
 export type Score = Omit<FeedScore, 'status'> & {status: {indicator: GameState; value: string}}
 
 const AthleticsResponseSchema = z.object({
-	timestamp: z.unknown(),
-	status: z.unknown(),
+	timestamp: z.unknown().optional(),
+	status: z.unknown().optional(),
 	scores: z.array(ScoreSchema),
 })
 
