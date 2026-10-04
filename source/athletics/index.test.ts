@@ -8,7 +8,10 @@ import {
 	type FeedScore,
 	type GameState,
 	type LiveGame,
+	type School,
 	type Score,
+	withYesterday,
+	yesterdaysGames,
 } from './index.ts'
 
 function readFixture(path: string): unknown {
@@ -350,4 +353,143 @@ void test('needsFrequentRefresh: false for an all-day event', (t) => {
 
 void test('needsFrequentRefresh: false for an unreadable date', (t) => {
 	t.assert.equal(needsFrequentRefresh([makeGame('scheduled', 'TBA')], AFTER_KICKOFF), false)
+})
+
+// ── Yesterday, from the calendar ─────────────────────────────────────────────
+
+const STOLAF: School = {origin: 'https://athletics.stolaf.edu', teamName: 'Oles'}
+
+/** 2:54 a.m. Central on Sunday, October 4: yesterday is Saturday the 3rd. */
+const SUNDAY_NIGHT = new Date('2026-10-04T07:54:00.000Z')
+
+void test("yesterdaysGames lists the calendar's finished games for the school's yesterday", (t) => {
+	const games = yesterdaysGames(
+		readFixture('calendar/2026-10-03-stolaf.json'),
+		SUNDAY_NIGHT,
+		STOLAF,
+	)
+
+	t.assert.deepEqual(
+		games.map((game) => `${game.sport} ${game.result} ${game.team_score}-${game.opponent_score}`),
+		[
+			"Women's Cross Country N -",
+			"Women's Golf N -",
+			"Men's Cross Country N -",
+			"Women's Soccer W 5-0",
+			'Football W 23-21',
+			"Men's Soccer W 4-0",
+			"Men's Swimming and Diving N -",
+			"Women's Swimming and Diving N -",
+		],
+	)
+	for (const game of games) {
+		t.assert.equal(game.status.indicator, 'final', game.sport)
+		t.assert.equal(
+			ScoreSchema.safeParse({...game, status: {indicator: 'O', value: ''}}).success,
+			true,
+		)
+	}
+})
+
+void test('yesterdaysGames reads Central wall-clock times as instants', (t) => {
+	const football = yesterdaysGames(
+		readFixture('calendar/2026-10-03-stolaf.json'),
+		SUNDAY_NIGHT,
+		STOLAF,
+	).find((game) => game.id === '21038')
+
+	t.assert.equal(football?.date_utc, '2026-10-03T18:00:00.000Z')
+	t.assert.equal(football?.timestamp, Date.parse('2026-10-03T18:00:00.000Z') / 1000)
+	t.assert.equal(football?.time, '1 p.m.')
+})
+
+void test('yesterdaysGames writes a home game school first, as the scores feed does', (t) => {
+	const football = yesterdaysGames(
+		readFixture('calendar/2026-10-03-stolaf.json'),
+		SUNDAY_NIGHT,
+		STOLAF,
+	).find((game) => game.id === '21038')
+
+	t.assert.deepEqual(
+		{
+			hometeam: football?.hometeam,
+			hometeam_logo: football?.hometeam_logo,
+			opponent: football?.opponent,
+			opponent_logo: football?.opponent_logo,
+			location: football?.location,
+			links: football?.links,
+		},
+		{
+			hometeam: 'Oles',
+			hometeam_logo: 'https://athletics.stolaf.edu/images/logos/site/site.png',
+			opponent: 'Augsburg University',
+			opponent_logo: 'https://athletics.stolaf.edu/images/logos/Augsburg-Spirit-Logo.png',
+			location: {location: 'Northfield, Minn.', facility: 'Klein Field at Manitou', homeAway: 'H'},
+			links: {
+				boxscore: {url: 'https://athletics.stolaf.edu/boxscore.aspx?id=21038', text: 'Box'},
+				postgame: {
+					url: 'https://athletics.stolaf.edu/news/2026/10/3/football-gardners-last-second-field-goal-gives-football-first-win-of-season.aspx',
+					text: 'Recap',
+				},
+			},
+		},
+	)
+})
+
+void test('yesterdaysGames writes an away game home side first, matching the scores feed', (t) => {
+	const games = yesterdaysGames(
+		readFixture('calendar/2026-09-23-stolaf.json'),
+		new Date('2026-09-24T15:00:00.000Z'),
+		STOLAF,
+	)
+	const fromFeed = readFixture('2026-09-23-away-games/20260924T020713Z-scores.json') as {
+		scores: FeedScore[]
+	}
+
+	for (const feedGame of fromFeed.scores) {
+		const game = games.find((g) => g.id === feedGame.id)
+		t.assert.deepEqual(
+			[game?.hometeam, game?.opponent, game?.team_score, game?.opponent_score, game?.result],
+			[
+				feedGame.hometeam,
+				feedGame.opponent,
+				feedGame.team_score,
+				feedGame.opponent_score,
+				feedGame.result,
+			],
+			feedGame.id,
+		)
+	}
+})
+
+void test('yesterdaysGames treats an unreadable calendar body as no games', (t) => {
+	t.assert.deepEqual(yesterdaysGames(null, SUNDAY_NIGHT, STOLAF), [])
+	t.assert.deepEqual(yesterdaysGames({days: []}, SUNDAY_NIGHT, STOLAF), [])
+})
+
+void test('yesterdaysGames skips a fixture that does not parse and keeps the rest', (t) => {
+	const calendar = readFixture('calendar/2026-10-03-stolaf.json') as {events: unknown[]}[]
+	const [first] = calendar
+	const broken = [{...first, events: [{id: 'not a number'}, ...(first?.events ?? [])]}]
+
+	t.assert.equal(yesterdaysGames(broken, SUNDAY_NIGHT, STOLAF).length, 8)
+})
+
+void test('yesterdaysGames is empty when the calendar does not list yesterday', (t) => {
+	const mondayNight = new Date('2026-10-06T07:54:00.000Z')
+
+	t.assert.deepEqual(
+		yesterdaysGames(readFixture('calendar/2026-10-03-stolaf.json'), mondayNight, STOLAF).map(
+			(game) => game.id,
+		),
+		[],
+	)
+})
+
+void test('withYesterday prefers the scores feed for a game both list', (t) => {
+	const feedGame = makeGame('final')
+	const calendarGame = {...makeGame('final'), sport: 'from the calendar'}
+	const other = {...makeGame('final'), id: '99999'}
+
+	t.assert.deepEqual(withYesterday([feedGame], [calendarGame, other]), [other, feedGame])
 })
