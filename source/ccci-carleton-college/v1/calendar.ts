@@ -23,7 +23,8 @@ export async function ics(ctx: Context) {
 	if (ctx.cached(ONE_MINUTE)) return
 
 	let calendarUrl = ctx.URL.searchParams.get('url')
-	ctx.assert(calendarUrl, 400, '?id is required')
+	ctx.assert(calendarUrl, 400, '?url is required')
+	ctx.assert(URL.canParse(calendarUrl), 400, '?url must be a URL')
 	ctx.body = await getInternetCalendar(new URL(calendarUrl))
 }
 
