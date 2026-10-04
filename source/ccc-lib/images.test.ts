@@ -2,7 +2,7 @@ import {test, mock, type TestContext} from 'node:test'
 import {noop} from 'lodash-es'
 
 import {image, imageUrl, isPublishedImage} from './images.ts'
-import type {Context} from '../../ccc-server/context.ts'
+import type {Context} from '../ccc-server/context.ts'
 
 void test('isPublishedImage', (t: TestContext) => {
 	t.assert.ok(isPublishedImage('spaces', 'old-main.webp'))

@@ -1,8 +1,7 @@
 import {Buffer} from 'node:buffer'
-import {http} from '../../ccc-lib/http.ts'
-import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import {GH_PAGES} from './gh-pages.ts'
-import type {Context} from '../../ccc-server/context.ts'
+import {http} from './http.ts'
+import {ONE_DAY} from './constants.ts'
+import type {Context} from '../ccc-server/context.ts'
 
 /**
  * The folders of the app repo's `images/` that its `bundle-data` task publishes
@@ -18,7 +17,12 @@ export function isPublishedImage(group: string, name: string): boolean {
 	return IMAGE_GROUPS.has(group) && IMAGE_NAME.test(name)
 }
 
-export const imageUrl = (group: string, name: string): URL => GH_PAGES(`img/${group}/${name}`)
+/**
+ * Both institutions' servers serve the All About Olaf site's images, not their
+ * own `gh-pages.ts` site, so the address is here rather than there.
+ */
+export const imageUrl = (group: string, name: string): URL =>
+	new URL(`https://stodevx.github.io/AAO-React-Native/img/${group}/${name}`)
 
 export async function image(ctx: Context) {
 	const {group = '', name = ''} = ctx.params
