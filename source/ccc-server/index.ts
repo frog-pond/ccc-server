@@ -28,8 +28,6 @@ function setupSentry() {
 		// on spans: the profiler continues to run while there is at least one active span,
 		// and stops when there are no active spans.
 		profileLifecycle: 'trace',
-		// Send logs to Sentry
-		enableLogs: true,
 	})
 }
 
