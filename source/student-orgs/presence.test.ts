@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {cleanOrg, groupCategories} from './presence.ts'
+import {cleanOrg, groupCategories, withoutDemoCategory, withoutDemoOrgs} from './presence.ts'
 import {SortableStudentOrgSchema, OrgCategorySchema} from './types.ts'
 
 const RAW_ORG = {
@@ -90,4 +90,27 @@ void test('groupCategories sorts categories by name', (t) => {
 		categories.map((c) => c.name),
 		['Departments', 'Performance'],
 	)
+})
+
+void test('withoutDemoOrgs removes orgs in the Demo category', (t) => {
+	let orgs = [
+		{...cleanOrg(RAW_ORG, sortableRegex), category: 'Religious'},
+		{...cleanOrg(RAW_ORG, sortableRegex), name: 'Balloon Animals Club', category: 'Demo'},
+	]
+
+	t.assert.deepEqual(
+		withoutDemoOrgs(orgs).map((org) => org.name),
+		['Agape'],
+	)
+})
+
+void test('withoutDemoCategory removes Demo and its orgs from other categories', (t) => {
+	let categories = [
+		{catIdh: 'demo', name: 'Demo', organizationUris: ['balloon-animals']},
+		{catIdh: 'clubs', name: 'Clubs', organizationUris: ['balloon-animals', 'chess']},
+	]
+
+	t.assert.deepEqual(withoutDemoCategory(categories), [
+		{catIdh: 'clubs', name: 'Clubs', organizationUris: ['chess']},
+	])
 })

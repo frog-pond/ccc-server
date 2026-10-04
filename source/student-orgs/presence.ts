@@ -66,6 +66,10 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 	})
 }
 
+export function withoutDemoOrgs(orgs: SortableStudentOrgType[]): SortableStudentOrgType[] {
+	return orgs.filter((org) => !org.category.split(', ').includes('Demo'))
+}
+
 const fetchOrg = async (base: string, orgUri: string) =>
 	DetailedPresenceOrgSchema.parse(await getJson(`${base}/${orgUri}`))
 
@@ -107,6 +111,21 @@ export function groupCategories(memberships: PresenceCategoryMembershipType[]): 
 	)
 
 	return sortBy(categories, 'name')
+}
+
+export function withoutDemoCategory(categories: OrgCategoryType[]): OrgCategoryType[] {
+	let demoOrgUris = new Set(
+		categories
+			.filter((category) => category.name === 'Demo')
+			.flatMap((category) => category.organizationUris),
+	)
+
+	return categories
+		.filter((category) => category.name !== 'Demo')
+		.map((category) => ({
+			...category,
+			organizationUris: category.organizationUris.filter((uri) => !demoOrgUris.has(uri)),
+		}))
 }
 
 export async function presenceCategories(school: string): Promise<OrgCategoryType[]> {
