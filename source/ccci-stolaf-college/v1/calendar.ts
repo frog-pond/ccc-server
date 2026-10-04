@@ -45,7 +45,7 @@ export async function northfield(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = await getGoogleCalendar('thisisnorthfield@gmail.com')
+	ctx.body = await getInternetCalendar('https://events.northfieldmn.gov/calendar.ics')
 }
 
 export async function krlx(ctx: Context) {
