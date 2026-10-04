@@ -69,6 +69,10 @@ mise run build
 mise run start:prod
 ```
 
+## Images
+
+`GET /v1/images/<group>/<name>.webp` (St. Olaf) proxies `img/<group>/<name>.webp` from the All About Olaf GitHub Pages site, which publishes the `images/` folder of [StoDevX/AAO-React-Native](https://github.com/StoDevX/AAO-React-Native). The groups are `contacts`, `news-sources`, `spaces`, `streaming` and `webcams`; any other group or file name is a 404.
+
 ## Testing
 
 All tests

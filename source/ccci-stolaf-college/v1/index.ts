@@ -8,6 +8,7 @@ import * as dictionary from './dictionary.ts'
 import * as faqs from './faqs.ts'
 import * as help from './help.ts'
 import * as hours from './hours.ts'
+import * as images from './images.ts'
 import * as majors from './majors.ts'
 import * as map from './map.ts'
 import * as menus from './menu.ts'
@@ -93,6 +94,9 @@ api.get('/faqs', faqs.faqs)
 
 // webcams
 api.get('/webcams', webcams.webcams)
+
+// images, proxied from GitHub Pages
+api.get('/images/:group/:name', images.image)
 
 // jobs
 api.get('/jobs', deprecated.jobs)
