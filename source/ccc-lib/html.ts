@@ -45,7 +45,7 @@ export function buildDetailMap(
 		}
 
 		let key = node.textContent?.replace(/:$/, '') ?? ''
-		let value: string | boolean = ''
+		let value: string | boolean
 
 		if (specialKeys.boolean?.includes(key)) {
 			value = true
