@@ -131,8 +131,6 @@ async function main() {
 	app.use(router.routes())
 	app.use(router.allowedMethods())
 
-	Sentry.setupKoaErrorHandler(app)
-
 	//
 	// start the app
 	//
