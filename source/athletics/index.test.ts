@@ -344,6 +344,20 @@ for (const indicator of ['started', 'live', 'unofficial-final'] as const) {
 	})
 }
 
+for (const indicator of ['started', 'live', 'unofficial-final'] as const) {
+	void test(`needsFrequentRefresh: false for a game still ${indicator} a day after kickoff`, (t) => {
+		const aDayLater = new Date(Date.parse(KICKOFF) + 24 * 60 * 60 * 1000)
+
+		t.assert.equal(needsFrequentRefresh([makeGame(indicator)], aDayLater), false)
+	})
+
+	void test(`needsFrequentRefresh: true for a game ${indicator} just under a day after kickoff`, (t) => {
+		const justUnder = new Date(Date.parse(KICKOFF) + 24 * 60 * 60 * 1000 - 60 * 1000)
+
+		t.assert.equal(needsFrequentRefresh([makeGame(indicator)], justUnder), true)
+	})
+}
+
 void test('needsFrequentRefresh: true when a game kicks off within five minutes', (t) => {
 	const now = new Date('2026-09-19T17:56:00.000Z')
 

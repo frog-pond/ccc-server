@@ -1,5 +1,5 @@
 import {z} from 'zod'
-import {ONE_MINUTE} from '../ccc-lib/constants.ts'
+import {ONE_DAY, ONE_MINUTE} from '../ccc-lib/constants.ts'
 import {getJson} from '../ccc-lib/http.ts'
 
 // ── Zod schemas ──────────────────────────────────────────────────────────────
@@ -247,13 +247,18 @@ const IN_PLAY: ReadonlySet<GameState> = new Set(['started', 'live', 'unofficial-
  * Whether the scores should be re-read every minute rather than every five:
  * a game is under way or waiting for its official result, or one kicks off
  * within five minutes.
+ *
+ * A game counts as in play for at most a day after kickoff. A result can go
+ * unposted for good -- Carleton's feed still had a 2026-09-27 tennis match with
+ * none a week later -- and that one game would otherwise hold every request to
+ * the one-minute rate indefinitely.
  */
 export function needsFrequentRefresh(scores: Score[], now: Date): boolean {
 	return scores.some((score) => {
-		if (IN_PLAY.has(score.status.indicator)) {
-			return true
-		}
 		const kickoff = kickoffTime(score)
+		if (IN_PLAY.has(score.status.indicator)) {
+			return kickoff === undefined || now.getTime() - kickoff.getTime() < ONE_DAY
+		}
 		if (kickoff === undefined) {
 			return false
 		}
