@@ -15,7 +15,7 @@ const ROUTES = [
 	'/v1/map/style',
 	'/v1/map/style-dark',
 	'/v1/courses/catalog.db',
-	'/v1/orgs/agape',
+	'/v1/orgs/uri/agape',
 ]
 
 for (const route of ROUTES) {
@@ -24,14 +24,7 @@ for (const route of ROUTES) {
 	})
 }
 
-/// `/orgs/:uri` would match these too, were it registered before them.
-for (const route of ['/v1/orgs/categories', '/v1/orgs/category-styles']) {
-	void test(`${route} is not taken for an org`, () => {
-		assert.equal(api.match(route, 'GET').pathAndMethod[0]?.path, route)
-	})
-}
-
-void test('/orgs/:uri refuses a slug Presence could not have, without asking Presence', async (t) => {
+void test('/orgs/uri/:uri refuses a slug Presence could not have, without asking Presence', async (t) => {
 	let app = new Koa()
 	app.context['cacheControl'] = noop
 	app.context['cached'] = () => false
@@ -46,7 +39,7 @@ void test('/orgs/:uri refuses a slug Presence could not have, without asking Pre
 	// to Presence would go through the mock.
 	let send = globalThis.fetch.bind(globalThis)
 	let upstream = t.mock.method(globalThis, 'fetch')
-	let base = `http://localhost:${String(address.port)}/v1/orgs`
+	let base = `http://localhost:${String(address.port)}/v1/orgs/uri`
 	let slugs = ['Agape', 'a_b', '-agape', '..%2F..%2Fsecret']
 	let statuses = await Promise.all(
 		slugs.map(async (slug) => (await send(`${base}/${slug}`)).status),
