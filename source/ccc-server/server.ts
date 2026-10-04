@@ -7,6 +7,7 @@ import * as Sentry from '@sentry/node'
 import {z} from 'zod'
 import type {ContextState, RouterState} from './context.ts'
 import {accessLog} from '../ccc-koa/access-log.ts'
+import {ignoreClientHangUps} from '../ccc-koa/client-abort.ts'
 import {conditionalGet} from '../ccc-koa/conditional-get.ts'
 import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
 import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
@@ -44,6 +45,7 @@ async function main() {
 	}
 
 	const app = new Koa()
+	ignoreClientHangUps(app)
 
 	//
 	// set up the routes
