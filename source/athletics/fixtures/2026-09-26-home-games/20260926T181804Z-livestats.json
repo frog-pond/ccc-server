@@ -1,0 +1,85 @@
+{
+  "Games": [
+    {
+      "GameId": 21076,
+      "Path": "wsoc",
+      "FullPath": "http://static.sidearmstats.com/schools/stolaf/wsoc/",
+      "Link": "https://sidearmstats.com/stolaf/wsoc/",
+      "SportTitle": "Women's Soccer",
+      "Opponent": "Augsburg University",
+      "Location": "Northfield, Minn. ",
+      "Time": "1 p.m.",
+      "HasStarted": true,
+      "IsComplete": false,
+      "ClockSeconds": 1033,
+      "ShowExtraPeriodsAsOT": true,
+      "PeriodsRegulation": 2,
+      "Period": 1,
+      "PeriodName": "Half",
+      "HomeTeam": {
+        "Id": "STO",
+        "Name": "St. Olaf",
+        "Score": 1
+      },
+      "VisitingTeam": {
+        "Id": "AUG",
+        "Name": "Augsburg",
+        "Score": 0
+      }
+    },
+    {
+      "GameId": 21037,
+      "Path": "football",
+      "FullPath": "http://static.sidearmstats.com/schools/stolaf/football/",
+      "Link": "https://sidearmstats.com/stolaf/football/",
+      "SportTitle": "Football",
+      "Opponent": "Carleton College",
+      "Location": "Northfield, Minn.",
+      "Time": "1 p.m.",
+      "HasStarted": true,
+      "IsComplete": false,
+      "ClockSeconds": 524,
+      "ShowExtraPeriodsAsOT": true,
+      "PeriodsRegulation": 4,
+      "Period": 1,
+      "PeriodName": "Quarter",
+      "HomeTeam": {
+        "Id": "STO",
+        "Name": "St. Olaf",
+        "Score": 7
+      },
+      "VisitingTeam": {
+        "Id": "CAR",
+        "Name": "Carleton",
+        "Score": 7
+      }
+    },
+    {
+      "GameId": 21097,
+      "Path": "msoc",
+      "FullPath": "http://static.sidearmstats.com/schools/stolaf/msoc/",
+      "Link": "https://sidearmstats.com/stolaf/msoc/",
+      "SportTitle": "Men's Soccer",
+      "Opponent": "Augsburg University",
+      "Location": "Northfield, Minn.",
+      "Time": "3:30 p.m.",
+      "HasStarted": false,
+      "IsComplete": false,
+      "ClockSeconds": 0,
+      "ShowExtraPeriodsAsOT": true,
+      "PeriodsRegulation": 2,
+      "Period": 1,
+      "PeriodName": "Half",
+      "HomeTeam": {
+        "Id": "TeamB",
+        "Name": "#1 St. Olaf",
+        "Score": 0
+      },
+      "VisitingTeam": {
+        "Id": "TeamA",
+        "Name": "Augsburg",
+        "Score": 0
+      }
+    }
+  ]
+}

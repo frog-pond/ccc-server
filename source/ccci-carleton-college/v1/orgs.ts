@@ -1,9 +1,16 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {JSDOM} from 'jsdom'
-import {sortBy} from 'lodash-es'
+import {groupableName, sortOrgs, sortableName} from '../../student-orgs/names.ts'
 import {z} from 'zod'
 import type {Context} from '../../ccc-server/context.ts'
+import {unavailableOrgs} from './deprecated.ts'
+
+/// An org with no website, or none we may administer, is ordinary rather than
+/// malformed, and `domToOrg` says so with ''. Demanding a URL outright threw on
+/// those, and `getOrgs` parses in an unguarded loop, so one such org emptied the
+/// whole list.
+const UrlOrBlank = z.union([z.url(), z.literal('')])
 
 export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
 export const CarletonStudentOrgSchema = z.object({
@@ -11,20 +18,20 @@ export const CarletonStudentOrgSchema = z.object({
 	contacts: z.string().array(),
 	categories: z.string().array(),
 	socialLinks: z.url().array(),
-	adminLink: z.url(),
+	adminLink: UrlOrBlank,
 	description: z.string(),
-	website: z.url(),
+	website: UrlOrBlank,
 	name: z.string().min(1),
 })
 
 export type SortableCarletonStudentOrgType = z.infer<typeof SortableCarletonStudentOrgSchema>
 export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend({
-	/** The name, but with leading common prefixes stripped, such as "The" */
+	/** The name, folded for sorting: no leading prefix such as "The", no accents, no opening punctuation */
 	$sortableName: z.string(),
 	$groupableName: z.string(),
 })
 
-function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
+export function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
 	let name =
 		orgNode
 			.querySelector('h4')
@@ -63,7 +70,7 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 		return href ? [href] : []
 	})
 
-	let sortableName = name.replace(sortableRegex, '')
+	let sortable = sortableName(name, sortableRegex)
 
 	let orgObj: SortableCarletonStudentOrgType = {
 		id,
@@ -74,14 +81,16 @@ function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStud
 		categories: [],
 		socialLinks,
 		adminLink,
-		$sortableName: sortableName,
-		$groupableName: sortableName.at(0)?.toLocaleUpperCase() ?? '',
+		$sortableName: sortable,
+		$groupableName: groupableName(sortable),
 	}
 
 	return SortableCarletonStudentOrgSchema.parse(orgObj)
 }
 
-async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
+/// Kept against the block being lifted: the page's shape has not changed,
+/// only our ability to reach it.
+export async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 	let body = await getText('https://apps.carleton.edu/student/orgs/')
 	let dom = new JSDOM(body)
 
@@ -110,12 +119,12 @@ async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
 		}
 	}
 
-	return sortBy(Array.from(allOrgs.values()), '$sortableName')
+	return sortOrgs(Array.from(allOrgs.values()))
 }
 
-export async function orgs(ctx: Context) {
+export function orgs(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
 	if (ctx.cached(ONE_HOUR * 6)) return
 
-	ctx.body = await getOrgs()
+	ctx.body = unavailableOrgs()
 }

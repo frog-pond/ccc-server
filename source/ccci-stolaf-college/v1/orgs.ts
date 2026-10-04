@@ -1,5 +1,10 @@
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
-import {presence} from '../../student-orgs/presence.ts'
+import {
+	presence,
+	presenceCategories,
+	withoutDemoCategory,
+	withoutDemoOrgs,
+} from '../../student-orgs/presence.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 const CACHE_DURATION = ONE_HOUR * 36
@@ -8,5 +13,14 @@ export async function orgs(ctx: Context) {
 	ctx.cacheControl(CACHE_DURATION)
 	if (ctx.cached(CACHE_DURATION)) return
 
-	ctx.body = await presence('stolaf')
+	ctx.body = withoutDemoOrgs(await presence('stolaf'))
+}
+
+/// Lighter than `/orgs`: one row per category, with the org uris in it, so a
+/// client can show category tiles without fetching all 225 full org records.
+export async function orgCategories(ctx: Context) {
+	ctx.cacheControl(CACHE_DURATION)
+	if (ctx.cached(CACHE_DURATION)) return
+
+	ctx.body = withoutDemoCategory(await presenceCategories('stolaf'))
 }

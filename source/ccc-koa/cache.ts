@@ -66,6 +66,12 @@ declare module 'koa' {
 		 */
 		evictCachedItem(key: string): void
 		/**
+		 * Override the cache TTL after fetching data. Call this after ctx.cached() returns false
+		 * but before the response completes to change the TTL based on response content.
+		 * @param maxAge The new max age in milliseconds
+		 */
+		setCacheTTL(maxAge: number): void
+		/**
 		 * cacheKey stores the key used to cache this response
 		 */
 		[CACHE_KEY]: string
@@ -144,6 +150,13 @@ export function cachable(options: Options): Middleware {
 		set(key, undefined)
 	}
 
+	// allow overriding TTL after fetching
+	function setCacheTTL(this: ExtendableContext, maxAge: number): void {
+		if (this[CACHE_INFO_KEY]) {
+			this[CACHE_INFO_KEY].maxAge = maxAge
+		}
+	}
+
 	// ctx.cached(maxAge) => boolean
 	function cached(this: ExtendableContext, maxAge: number | undefined): boolean {
 		// uncacheable request method
@@ -187,6 +200,7 @@ export function cachable(options: Options): Middleware {
 		ctx.vary('Accept-Encoding')
 		ctx.cached = cached.bind(ctx)
 		ctx.evictCachedItem = evictCachedItem.bind(ctx)
+		ctx.setCacheTTL = setCacheTTL.bind(ctx)
 
 		await next()
 

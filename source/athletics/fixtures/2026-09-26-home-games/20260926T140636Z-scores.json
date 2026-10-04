@@ -1,0 +1,176 @@
+{
+  "scores": [
+    {
+      "id": "21147",
+      "sport": "Volleyball",
+      "sport_abbrev": "VB",
+      "date": "9.26",
+      "dateFormatted": "9.26",
+      "date_utc": "9/26/2026 2:00:00 PM",
+      "date_end_utc": "",
+      "time": "9 a.m.",
+      "timestamp": 1790431200,
+      "location": {
+        "location": "Northfield, Minn.",
+        "HAN": "H",
+        "facility": "Bob Gelle Court at Skoglund Center"
+      },
+      "status": {
+        "indicator": "A",
+        "value": ""
+      },
+      "hometeam": "Oles",
+      "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+      "opponent": "University of Wisconsin-Stout Polytechnic",
+      "opponent_logo": "https://athletics.stolaf.edu/images/logos/UW_Stout.png",
+      "team_score": "",
+      "opponent_score": "",
+      "result": "",
+      "ip_time": "",
+      "prescore_info": "",
+      "postscore_info": "",
+      "links": {
+        "livestats": {
+          "url": "https://athletics.stolaf.edu/sidearmstats/wvball/summary",
+          "text": "Live Stats"
+        },
+        "streaming_video": {
+          "url": "https://miacsportsnetwork.com/stolaf/",
+          "text": "Live Video"
+        },
+        "tickets": {
+          "url": "https://athletics.stolaf.edu/sports/2024/8/9/tickets.aspx",
+          "text": "Tickets"
+        }
+      },
+      "coverage": {}
+    },
+    {
+      "id": "21037",
+      "sport": "Football",
+      "sport_abbrev": "FB",
+      "date": "9.26",
+      "dateFormatted": "9.26",
+      "date_utc": "9/26/2026 6:00:00 PM",
+      "date_end_utc": "",
+      "time": "1 p.m.",
+      "timestamp": 1790445600,
+      "location": {
+        "location": "Northfield, Minn.",
+        "HAN": "H",
+        "facility": "Klein Field at Manitou"
+      },
+      "status": {
+        "indicator": "A",
+        "value": ""
+      },
+      "hometeam": "Oles",
+      "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+      "opponent": "Carleton College",
+      "opponent_logo": "https://athletics.stolaf.edu/images/logos/Carleton-College.png",
+      "team_score": "",
+      "opponent_score": "",
+      "result": "",
+      "ip_time": "",
+      "prescore_info": "",
+      "postscore_info": "",
+      "links": {
+        "livestats": {
+          "url": "https://athletics.stolaf.edu/sidearmstats/football/summary",
+          "text": "Live Stats"
+        },
+        "streaming_video": {
+          "url": "https://miacsportsnetwork.com/stolaf/",
+          "text": "Live Video"
+        },
+        "tickets": {
+          "url": "https://athletics.stolaf.edu/sports/2024/8/9/tickets.aspx",
+          "text": "Tickets"
+        }
+      },
+      "coverage": {}
+    },
+    {
+      "id": "21076",
+      "sport": "Women's Soccer",
+      "sport_abbrev": "WSOC",
+      "date": "9.26",
+      "dateFormatted": "9.26",
+      "date_utc": "9/26/2026 6:00:00 PM",
+      "date_end_utc": "",
+      "time": "1 p.m.",
+      "timestamp": 1790445600,
+      "location": {
+        "location": "Northfield, Minn. ",
+        "HAN": "H",
+        "facility": "Rolf Mellby Field"
+      },
+      "status": {
+        "indicator": "A",
+        "value": ""
+      },
+      "hometeam": "Oles",
+      "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+      "opponent": "Augsburg University",
+      "opponent_logo": "https://athletics.stolaf.edu/images/logos/Augsburg-Spirit-Logo.png",
+      "team_score": "",
+      "opponent_score": "",
+      "result": "",
+      "ip_time": "",
+      "prescore_info": "",
+      "postscore_info": "",
+      "links": {
+        "livestats": {
+          "url": "https://athletics.stolaf.edu/sidearmstats/wsoc/summary",
+          "text": "Live Stats"
+        },
+        "streaming_video": {
+          "url": "https://miacsportsnetwork.com/stolaf/",
+          "text": "Live Video"
+        }
+      },
+      "coverage": {}
+    },
+    {
+      "id": "21097",
+      "sport": "Men's Soccer",
+      "sport_abbrev": "MSOC",
+      "date": "9.26",
+      "dateFormatted": "9.26",
+      "date_utc": "9/26/2026 8:30:00 PM",
+      "date_end_utc": "",
+      "time": "3:30 p.m.",
+      "timestamp": 1790454600,
+      "location": {
+        "location": "Northfield, Minn.",
+        "HAN": "H",
+        "facility": "Rolf Mellby Field"
+      },
+      "status": {
+        "indicator": "A",
+        "value": ""
+      },
+      "hometeam": "Oles",
+      "hometeam_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+      "opponent": "Augsburg University",
+      "opponent_logo": "https://athletics.stolaf.edu/images/logos/Augsburg-Spirit-Logo.png",
+      "team_score": "",
+      "opponent_score": "",
+      "result": "",
+      "ip_time": "",
+      "prescore_info": "",
+      "postscore_info": "",
+      "links": {
+        "livestats": {
+          "url": "https://athletics.stolaf.edu/sidearmstats/msoc/summary",
+          "text": "Live Stats"
+        },
+        "streaming_video": {
+          "url": "https://miacsportsnetwork.com/stolaf/",
+          "text": "Live Video"
+        }
+      },
+      "coverage": {}
+    }
+  ]
+}

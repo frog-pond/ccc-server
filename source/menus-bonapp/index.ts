@@ -1,7 +1,7 @@
 import {getJson, getText} from '../ccc-lib/http.ts'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
-import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe} from './helpers.ts'
+import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe, campusToday} from './helpers.ts'
 import {
 	CafeInfoResponseSchema,
 	CafeMenuResponseSchema,
@@ -34,7 +34,6 @@ async function getBonAppWebpage(url: string | URL) {
 }
 
 export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
-	let today = new Date()
 	let dom = await getBonAppWebpage(cafeUrl)
 
 	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
@@ -47,7 +46,7 @@ export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType
 			name: bamco.current_cafe.name,
 			days: [
 				{
-					date: today.toISOString().split('T')[0],
+					date: campusToday(),
 					dayparts: Object.values(bamco.dayparts).map(
 						({id, label, message, starttime, endtime}) => ({
 							id,
@@ -63,13 +62,13 @@ export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType
 	})
 }
 
-export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
+export async function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	try {
-		return _cafe(cafeUrl)
+		return await _cafe(cafeUrl)
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
 		Sentry.captureException(err)
-		return Promise.resolve(CustomCafe('Could not load café from BonApp'))
+		return CustomCafe('Could not load café from BonApp')
 	}
 }
 
@@ -78,7 +77,6 @@ export function nutrition(itemId: string) {
 }
 
 export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
-	let today = new Date()
 	let dom = await getBonAppWebpage(cafeUrl)
 
 	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
@@ -91,7 +89,7 @@ export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType
 		items: bamco.menu_items,
 		days: [
 			{
-				date: today.toISOString().split('T')[0],
+				date: campusToday(),
 				cafe: {
 					name: bamco.current_cafe.name,
 					menu_id: '1',
@@ -102,17 +100,15 @@ export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType
 	})
 }
 
-export function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
+export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	try {
-		return _menu(cafeUrl)
+		return await _menu(cafeUrl)
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
 		Sentry.captureException(err)
-		return Promise.resolve(
-			CafeMenuWithError(
-				err && typeof err === 'object' && 'message' in err && err.message,
-				'Could not load the BonApp menu data',
-			),
+		return CafeMenuWithError(
+			err && typeof err === 'object' && 'message' in err && err.message,
+			'Could not load the BonApp menu data',
 		)
 	}
 }

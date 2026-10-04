@@ -1,0 +1,86 @@
+{
+  "scores": [
+    {
+      "id": "21096",
+      "sport": "Men's Soccer",
+      "sport_abbrev": "MSOC",
+      "date": "9.23",
+      "dateFormatted": "9.23",
+      "date_utc": "9/24/2026 12:00:00 AM",
+      "date_end_utc": "",
+      "time": "7 p.m.",
+      "timestamp": 1790208000,
+      "location": {
+        "location": "Decorah, Iowa / Luther Soccer Field",
+        "HAN": "A",
+        "facility": ""
+      },
+      "status": {
+        "indicator": "A",
+        "value": ""
+      },
+      "hometeam": "Luther College",
+      "hometeam_logo": "https://athletics.stolaf.edu/images/logos/Luther_College.png",
+      "opponent": "Oles",
+      "opponent_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+      "team_score": "",
+      "opponent_score": "",
+      "result": "",
+      "ip_time": "",
+      "prescore_info": "",
+      "postscore_info": "",
+      "links": {
+        "livestats": {
+          "url": "https://luthernorse.com/sidearmstats/msoc/summary",
+          "text": "Live Stats"
+        },
+        "streaming_video": {
+          "url": "https://watchmidwestsports.com/luthernorse/?B=4105640",
+          "text": "Live Video"
+        },
+        "tickets": {
+          "url": "https://www.luther.edu/offices/programming/tickets/sports",
+          "text": "Tickets"
+        }
+      },
+      "coverage": {}
+    },
+    {
+      "id": "21117",
+      "sport": "Volleyball",
+      "sport_abbrev": "VB",
+      "date": "9.23",
+      "dateFormatted": "9.23",
+      "date_utc": "9/24/2026 12:00:00 AM",
+      "date_end_utc": "",
+      "time": "7 p.m.",
+      "timestamp": 1790208000,
+      "location": {
+        "location": "Northfield, Minn. / West Gym",
+        "HAN": "A",
+        "facility": ""
+      },
+      "status": {
+        "indicator": "O",
+        "value": ""
+      },
+      "hometeam": "Carleton College",
+      "hometeam_logo": "https://athletics.stolaf.edu/images/logos/Carleton-College.png",
+      "opponent": "Oles",
+      "opponent_logo": "https://athletics.stolaf.edu/images/logos/site/site.png",
+      "team_score": "0",
+      "opponent_score": "3",
+      "result": "W",
+      "ip_time": "",
+      "prescore_info": "",
+      "postscore_info": "",
+      "links": {
+        "boxscore": {
+          "url": "https://athletics.stolaf.edu/boxscore.aspx?id=21117",
+          "text": "Box"
+        }
+      },
+      "coverage": {}
+    }
+  ]
+}

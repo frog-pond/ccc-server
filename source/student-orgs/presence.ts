@@ -1,9 +1,15 @@
 import {getJson} from '../ccc-lib/http.ts'
-import {sortBy} from 'lodash-es'
+import {groupableName, sortOrgs, sortableName} from './names.ts'
+import {groupBy, sortBy, toPairs} from 'lodash-es'
 import {JSDOM} from 'jsdom'
 import pMap from 'p-map'
 import {z} from 'zod'
-import {SortableStudentOrgSchema, type SortableStudentOrgType} from './types.ts'
+import {
+	OrgCategorySchema,
+	SortableStudentOrgSchema,
+	type OrgCategoryType,
+	type SortableStudentOrgType,
+} from './types.ts'
 
 const BasicPresenceOrgSchema = z.object({
 	subdomain: z.string(),
@@ -36,14 +42,17 @@ const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
 export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 	let name = org.name.trim()
 	let category = org.categories.join(', ')
-	let meetings = (org.regularMeetingLocation ?? '').trim() + (org.regularMeetingTime ?? '').trim()
+	let meetings = [org.regularMeetingLocation, org.regularMeetingTime]
+		.map((part) => part?.trim())
+		.filter(Boolean)
+		.join(', ')
 	let description = JSDOM.fragment(org.description).textContent.trim()
 	let website = org.website?.trim() ?? ''
 	if (website && !/^https?:\/\//.test(website)) {
 		website = `http://${website}`
 	}
 
-	let sortableName = name.replace(sortableRegex, '').toLowerCase()
+	let sortable = sortableName(name, sortableRegex)
 	return SortableStudentOrgSchema.parse({
 		advisors: [],
 		category,
@@ -53,9 +62,15 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 		meetings,
 		name,
 		website,
-		$sortableName: sortableName,
-		$groupableName: sortableName.at(0)?.toLocaleUpperCase(),
+		organizationUri: org.uri,
+		memberCount: org.memberCount,
+		$sortableName: sortable,
+		$groupableName: groupableName(sortable),
 	})
+}
+
+export function withoutDemoOrgs(orgs: SortableStudentOrgType[]): SortableStudentOrgType[] {
+	return orgs.filter((org) => !org.category.split(', ').includes('Demo'))
 }
 
 const fetchOrg = async (base: string, orgUri: string) =>
@@ -74,5 +89,52 @@ export async function presence(school: string): Promise<SortableStudentOrgType[]
 
 	let cleaned = orgs.map((org) => cleanOrg(org, sortableRegex))
 
-	return sortBy(cleaned, '$sortableName')
+	return sortOrgs(cleaned)
+}
+
+/// One row per org-category membership — an org with two categories appears
+/// twice. `/organizations/categories` returns this flat, so a category tile
+/// with its org count means grouping it ourselves.
+const PresenceCategoryMembershipSchema = z.object({
+	catIdh: z.string(),
+	name: z.string(),
+	organizationUri: z.string(),
+})
+type PresenceCategoryMembershipType = z.infer<typeof PresenceCategoryMembershipSchema>
+
+export function groupCategories(memberships: PresenceCategoryMembershipType[]): OrgCategoryType[] {
+	let grouped = groupBy(memberships, (m) => m.catIdh)
+
+	let categories = toPairs(grouped).map(([catIdh, rows]) =>
+		OrgCategorySchema.parse({
+			catIdh,
+			name: rows.at(0)?.name ?? '',
+			organizationUris: rows.map((row) => row.organizationUri),
+		}),
+	)
+
+	return sortBy(categories, 'name')
+}
+
+export function withoutDemoCategory(categories: OrgCategoryType[]): OrgCategoryType[] {
+	let demoOrgUris = new Set(
+		categories
+			.filter((category) => category.name === 'Demo')
+			.flatMap((category) => category.organizationUris),
+	)
+
+	return categories
+		.filter((category) => category.name !== 'Demo')
+		.map((category) => ({
+			...category,
+			organizationUris: category.organizationUris.filter((uri) => !demoOrgUris.has(uri)),
+		}))
+}
+
+export async function presenceCategories(school: string): Promise<OrgCategoryType[]> {
+	let categoriesUrl = `https://api.presence.io/${school}/v1/organizations/categories`
+
+	let memberships = PresenceCategoryMembershipSchema.array().parse(await getJson(categoriesUrl))
+
+	return groupCategories(memberships)
 }

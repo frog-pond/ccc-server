@@ -6,6 +6,7 @@ import pMap from 'p-map'
 import type {Context} from '../../ccc-server/context.ts'
 import assert from 'node:assert/strict'
 import {buildDetailMap} from '../../ccc-lib/html.ts'
+import {unavailableJobs} from './deprecated.ts'
 
 const jobsUrl = 'https://apps.carleton.edu/campus/sfs/employment/feeds/jobs'
 
@@ -54,7 +55,9 @@ export async function fetchJob(link: URL) {
 	}
 }
 
-async function getAllJobs() {
+/// Kept against the block being lifted: the feed's shape has not changed,
+/// only our ability to reach it.
+export async function getAllJobs() {
 	let body = await getText(jobsUrl)
 	let dom = new JSDOM(body, {contentType: 'text/xml'})
 	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
@@ -66,9 +69,9 @@ async function getAllJobs() {
 	return pMap(jobLinks, fetchJob, {concurrency: 4})
 }
 
-export async function jobs(ctx: Context) {
+export function jobs(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = await getAllJobs()
+	ctx.body = unavailableJobs()
 }

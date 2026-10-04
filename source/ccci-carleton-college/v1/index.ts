@@ -1,4 +1,5 @@
 import Router from '@koa/router'
+import * as athletics from './athletics.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
 import * as convos from './convos.ts'
@@ -14,6 +15,7 @@ import * as orgs from './orgs.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
+import * as images from '../../ccc-lib/images.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -84,6 +86,9 @@ api.get('/faqs', faqs.faqs)
 // webcams
 api.get('/webcams', webcams.webcams)
 
+// images, proxied from the All About Olaf GitHub Pages site
+api.get('/images/:group/:name', images.image)
+
 // jobs
 api.get('/jobs', jobs.jobs)
 
@@ -111,7 +116,13 @@ api.get('/transit/bus', transit.bus)
 api.get('/transit/modes', transit.modes)
 
 // utilities
+// POST, since the HTML comes in the request body, which fetch will not send
+// with a GET; the GET stays for any caller that managed it anyway.
+api.post('/util/html-to-md', util.htmlToMarkdown)
 api.get('/util/html-to-md', util.htmlToMarkdown)
+
+// athletics
+api.get('/athletics/scores', athletics.scores)
 
 // sitemap
 api.get('/routes', (ctx: Context) => {

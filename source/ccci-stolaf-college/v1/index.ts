@@ -1,23 +1,29 @@
 import Router from '@koa/router'
-import * as atoz from './a-z.ts'
+import * as appData from './app-data.ts'
+import * as athletics from './athletics.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
 import * as departments from './departments.ts'
+import * as courses from './courses.ts'
+import * as deprecated from './deprecated.ts'
 import * as dictionary from './dictionary.ts'
 import * as faqs from './faqs.ts'
 import * as help from './help.ts'
 import * as hours from './hours.ts'
-import * as jobs from './jobs.ts'
 import * as majors from './majors.ts'
+import * as map from './map.ts'
 import * as menus from './menu.ts'
 import * as news from './news.ts'
 import * as orgs from './orgs.ts'
 import * as printing from './printing.ts'
 import * as reports from './reports.ts'
+import * as sources from './sources.ts'
 import * as streams from './streams.ts'
+import * as studentWork from './student-work.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
+import * as images from '../../ccc-lib/images.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -60,13 +66,18 @@ api.get('/food/named/menu/schulze', menus.schulzeMenu)
 api.get('/calendar/google', calendar.google)
 api.get('/calendar/ics', calendar.ics)
 api.get('/calendar/named/stolaf', calendar.stolaf)
-api.get('/calendar/named/oleville', calendar.oleville)
+api.get('/calendar/named/oleville', deprecated.olevilleCalendar)
 api.get('/calendar/named/northfield', calendar.northfield)
 api.get('/calendar/named/krlx-schedule', calendar.krlx)
 api.get('/calendar/named/ksto-schedule', calendar.ksto)
 
-// a-to-z
-api.get('/a-to-z', atoz.atoz)
+// a-to-z — St. Olaf's WordPress blocks this server's IP; the app fetches it
+// directly now.
+api.get('/a-to-z', deprecated.atoz)
+api.get('/a-to-z/extras', appData.aToZExtras)
+
+// sources
+api.get('/sources', sources.sources)
 
 // dictionary
 api.get('/dictionary', dictionary.dictionary)
@@ -87,11 +98,29 @@ api.get('/faqs', faqs.faqs)
 // webcams
 api.get('/webcams', webcams.webcams)
 
+// images, proxied from GitHub Pages
+api.get('/images/:group/:name', images.image)
+
 // jobs
-api.get('/jobs', jobs.jobs)
+api.get('/jobs', deprecated.jobs)
+
+// map
+api.get('/map', map.map)
+api.get('/map/geojson', map.geojson)
+api.get('/map/categories', appData.mapCategories)
+api.get('/map/style', map.styleLight)
+api.get('/map/style-dark', map.styleDark)
 
 // orgs
 api.get('/orgs', orgs.orgs)
+api.get('/orgs/categories', orgs.orgCategories)
+api.get('/orgs/category-styles', appData.orgCategoryStyles)
+api.get('/student-work/units', studentWork.units)
+api.get('/student-work/areas', appData.studentWorkAreas)
+api.get('/student-work/wages', appData.studentWorkWages)
+
+// courses
+api.get('/courses/catalog.db', courses.catalog)
 
 // news
 api.get('/news/rss', news.rss)
@@ -121,7 +150,13 @@ api.get('/printing/color-printers', printing.colorPrinters)
 api.get('/reports/stav', reports.stavMealtimeReport)
 
 // utilities
+// POST, since the HTML comes in the request body, which fetch will not send
+// with a GET; the GET stays for any caller that managed it anyway.
+api.post('/util/html-to-md', util.htmlToMarkdown)
 api.get('/util/html-to-md', util.htmlToMarkdown)
+
+// athletics
+api.get('/athletics/scores', athletics.scores)
 
 // sitemap
 api.get('/routes', (ctx: Context) => {

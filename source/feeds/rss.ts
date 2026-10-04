@@ -17,12 +17,17 @@ export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedI
 	}
 }
 
-function nodeListTextContent(nodeList: NodeListOf<Element>): string[] {
-	return Array.from(nodeList).flatMap((el) => (el.textContent ? [el.textContent] : []))
+function nodeListTextContent(nodeList: Iterable<Element>): string[] {
+	return Array.from(nodeList).flatMap((el) => {
+		let text = el.textContent.trim()
+		return text ? [text] : []
+	})
 }
 
+/// Namespaced elements like `dc:creator` are looked up by their qualified
+/// name: in an XML document a CSS selector only sees the local name.
 export function convertRssItemToStory(item: Element) {
-	let authors = nodeListTextContent(item.querySelectorAll('dc\\:creator'))
+	let authors = nodeListTextContent(item.getElementsByTagName('dc:creator'))
 	authors = authors.length ? authors : ['Unknown Author']
 
 	let categories = nodeListTextContent(item.querySelectorAll('category'))
@@ -39,7 +44,10 @@ export function convertRssItemToStory(item: Element) {
 
 	let descriptionEl = item.querySelector('description')
 
-	let content = item.getAttribute('content:encoded') ?? descriptionEl?.textContent ?? '(no content)'
+	let content =
+		item.getElementsByTagName('content:encoded')[0]?.textContent ??
+		descriptionEl?.textContent ??
+		'(no content)'
 	content = JSDOM.fragment(content).textContent.trim()
 
 	let excerpt: string | null = descriptionEl?.textContent ?? content.substring(0, 250)

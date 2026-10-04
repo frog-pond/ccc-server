@@ -6,6 +6,9 @@ const zodCurrencyString = z.string() //.regex(/^\$.*/)
 const zodHtmlString = z.string()
 const zod24Time = z.string().regex(/\d\d:\d\d/)
 const zodNumericBoolean = z.number().gte(0).lte(1)
+// The tab Bon Appétit files an item under: 1 for Specials, 2 for Additional
+// Favorites, 3 for Condiments and Extras. Sent as `1` but as `"2"` and `"3"`.
+const zodTier = z.optional(z.coerce.number().int())
 
 const MonotonyContainer = z.object({
 	id: z.string(),
@@ -61,6 +64,7 @@ const BamcoMenuItemSchema = z.object({
 	sub_station: z.string(),
 	sub_station_id: zodNumericString,
 	sub_station_order: zodNumericString,
+	tier: zodTier,
 	zero_entree: zodNumericString,
 })
 
