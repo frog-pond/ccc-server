@@ -60,3 +60,69 @@ void test('menu falls back to an error menu when BonApp cannot be read', async (
 	const data = await bonApp.menu(BROKEN_PAGE)
 	t.assert.equal(data.days[0]?.cafe.dayparts[0]?.[0]?.label, 'Errored')
 })
+
+/// A BonApp page with one station and one item, as BonApp writes them.
+const BAMCO_PAGE = `data:text/html,${encodeURIComponent(
+	`<script>window.Bamco = ${JSON.stringify({
+		current_cafe: {name: 'Stav Hall', id: '261'},
+		cor_icons: [],
+		menu_items: {
+			42: {
+				id: '42',
+				label: 'mac  &amp; cheese (v)',
+				description: '<p>baked <b>golden</b></p><br>with breadcrumbs',
+				station: '<strong>@home &amp; hearth</strong>',
+				sub_station: 'entrees',
+				sub_station_id: '1',
+				sub_station_order: '1',
+				rating: '0',
+				special: 1,
+				zero_entree: '0',
+			},
+		},
+		dayparts: {
+			1: {
+				id: '1',
+				label: 'Lunch',
+				abbreviation: 'L',
+				starttime: '11:00',
+				endtime: '13:30',
+				starttime_formatted: '11:00 am',
+				endtime_formatted: '1:30 pm',
+				time_formatted: '11:00 am - 1:30 pm',
+				message: '',
+				stations: [
+					{
+						order_id: '1',
+						id: '1',
+						label: 'home &amp; hearth',
+						price: '',
+						note: '',
+						soup: 0,
+						items: ['42'],
+					},
+				],
+			},
+		},
+	})}</script>`,
+)}`
+
+void test('a menu comes back with its text cleaned', async (t) => {
+	let menu = await bonApp._menu(BAMCO_PAGE)
+	let item = menu.items['42']
+
+	t.assert.equal(item?.station, 'Home & Hearth')
+	t.assert.equal(item?.label, 'Mac & Cheese')
+	t.assert.equal(item?.description, 'baked golden with breadcrumbs')
+	t.assert.equal(item?.sub_station, 'Entrees')
+})
+
+void test("a menu's items still match their stations' labels", async (t) => {
+	let menu = await bonApp._menu(BAMCO_PAGE)
+	let labels = menu.days[0]?.cafe.dayparts
+		.flat()
+		.flatMap((part) => part.stations.map((s) => s.label))
+
+	t.assert.deepEqual(labels, ['Home & Hearth'])
+	t.assert.equal(labels?.includes(menu.items['42']?.station ?? ''), true)
+})

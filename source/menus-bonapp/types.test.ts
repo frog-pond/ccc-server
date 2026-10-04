@@ -61,3 +61,25 @@ void test('a numeric field refuses anything but digits', (t) => {
 		t.assert.throws(() => CafeMenuItemSchema.parse({...bamcoItem(1), sub_station_order: value}))
 	}
 })
+
+/// A BonApp page with one item, `overrides` applied to it.
+function pageWith(overrides: Record<string, unknown>) {
+	return {
+		current_cafe: {name: 'The Cage', id: '262'},
+		menu_items: {1: {...bamcoItem(1), ...overrides}},
+		cor_icons: [],
+		dayparts: {},
+	}
+}
+
+void test("BonApp's numeric fields take digits, or nothing", (t) => {
+	for (const value of ['', '0', '178542']) {
+		t.assert.doesNotThrow(() => BamcoPageContentsSchema.parse(pageWith({sub_station_id: value})))
+	}
+})
+
+void test("BonApp's numeric fields refuse anything but digits", (t) => {
+	for (const value of ['1-1', 'abc', '12a', ' 1']) {
+		t.assert.throws(() => BamcoPageContentsSchema.parse(pageWith({sub_station_id: value})))
+	}
+})

@@ -2,6 +2,7 @@ import {getJson, getText} from '../ccc-lib/http.ts'
 import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
 import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe, campusToday} from './helpers.ts'
+import {cleanDayPart, cleanMenuItem} from './clean.ts'
 import {
 	CafeInfoResponseSchema,
 	CafeMenuResponseSchema,
@@ -86,14 +87,16 @@ export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType
 
 	return CafeMenuResponseSchema.parse({
 		cor_icons: Array.isArray(bamco.cor_icons) ? {} : bamco.cor_icons,
-		items: bamco.menu_items,
+		items: Object.fromEntries(
+			Object.entries(bamco.menu_items).map(([id, item]) => [id, cleanMenuItem(item)]),
+		),
 		days: [
 			{
 				date: campusToday(),
 				cafe: {
 					name: bamco.current_cafe.name,
 					menu_id: '1',
-					dayparts: [Object.values(bamco.dayparts)],
+					dayparts: [Object.values(bamco.dayparts).map(cleanDayPart)],
 				},
 			},
 		],
