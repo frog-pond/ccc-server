@@ -27,6 +27,18 @@ void test('cleanOrg carries the org’s Presence slug as organizationUri', (t) =
 	t.assert.equal(org.organizationUri, 'agape')
 })
 
+void test('cleanOrg separates the meeting location from the meeting time', (t) => {
+	let org = cleanOrg(RAW_ORG, sortableRegex)
+
+	t.assert.equal(org.meetings, 'Norway Room, 7pm-8pm')
+})
+
+void test('cleanOrg lists a lone meeting time without a separator', (t) => {
+	let org = cleanOrg({...RAW_ORG, regularMeetingLocation: undefined}, sortableRegex)
+
+	t.assert.equal(org.meetings, '7pm-8pm')
+})
+
 void test('cleanOrg carries the member count', (t) => {
 	let org = cleanOrg(RAW_ORG, sortableRegex)
 

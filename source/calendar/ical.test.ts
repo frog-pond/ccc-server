@@ -4,6 +4,7 @@ import moment from 'moment'
 import {JSDOM} from 'jsdom'
 import getUrls from 'get-urls'
 import {EventSchema} from './types.ts'
+import {ical} from './ical.ts'
 
 /**
  * Tests for the ical.js event parser
@@ -221,7 +222,7 @@ END:VCALENDAR`
 		.map((vevent) => new InternetCalendar.Event(vevent))
 
 	// Apply filters as the ical function does
-	events = events.filter((event) => moment(event.endDate.toString()).isAfter(now, 'day'))
+	events = events.filter((event) => moment(event.endDate.toString()).isAfter(now))
 	events = events.filter((event) =>
 		moment(event.endDate.toString()).isSameOrBefore(maxEndDate, 'day'),
 	)
@@ -232,4 +233,38 @@ END:VCALENDAR`
 	t.assert.equal(eventSummaries.includes('Event within range'), true)
 	t.assert.equal(eventSummaries.includes('Event just at limit'), true)
 	t.assert.equal(eventSummaries.includes('Event beyond maxEndDate'), false)
+})
+
+void test('ical keeps events that end later today and drops ones already over', async (t) => {
+	const sampleIcal = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//EN
+BEGIN:VEVENT
+UID:morning@example.com
+SUMMARY:This morning
+DTSTART:20261004T140000Z
+DTEND:20261004T150000Z
+END:VEVENT
+BEGIN:VEVENT
+UID:tonight@example.com
+SUMMARY:Tonight
+DTSTART:20261004T230000Z
+DTEND:20261005T010000Z
+END:VEVENT
+BEGIN:VEVENT
+UID:evening@example.com
+SUMMARY:This evening
+DTSTART:20261004T200000Z
+DTEND:20261004T210000Z
+END:VEVENT
+END:VCALENDAR`
+
+	const now = moment('2026-10-04T18:00:00Z')
+	const url = `data:text/calendar,${encodeURIComponent(sampleIcal)}`
+	const events = await ical(url, {}, now)
+
+	t.assert.deepEqual(
+		events.map((e) => e.title),
+		['This evening', 'Tonight'],
+	)
 })

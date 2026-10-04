@@ -58,7 +58,7 @@ export async function ical(
 		.map((vevent) => new InternetCalendar.Event(vevent))
 
 	if (onlyFuture) {
-		events = events.filter((event) => moment(event.endDate.toString()).isAfter(now, 'day'))
+		events = events.filter((event) => moment(event.endDate.toString()).isAfter(now))
 	}
 
 	if (maxEndDate) {
