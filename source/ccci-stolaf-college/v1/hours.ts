@@ -9,3 +9,10 @@ export async function buildingHours(ctx: Context) {
 
 	ctx.body = await getJson(GH_PAGES('building-hours.json'))
 }
+
+export async function campusDirectory(ctx: Context) {
+	ctx.cacheControl(ONE_HOUR)
+	if (ctx.cached(ONE_HOUR)) return
+
+	ctx.body = await getJson(GH_PAGES('building-directory.json'))
+}
