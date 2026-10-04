@@ -15,6 +15,7 @@ import * as orgs from './orgs.ts'
 import * as transit from './transit.ts'
 import * as util from './util.ts'
 import * as webcams from './webcams.ts'
+import * as images from '../../ccc-lib/images.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -84,6 +85,9 @@ api.get('/faqs', faqs.faqs)
 
 // webcams
 api.get('/webcams', webcams.webcams)
+
+// images, proxied from the All About Olaf GitHub Pages site
+api.get('/images/:group/:name', images.image)
 
 // jobs
 api.get('/jobs', jobs.jobs)
