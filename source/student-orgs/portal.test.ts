@@ -164,3 +164,36 @@ void test('only a web address passes as a link', (t) => {
 void test('additional information is read as plain text', (t) => {
 	t.assert.equal(plainText('<p>Everyone is <b>welcome</b>!</p>'), 'Everyone is welcome!')
 })
+
+/// Habitat for Humanity's, as Presence has it: one name to a paragraph, a
+/// paste's leftover markers, and trailing breaks.
+void test('each paragraph of plain text keeps a line of its own', (t) => {
+	let html =
+		'<p style="font-size: 14px;">Executive Committee: 2026 Fall</p>' +
+		'<p style="font-size: 14px;">Yousef Abualatta</p>' +
+		'<p style="font-size: 14px;"><!--StartFragment--><span>Alex Walk</span></p>' +
+		'<p style="font-size: 14px;"><!--EndFragment-->Sam Fineran<br/><br/><br/></p>'
+	t.assert.equal(
+		plainText(html),
+		'Executive Committee: 2026 Fall\nYousef Abualatta\nAlex Walk\nSam Fineran',
+	)
+})
+
+void test('a heading, a break and a list item each end a line', (t) => {
+	t.assert.equal(
+		plainText('<p></p><h1>Who Are We?</h1><p>One<br>Two</p><ul><li>Three</li><li>Four</li></ul>'),
+		'Who Are We?\nOne\nTwo\nThree\nFour',
+	)
+})
+
+void test("a paragraph's own line breaks and runs of spaces read as one space", (t) => {
+	t.assert.equal(
+		plainText('<p>Meets\n   weekly  in <a href="#">Buntrock</a></p>'),
+		'Meets weekly in Buntrock',
+	)
+})
+
+void test('portalFields reads the statement of purpose', (t) => {
+	let body = {fieldData: [{label: 'Statement of Purpose', value: '<p>We build homes.</p>'}]}
+	t.assert.equal(portalFields(body).statementOfPurpose, '<p>We build homes.</p>')
+})

@@ -1,5 +1,12 @@
 import {test} from 'node:test'
-import {cleanOrg, groupCategories, withoutDemoCategory, withoutDemoOrgs} from './presence.ts'
+import {
+	cleanOrg,
+	groupCategories,
+	orgDetail,
+	withoutDemoCategory,
+	withoutDemoOrgs,
+} from './presence.ts'
+import {portalFields} from './portal.ts'
 import {SortableStudentOrgSchema, OrgCategorySchema} from './types.ts'
 
 const RAW_ORG = {
@@ -181,4 +188,24 @@ void test('withoutDemoCategory removes Demo and its orgs from other categories',
 	t.assert.deepEqual(withoutDemoCategory(categories), [
 		{catIdh: 'clubs', name: 'Clubs', organizationUris: ['chess']},
 	])
+})
+
+/// Presence's list runs a description's paragraphs together -- "Who Are
+/// We?InterVarsity…" -- where the portal's statement of purpose keeps them.
+void test('orgDetail describes an org from its statement of purpose, a line to a paragraph', (t) => {
+	let fields = portalFields({
+		fieldData: [{label: 'Statement of Purpose', value: '<h1>Who Are We?</h1><p>A ministry.</p>'}],
+	})
+	let org = orgDetail(
+		cleanOrg({...RAW_ORG, description: 'Who Are We?A ministry.'}, sortableRegex),
+		fields,
+	)
+
+	t.assert.equal(org.description, 'Who Are We?\nA ministry.')
+})
+
+void test('orgDetail keeps the list description when the statement of purpose is blank', (t) => {
+	let org = orgDetail(cleanOrg(RAW_ORG, sortableRegex), portalFields({fieldData: []}))
+
+	t.assert.equal(org.description, 'Fosters fellowship.')
 })
