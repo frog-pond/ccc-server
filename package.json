@@ -43,7 +43,7 @@
     "get-urls": "12.1.0",
     "html-entities": "2.6.0",
     "ical.js": "^2.0.1",
-    "jsdom": "27.4.0",
+    "jsdom": "30.1.1",
     "koa": "3.2.1",
     "koa-compress": "5.2.2",
     "koa-json-error": "3.1.2",
@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
-    "@types/jsdom": "27.0.0",
+    "@types/jsdom": "30.0.0",
     "@types/koa": "3.0.3",
     "@types/koa__router": "15.0.0",
     "@types/koa-compress": "4.0.7",
