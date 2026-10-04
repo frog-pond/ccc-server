@@ -59,14 +59,14 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.5",
+    "@eslint/js": "10.0.1",
     "@types/jsdom": "30.0.0",
     "@types/koa": "3.0.3",
     "@types/koa__router": "15.0.0",
     "@types/koa-compress": "4.0.7",
     "@types/lodash-es": "4.17.12",
     "@types/turndown": "5.0.6",
-    "eslint": "9.39.5",
+    "eslint": "10.11.0",
     "globals": "17.13.0",
     "prettier": "3.9.9",
     "typed-query-selector": "2.12.3",
