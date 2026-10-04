@@ -135,6 +135,7 @@ api.get('/news/named/krlx', news.krlx)
 
 // hours
 api.get('/spaces/hours', hours.buildingHours)
+api.get('/spaces/directory', hours.campusDirectory)
 
 // transit
 api.get('/transit/bus', transit.bus)
