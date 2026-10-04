@@ -66,8 +66,8 @@ export async function upcomingDetail(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR * 6)
 	if (ctx.cached(ONE_HOUR * 6)) return
 
-	let detailId = ctx.URL.searchParams.get('id')
-	ctx.assert(detailId, 400, '?id is required')
+	let {id: detailId = ''} = ctx.params
+	ctx.assert(detailId, 400, 'id is required')
 	ctx.body = await getUpcoming(detailId)
 }
 
