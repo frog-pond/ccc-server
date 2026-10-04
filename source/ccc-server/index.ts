@@ -23,7 +23,7 @@ function setupSentry() {
 		],
 		// Performance Monitoring
 		tracesSampleRate: 1.0,
-		profilesSampleRate: 1.0,
+		profileSessionSampleRate: 1.0,
 		// In trace mode, the profiler manages its own start and stop calls, which are based
 		// on spans: the profiler continues to run while there is at least one active span,
 		// and stops when there are no active spans.
