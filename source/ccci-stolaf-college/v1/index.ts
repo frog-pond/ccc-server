@@ -4,6 +4,7 @@ import * as athletics from './athletics.ts'
 import * as calendar from './calendar.ts'
 import * as contacts from './contacts.ts'
 import * as departments from './departments.ts'
+import * as courses from './courses.ts'
 import * as deprecated from './deprecated.ts'
 import * as dictionary from './dictionary.ts'
 import * as faqs from './faqs.ts'
@@ -107,6 +108,8 @@ api.get('/jobs', deprecated.jobs)
 api.get('/map', map.map)
 api.get('/map/geojson', map.geojson)
 api.get('/map/categories', appData.mapCategories)
+api.get('/map/style', map.styleLight)
+api.get('/map/style-dark', map.styleDark)
 
 // orgs
 api.get('/orgs', orgs.orgs)
@@ -115,6 +118,9 @@ api.get('/orgs/category-styles', appData.orgCategoryStyles)
 api.get('/student-work/units', studentWork.units)
 api.get('/student-work/areas', appData.studentWorkAreas)
 api.get('/student-work/wages', appData.studentWorkWages)
+
+// courses
+api.get('/courses/catalog.db', courses.catalog)
 
 // news
 api.get('/news/rss', news.rss)

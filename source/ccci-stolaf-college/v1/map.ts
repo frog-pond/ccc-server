@@ -22,3 +22,19 @@ export async function geojson(ctx: Context) {
 
 	ctx.body = await getJson(GH_PAGES_FROM_REPO(MAP_REPO, 'map.geojson'))
 }
+
+/// The MapLibre styles the app draws the campus basemap with. They name their
+/// own tiles, glyphs and sprites by absolute URL, so only the style itself
+/// passes through here: moving those later is an edit to the published style,
+/// not an app release.
+function style(filename: string) {
+	return async (ctx: Context) => {
+		ctx.cacheControl(ONE_HOUR)
+		if (ctx.cached(ONE_HOUR)) return
+
+		ctx.body = await getJson(GH_PAGES_FROM_REPO(MAP_REPO, filename))
+	}
+}
+
+export const styleLight = style('style.json')
+export const styleDark = style('style-dark.json')
