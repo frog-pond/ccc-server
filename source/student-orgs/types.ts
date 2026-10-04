@@ -30,12 +30,37 @@ export const StudentOrgSchema = z.object({
 	organizationUri: z.string(),
 	/** Current member count, as Presence reports it. */
 	memberCount: z.number(),
+	/** `meetings` is these two joined, for builds that read only that. */
+	meetingLocation: z.string(),
+	meetingTime: z.string(),
+	/** Every category the org is in; `category` is these joined. */
+	categories: z.string().array(),
+	hasCoverImage: z.boolean(),
+	/** The cover image's file name on Presence's CDN, e.g. `"d73f….png"`. */
+	photoUri: z.string(),
+	/** `photoUri` with a `?v=` cache-buster that changes with the image. */
+	photoUriWithVersion: z.string(),
+	/** The cover image's address on Presence's CDN, or '' for an org without one. */
+	photoUrl: z.union([z.url(), z.literal('')]),
+	hasUpcomingEvents: z.boolean(),
 })
 
 export type SortableStudentOrgType = z.infer<typeof SortableStudentOrgSchema>
 export const SortableStudentOrgSchema = StudentOrgSchema.extend({
 	$sortableName: z.string(),
 	$groupableName: z.string(),
+})
+
+/** One org with what only its own Presence pages hold, for its detail screen. */
+export type DetailedStudentOrgType = z.infer<typeof DetailedStudentOrgSchema>
+export const DetailedStudentOrgSchema = SortableStudentOrgSchema.extend({
+	/** Instagram profiles, as URLs. */
+	socialLinks: z.url().array(),
+	constitutionUrl: z.union([z.url(), z.literal('')]),
+	officeHours: z.string(),
+	officeLocation: z.string(),
+	/** Plain text, like `description`. */
+	additionalInformation: z.string(),
 })
 
 /** One of Presence's org categories, with every org uri that belongs to it. */
