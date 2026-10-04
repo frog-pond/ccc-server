@@ -11,9 +11,11 @@ const CATALOG_URL = 'https://stolaf.dev/course-data/catalog-recent.db'
 /// that header on to the file's host, which answers it, so nothing about the
 /// download changes.
 ///
-/// A 302, not a 301, and cached for an hour at most: a client that remembered this
-/// as permanent would never notice when the redirect is replaced by the file.
+/// A 307, not a 308, and cached for an hour at most: a client that remembered
+/// this as permanent would never notice when the redirect is replaced by the
+/// file.
 export function catalog(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	ctx.redirect(CATALOG_URL)
+	ctx.status = 307
 }
