@@ -59,7 +59,7 @@ function CustomCafeMenuItem({
 		station,
 		sub_station,
 		sub_station_id: '1',
-		sub_station_order: '1-1',
+		sub_station_order: '1',
 		zero_entree: '0',
 	})
 }

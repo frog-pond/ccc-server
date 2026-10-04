@@ -1,7 +1,7 @@
 import {z} from 'zod'
 
 const zodYesNo = z.union([z.literal('Y'), z.literal('N')])
-const zodNumericString = z.string().regex(/d*/)
+const zodNumericString = z.string().regex(/^\d*$/)
 const zodCurrencyString = z.string() //.regex(/^\$.*/)
 const zodHtmlString = z.string()
 const zod24Time = z.string().regex(/\d\d:\d\d/)

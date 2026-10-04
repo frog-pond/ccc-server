@@ -62,13 +62,13 @@ export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType
 	})
 }
 
-export function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
+export async function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
 	try {
-		return _cafe(cafeUrl)
+		return await _cafe(cafeUrl)
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
 		Sentry.captureException(err)
-		return Promise.resolve(CustomCafe('Could not load café from BonApp'))
+		return CustomCafe('Could not load café from BonApp')
 	}
 }
 
@@ -100,17 +100,15 @@ export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType
 	})
 }
 
-export function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
+export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	try {
-		return _menu(cafeUrl)
+		return await _menu(cafeUrl)
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
 		Sentry.captureException(err)
-		return Promise.resolve(
-			CafeMenuWithError(
-				err && typeof err === 'object' && 'message' in err && err.message,
-				'Could not load the BonApp menu data',
-			),
+		return CafeMenuWithError(
+			err && typeof err === 'object' && 'message' in err && err.message,
+			'Could not load the BonApp menu data',
 		)
 	}
 }

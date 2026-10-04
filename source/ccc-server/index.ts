@@ -1,3 +1,6 @@
+// First, so that setupSentry below sees the SENTRY_DSN and NODE_ENV that
+// .env provides: production gets them only from there.
+import 'dotenv/config'
 import * as Sentry from '@sentry/node'
 import {nodeProfilingIntegration} from '@sentry/profiling-node'
 import {captureConsoleIntegration} from '@sentry/node'
@@ -35,5 +38,4 @@ function setupSentry() {
 
 setupSentry()
 
-await import('dotenv/config')
 await import('./server.ts')

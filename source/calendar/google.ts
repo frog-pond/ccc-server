@@ -24,11 +24,11 @@ const GoogleCalendarResultSchema = z.object({
 	items: GoogleCalendarEventSchema.array(),
 })
 
-function convertGoogleEvents(data: GoogleCalendarEventType[], now = moment()) {
+export function convertGoogleEvents(data: GoogleCalendarEventType[], now = moment()) {
 	return data.map((event) => {
 		const startTime = moment(event.start.date ?? event.start.dateTime)
 		const endTime = moment(event.end.date ?? event.end.dateTime)
-		let description = (event.description ?? '').replace('<br>', '\n')
+		let description = (event.description ?? '').replace(/<br\s*\/?>/giu, '\n')
 		description = JSDOM.fragment(description).textContent.trim()
 
 		return EventSchema.parse({
@@ -63,5 +63,5 @@ export async function googleCalendar(calendarId: string, now = moment()) {
 
 	let body = GoogleCalendarResultSchema.parse(await getJson(calendarUrl, {searchParams: params}))
 
-	return convertGoogleEvents(body.items)
+	return convertGoogleEvents(body.items, now)
 }

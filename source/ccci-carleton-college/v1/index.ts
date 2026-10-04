@@ -116,6 +116,9 @@ api.get('/transit/bus', transit.bus)
 api.get('/transit/modes', transit.modes)
 
 // utilities
+// POST, since the HTML comes in the request body, which fetch will not send
+// with a GET; the GET stays for any caller that managed it anyway.
+api.post('/util/html-to-md', util.htmlToMarkdown)
 api.get('/util/html-to-md', util.htmlToMarkdown)
 
 // athletics

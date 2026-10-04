@@ -150,6 +150,9 @@ api.get('/printing/color-printers', printing.colorPrinters)
 api.get('/reports/stav', reports.stavMealtimeReport)
 
 // utilities
+// POST, since the HTML comes in the request body, which fetch will not send
+// with a GET; the GET stays for any caller that managed it anyway.
+api.post('/util/html-to-md', util.htmlToMarkdown)
 api.get('/util/html-to-md', util.htmlToMarkdown)
 
 // athletics
