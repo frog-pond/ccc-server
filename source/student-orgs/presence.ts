@@ -52,7 +52,25 @@ type PresenceOrgType = z.infer<typeof BasicPresenceOrgSchema>
 /// date". So it stays, and stays a string, as every shipped build types it.
 const NO_LAST_UPDATED_DATE = '2000-01-01'
 
-export function cleanOrg(org: PresenceOrgType, sortableRegex: RegExp) {
+/// The campus Presence serves: where its files are, and the id it files them under.
+const PresenceCampusSchema = z.object({apiId: z.string(), cdn: z.url()})
+export type PresenceCampusType = z.infer<typeof PresenceCampusSchema>
+
+const fetchCampus = async (base: string) =>
+	PresenceCampusSchema.parse(await getJson(`${base}/app/campus`))
+
+/// Where Presence's own site loads an org's cover image from, as the app does
+/// for an event's: the campus CDN, then the campus id, then the image's
+/// versioned name. Blank for an org with no cover, or with no campus to hand.
+function photoUrl(org: PresenceOrgType, campus: PresenceCampusType | undefined): string {
+	if (!campus || !org.hasCoverImage || !org.photoUriWithVersion) {
+		return ''
+	}
+	let path = `/organization-photos/${campus.apiId}/${org.photoUriWithVersion}`
+	return new URL(path, campus.cdn).toString()
+}
+
+export function cleanOrg(org: PresenceOrgType, sortableRegex: RegExp, campus?: PresenceCampusType) {
 	let name = org.name.trim()
 	let category = org.categories.join(', ')
 	let meetingLocation = org.regularMeetingLocation?.trim() ?? ''
@@ -82,6 +100,7 @@ export function cleanOrg(org: PresenceOrgType, sortableRegex: RegExp) {
 		hasCoverImage: org.hasCoverImage,
 		photoUri: org.photoUri,
 		photoUriWithVersion: org.photoUriWithVersion,
+		photoUrl: photoUrl(org, campus),
 		hasUpcomingEvents: org.hasUpcomingEvents ?? false,
 		$sortableName: sortable,
 		$groupableName: groupableName(sortable),
@@ -99,11 +118,12 @@ const SORTABLE_PREFIXES = /^(St\.? Olaf(?: College)?|The) +/i
 /// fields -- so the list is one request rather than one per org; what only
 /// an org's own pages hold is `presenceOrg`'s job, one org at a time.
 export async function presence(school: string): Promise<SortableStudentOrgType[]> {
-	let orgsUrl = `https://api.presence.io/${school}/v1/organizations`
+	let base = `https://api.presence.io/${school}/v1`
 
-	let body = BasicPresenceOrgSchema.array().parse(await getJson(orgsUrl))
+	let [list, campus] = await Promise.all([getJson(`${base}/organizations`), fetchCampus(base)])
+	let body = BasicPresenceOrgSchema.array().parse(list)
 
-	return sortOrgs(body.map((org) => cleanOrg(org, SORTABLE_PREFIXES)))
+	return sortOrgs(body.map((org) => cleanOrg(org, SORTABLE_PREFIXES, campus)))
 }
 
 /// One row per org-category membership — an org with two categories appears
@@ -163,8 +183,9 @@ export async function presenceOrg(
 	uri: string,
 ): Promise<DetailedStudentOrgType | undefined> {
 	let base = `https://api.presence.io/${school}/v1`
-	let [list, portal] = await Promise.all([
+	let [list, campus, portal] = await Promise.all([
 		getJson(`${base}/organizations`),
+		fetchCampus(base),
 		http.get(`${base}/grid/portal-view/Organization/${uri}/`),
 	])
 
@@ -178,7 +199,7 @@ export async function presenceOrg(
 	let fields = portalFields(await portal.json())
 
 	return DetailedStudentOrgSchema.parse({
-		...cleanOrg(listed, SORTABLE_PREFIXES),
+		...cleanOrg(listed, SORTABLE_PREFIXES, campus),
 		contacts: contactsOf(fields),
 		advisors: advisorsOf(fields),
 		socialLinks: instagramLinks(fields.instagram),

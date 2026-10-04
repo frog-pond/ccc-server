@@ -76,15 +76,16 @@ function fakePresence(t: test.TestContext) {
 		campusName: 'St. Olaf College',
 		name: uri,
 		uri,
-		hasCoverImage: false,
-		photoUri: '',
-		photoUriWithVersion: '',
+		hasCoverImage: true,
+		photoUri: `${uri}.png`,
+		photoUriWithVersion: `${uri}.png?v=0`,
 		memberCount: 3,
 		categories,
 		hasUpcomingEvents: true,
 		description: 'An org.',
 	})
 	let list = [org('chess-club', ['Recreational']), org('balloon-animals', ['Demo'])]
+	let campus = {apiId: 'campus-id', cdn: 'https://stolaf-cdn.presence.io'}
 	let portal = {
 		fieldData: [
 			{
@@ -100,6 +101,7 @@ function fakePresence(t: test.TestContext) {
 	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL, init?: RequestInit) => {
 		let url = input instanceof Request ? input.url : String(input)
 		if (url.endsWith('/v1/organizations')) return Promise.resolve(Response.json(list))
+		if (url.endsWith('/v1/app/campus')) return Promise.resolve(Response.json(campus))
 		if (url.includes('/grid/portal-view/')) return Promise.resolve(Response.json(portal))
 		return real(input, init)
 	})
@@ -111,8 +113,16 @@ void test('/orgs/uri/:uri serves an org with its portal fields', async (t) => {
 
 	let response = await fetch(`${base}/v1/orgs/uri/chess-club`)
 	assert.equal(response.status, 200)
-	let org = (await response.json()) as {hasUpcomingEvents: boolean; contacts: {email: string}[]}
+	let org = (await response.json()) as {
+		hasUpcomingEvents: boolean
+		photoUrl: string
+		contacts: {email: string}[]
+	}
 	assert.equal(org.hasUpcomingEvents, true)
+	assert.equal(
+		org.photoUrl,
+		'https://stolaf-cdn.presence.io/organization-photos/campus-id/chess-club.png?v=0',
+	)
 	assert.deepEqual(
 		org.contacts.map((c) => c.email),
 		['olson1@stolaf.edu'],

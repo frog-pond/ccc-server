@@ -40,6 +40,8 @@ export const StudentOrgSchema = z.object({
 	photoUri: z.string(),
 	/** `photoUri` with a `?v=` cache-buster that changes with the image. */
 	photoUriWithVersion: z.string(),
+	/** The cover image's address on Presence's CDN, or '' for an org without one. */
+	photoUrl: z.union([z.url(), z.literal('')]),
 	hasUpcomingEvents: z.boolean(),
 })
 
