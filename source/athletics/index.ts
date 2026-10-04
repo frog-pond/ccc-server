@@ -13,8 +13,13 @@ const LocationInfoSchema = z
 	})
 	.transform(({HAN, ...location}) => (HAN === undefined ? location : {...location, homeAway: HAN}))
 
+/**
+ * The feed's own status. Its indicator plays no part in a game's state (see
+ * `gameState`) beyond `C`, a cancelled game, so any letter is accepted: one
+ * the schema did not know would otherwise fail the whole response.
+ */
 const StatusInfoSchema = z.object({
-	indicator: z.enum(['O', 'A']),
+	indicator: z.string(),
 	value: z.string(),
 })
 
@@ -269,12 +274,16 @@ function liveGamesById(livestatsJson: unknown): Map<string, LiveGame> {
 	return new Map(parsed.data.Games.map((game) => [String(game.GameId), game]))
 }
 
-/** Turns the two feeds' bodies into the scores this server returns, as of `now`. */
+/**
+ * Turns the two feeds' bodies into the scores this server returns, as of
+ * `now`. A cancelled game is left out: with no result ever coming, it would
+ * otherwise read as started from kickoff on.
+ */
 export function scoresFromFeeds(scoresJson: unknown, livestatsJson: unknown, now: Date): Score[] {
 	const liveGames = liveGamesById(livestatsJson)
-	return AthleticsResponseSchema.parse(scoresJson).scores.map((score) =>
-		gameState(score, liveGames.get(score.id), now),
-	)
+	return AthleticsResponseSchema.parse(scoresJson)
+		.scores.filter((score) => score.status.indicator !== 'C')
+		.map((score) => gameState(score, liveGames.get(score.id), now))
 }
 
 // ── Yesterday, from the calendar ─────────────────────────────────────────────

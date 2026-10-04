@@ -205,6 +205,23 @@ void test('scoresFromFeeds treats an unreadable livestats body as empty', (t) =>
 	)
 })
 
+/** Carleton's feed sent this for a cancelled game on 2026-10-04. */
+void test('scoresFromFeeds leaves out a cancelled game, and keeps the rest', (t) => {
+	const cancelled = makeFeedScore({id: '10764', status: {indicator: 'C', value: 'Cancelled'}})
+	const played = makeFeedScore({id: '10765'})
+
+	const scores = scoresFromFeeds(
+		{timestamp: null, status: null, scores: [cancelled, played]},
+		null,
+		AFTER_KICKOFF,
+	)
+
+	t.assert.deepEqual(
+		scores.map((score) => score.id),
+		['10765'],
+	)
+})
+
 void test('scoresFromFeeds: a game in progress reads as started when livestats is unavailable', (t) => {
 	const scores = scoresFromFeeds(
 		readFixture('2026-09-26-home-games/20260926T180249Z-scores.json'),
