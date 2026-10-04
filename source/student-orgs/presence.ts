@@ -115,7 +115,9 @@ export function groupCategories(memberships: PresenceCategoryMembershipType[]): 
 
 export function withoutDemoCategory(categories: OrgCategoryType[]): OrgCategoryType[] {
 	let demoOrgUris = new Set(
-		categories.filter((category) => category.name === 'Demo').flatMap((category) => category.organizationUris),
+		categories
+			.filter((category) => category.name === 'Demo')
+			.flatMap((category) => category.organizationUris),
 	)
 
 	return categories

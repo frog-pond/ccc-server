@@ -98,7 +98,10 @@ void test('withoutDemoOrgs removes orgs in the Demo category', (t) => {
 		{...cleanOrg(RAW_ORG, sortableRegex), name: 'Balloon Animals Club', category: 'Demo'},
 	]
 
-	t.assert.deepEqual(withoutDemoOrgs(orgs).map((org) => org.name), ['Agape'])
+	t.assert.deepEqual(
+		withoutDemoOrgs(orgs).map((org) => org.name),
+		['Agape'],
+	)
 })
 
 void test('withoutDemoCategory removes Demo and its orgs from other categories', (t) => {
