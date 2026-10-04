@@ -47,3 +47,17 @@ void test('reads a tier sent as a string as a number', (t) => {
 void test('accepts an item without a tier', (t) => {
 	t.assert.equal(tierThroughBothSchemas(undefined), undefined)
 })
+
+void test('a numeric field takes digits, or nothing', (t) => {
+	for (const value of ['', '0', '1234']) {
+		t.assert.doesNotThrow(() =>
+			CafeMenuItemSchema.parse({...bamcoItem(1), sub_station_order: value}),
+		)
+	}
+})
+
+void test('a numeric field refuses anything but digits', (t) => {
+	for (const value of ['1-1', 'abc', '12a', ' 1']) {
+		t.assert.throws(() => CafeMenuItemSchema.parse({...bamcoItem(1), sub_station_order: value}))
+	}
+})
