@@ -5,13 +5,13 @@ export const ContactPersonSchema = z.object({
 	lastName: z.string(),
 	firstName: z.string(),
 	title: z.string(),
-	email: z.string().email(),
+	email: z.email(),
 })
 
 export type AdvisorType = z.infer<typeof AdvisorSchema>
 export const AdvisorSchema = z.object({
 	name: z.string(),
-	email: z.string().email(),
+	email: z.email(),
 })
 
 export type StudentOrgType = z.infer<typeof StudentOrgSchema>

@@ -17,14 +17,14 @@ export const WpJsonFeedEntrySchema = z.object({
 			'wp:featuredmedia': z
 				.array(
 					z.object({
-						id: z.unknown(),
+						id: z.unknown().optional(),
 						media_type: z.union([z.literal('image'), z.string()]).optional(),
 						media_details: z
 							.object({
-								sizes: z.optional(z.record(z.object({source_url: z.string().url()}))),
+								sizes: z.optional(z.record(z.string(), z.object({source_url: z.url()}))),
 							})
 							.optional(),
-						source_url: z.string().url().optional(),
+						source_url: z.url().optional(),
 					}),
 				)
 				.nullable()
@@ -39,7 +39,7 @@ export const WpJsonFeedEntrySchema = z.object({
 	excerpt: z.object({rendered: z.string()}),
 	title: z.object({rendered: z.string()}),
 	date_gmt: z.string(),
-	link: z.string().url(),
+	link: z.url(),
 })
 
 const WpJsonFeedResponseSchema = z.array(WpJsonFeedEntrySchema)

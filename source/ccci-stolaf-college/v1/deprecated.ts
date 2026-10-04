@@ -18,7 +18,7 @@ import {z} from 'zod'
 
 const LinkGroupSchema = z.object({
 	title: z.string(),
-	data: z.array(z.object({label: z.string(), url: z.string().url()})),
+	data: z.array(z.object({label: z.string(), url: z.url()})),
 })
 
 export function deprecatedLinkGroups(text: string) {

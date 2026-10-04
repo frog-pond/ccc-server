@@ -8,12 +8,12 @@ import {z} from 'zod'
 type GoogleCalendarEventType = z.infer<typeof GoogleCalendarEventSchema>
 const GoogleCalendarEventSchema = z.object({
 	start: z.object({
-		date: z.string().date().optional(),
-		dateTime: z.string().datetime({offset: true}).optional(),
+		date: z.iso.date().optional(),
+		dateTime: z.iso.datetime({offset: true}).optional(),
 	}),
 	end: z.object({
-		date: z.string().date().optional(),
-		dateTime: z.string().datetime({offset: true}).optional(),
+		date: z.iso.date().optional(),
+		dateTime: z.iso.datetime({offset: true}).optional(),
 	}),
 	description: z.string().optional(),
 	summary: z.string().optional(),

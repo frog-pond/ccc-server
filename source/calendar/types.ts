@@ -8,8 +8,8 @@ const EventConfigSchema = z.object({
 
 export const EventSchema = z.object({
 	dataSource: z.string(),
-	startTime: z.string().datetime(),
-	endTime: z.string().datetime(),
+	startTime: z.iso.datetime(),
+	endTime: z.iso.datetime(),
 	title: z.string(),
 	description: z.string(),
 	location: z.string().default(''),
