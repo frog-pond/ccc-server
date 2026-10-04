@@ -18,6 +18,7 @@ const FIELDS = {
 	officeHours: 'Office Hours',
 	officeLocation: 'Office Location',
 	additionalInformation: 'Additional Information',
+	statementOfPurpose: 'Statement of Purpose',
 } as const
 
 type Field = keyof typeof FIELDS
@@ -105,4 +106,39 @@ export function urlOrBlank(text: string): string {
 	return URL.canParse(text) && /^https?:/u.test(text) ? text : ''
 }
 
-export const plainText = (html: string): string => JSDOM.fragment(html).textContent.trim()
+/// Elements that start and end a line of their own, as a browser lays them out.
+const BLOCKS = new Set(['BLOCKQUOTE', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'P', 'TR'])
+
+const TEXT_NODE = 3
+
+/// Officers' rich text as lines: one to a paragraph, heading, list item or
+/// `<br>`, since `textContent` alone runs paragraphs together -- a list of
+/// names, one to a paragraph, would read as one long word. Empty lines go,
+/// and whitespace within a line reads as one space, as a browser shows it.
+export function plainText(html: string): string {
+	let lines: string[] = []
+	let line = ''
+	let endLine = () => {
+		lines.push(line.replace(/\s+/gu, ' ').trim())
+		line = ''
+	}
+	let read = (node: Node) => {
+		for (let child of node.childNodes) {
+			if (child.nodeType === TEXT_NODE) {
+				line += child.textContent ?? ''
+			} else if (child.nodeName === 'BR') {
+				endLine()
+			} else if (BLOCKS.has(child.nodeName)) {
+				endLine()
+				read(child)
+				endLine()
+			} else {
+				read(child)
+			}
+		}
+	}
+	read(JSDOM.fragment(html))
+	endLine()
+
+	return lines.filter(Boolean).join('\n')
+}

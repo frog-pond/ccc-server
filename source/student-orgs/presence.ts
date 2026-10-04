@@ -196,10 +196,19 @@ export async function presenceOrg(
 		return undefined
 	}
 
-	let fields = portalFields(await portal.json())
+	return orgDetail(cleanOrg(listed, SORTABLE_PREFIXES, campus), portalFields(await portal.json()))
+}
 
+/// An org from the list, with what its portal view adds. The description is
+/// the portal's statement of purpose, a line to a paragraph, since the list
+/// runs its paragraphs together; the list's stands when the portal's is blank.
+export function orgDetail(
+	org: SortableStudentOrgType,
+	fields: ReturnType<typeof portalFields>,
+): DetailedStudentOrgType {
 	return DetailedStudentOrgSchema.parse({
-		...cleanOrg(listed, SORTABLE_PREFIXES, campus),
+		...org,
+		description: plainText(fields.statementOfPurpose) || org.description,
 		contacts: contactsOf(fields),
 		advisors: advisorsOf(fields),
 		socialLinks: instagramLinks(fields.instagram),
