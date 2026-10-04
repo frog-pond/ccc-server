@@ -43,7 +43,6 @@
     "get-urls": "12.1.0",
     "html-entities": "2.6.0",
     "ical.js": "^2.0.1",
-    "is-absolute-url": "5.0.0",
     "jsdom": "27.4.0",
     "koa": "3.2.1",
     "koa-compress": "5.2.2",
