@@ -115,6 +115,8 @@ api.get('/map/style-dark', map.styleDark)
 api.get('/orgs', orgs.orgs)
 api.get('/orgs/categories', orgs.orgCategories)
 api.get('/orgs/category-styles', appData.orgCategoryStyles)
+// After the routes above, which it would otherwise match.
+api.get('/orgs/:uri', orgs.org)
 api.get('/student-work/units', studentWork.units)
 api.get('/student-work/areas', appData.studentWorkAreas)
 api.get('/student-work/wages', appData.studentWorkWages)

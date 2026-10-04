@@ -49,6 +49,45 @@ void test('cleanOrg output still parses as SortableStudentOrgSchema', (t) => {
 	t.assert.doesNotThrow(() => SortableStudentOrgSchema.parse(org))
 })
 
+void test('cleanOrg keeps the meeting location and time apart, and joins them for meetings', (t) => {
+	let org = cleanOrg(RAW_ORG, sortableRegex)
+
+	t.assert.equal(org.meetingLocation, 'Norway Room')
+	t.assert.equal(org.meetingTime, '7pm-8pm')
+	t.assert.equal(org.meetings, 'Norway Room, 7pm-8pm')
+})
+
+void test('cleanOrg leaves meetings without a separator when only one part is set', (t) => {
+	let org = cleanOrg({...RAW_ORG, regularMeetingLocation: undefined}, sortableRegex)
+
+	t.assert.equal(org.meetings, '7pm-8pm')
+})
+
+void test('cleanOrg passes through the list fields Presence publishes', (t) => {
+	let org = cleanOrg(
+		{...RAW_ORG, categories: ['Religious', 'Service'], hasUpcomingEvents: true},
+		sortableRegex,
+	)
+
+	t.assert.deepEqual(org.categories, ['Religious', 'Service'])
+	t.assert.equal(org.category, 'Religious, Service')
+	t.assert.equal(org.hasCoverImage, true)
+	t.assert.equal(org.photoUri, '255690e5-0f34-45cd-92ab-1b18d6c21cbe.png')
+	t.assert.equal(org.photoUriWithVersion, '255690e5-0f34-45cd-92ab-1b18d6c21cbe.png?v=0')
+	t.assert.equal(org.hasUpcomingEvents, true)
+})
+
+void test('cleanOrg reads a missing hasUpcomingEvents as false', (t) => {
+	t.assert.equal(cleanOrg(RAW_ORG, sortableRegex).hasUpcomingEvents, false)
+})
+
+/// The list endpoint sends descriptions as text with HTML entities in it.
+void test('cleanOrg decodes the entities in a list description', (t) => {
+	let org = cleanOrg({...RAW_ORG, description: 'Student &amp; Culture'}, sortableRegex)
+
+	t.assert.equal(org.description, 'Student & Culture')
+})
+
 const MEMBERSHIPS = [
 	{catIdh: 'PBnP', name: 'Departments', organizationUri: 'academic-success-center'},
 	{catIdh: 'PBnP', name: 'Departments', organizationUri: 'admissions'},

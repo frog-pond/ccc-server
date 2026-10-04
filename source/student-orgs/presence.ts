@@ -1,12 +1,21 @@
-import {getJson} from '../ccc-lib/http.ts'
+import {getJson, http} from '../ccc-lib/http.ts'
+import {
+	advisorsOf,
+	contactsOf,
+	instagramLinks,
+	plainText,
+	portalFields,
+	urlOrBlank,
+} from './portal.ts'
 import {groupableName, sortOrgs, sortableName} from './names.ts'
 import {groupBy, sortBy, toPairs} from 'lodash-es'
 import {JSDOM} from 'jsdom'
-import pMap from 'p-map'
 import {z} from 'zod'
 import {
+	DetailedStudentOrgSchema,
 	OrgCategorySchema,
 	SortableStudentOrgSchema,
+	type DetailedStudentOrgType,
 	type OrgCategoryType,
 	type SortableStudentOrgType,
 } from './types.ts'
@@ -29,20 +38,24 @@ const BasicPresenceOrgSchema = z.object({
 	categories: z.string().array(),
 	newOrg: z.boolean().optional(),
 	hasUpcomingEvents: z.boolean().optional(),
+	/** Plain text with HTML entities in the list; HTML in an org's own record. */
+	description: z.string().default(''),
+	website: z.string().optional().nullable(),
 })
+type PresenceOrgType = z.infer<typeof BasicPresenceOrgSchema>
 
-type DetailedPresenceOrgType = z.infer<typeof DetailedPresenceOrgSchema>
-const DetailedPresenceOrgSchema = BasicPresenceOrgSchema.and(
-	z.object({
-		description: z.string().default(''),
-		website: z.string().optional().nullable(),
-	}),
-)
+/// Presence publishes no date an org was last edited -- not in the list, an
+/// org's record, its portal view, or a Last-Modified header -- and the app
+/// never shows one. The field stays, with this stand-in, because builds
+/// already shipped type it as a required string.
+const NO_LAST_UPDATED_DATE = '2000-01-01'
 
-export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
+export function cleanOrg(org: PresenceOrgType, sortableRegex: RegExp) {
 	let name = org.name.trim()
 	let category = org.categories.join(', ')
-	let meetings = (org.regularMeetingLocation ?? '').trim() + (org.regularMeetingTime ?? '').trim()
+	let meetingLocation = org.regularMeetingLocation?.trim() ?? ''
+	let meetingTime = org.regularMeetingTime?.trim() ?? ''
+	let meetings = [meetingLocation, meetingTime].filter(Boolean).join(', ')
 	let description = JSDOM.fragment(org.description).textContent.trim()
 	let website = org.website?.trim() ?? ''
 	if (website && !/^https?:\/\//.test(website)) {
@@ -55,34 +68,36 @@ export function cleanOrg(org: DetailedPresenceOrgType, sortableRegex: RegExp) {
 		category,
 		contacts: [],
 		description,
-		lastUpdated: '2000-01-01',
+		lastUpdated: NO_LAST_UPDATED_DATE,
 		meetings,
+		meetingLocation,
+		meetingTime,
 		name,
 		website,
 		organizationUri: org.uri,
 		memberCount: org.memberCount,
+		categories: org.categories,
+		hasCoverImage: org.hasCoverImage,
+		photoUri: org.photoUri,
+		photoUriWithVersion: org.photoUriWithVersion,
+		hasUpcomingEvents: org.hasUpcomingEvents ?? false,
 		$sortableName: sortable,
 		$groupableName: groupableName(sortable),
 	})
 }
 
-const fetchOrg = async (base: string, orgUri: string) =>
-	DetailedPresenceOrgSchema.parse(await getJson(`${base}/${orgUri}`))
+const SORTABLE_PREFIXES = /^(St\.? Olaf(?: College)?|The) +/i
 
+/// Every org, from Presence's list alone. Each org's own record adds nothing
+/// the list lacks -- the same description, as HTML, and the same meeting
+/// fields -- so the list is one request rather than one per org; what only
+/// an org's own pages hold is `presenceOrg`'s job, one org at a time.
 export async function presence(school: string): Promise<SortableStudentOrgType[]> {
 	let orgsUrl = `https://api.presence.io/${school}/v1/organizations`
 
 	let body = BasicPresenceOrgSchema.array().parse(await getJson(orgsUrl))
 
-	let orgs = await pMap(body, (org) => fetchOrg(orgsUrl, org.uri), {
-		concurrency: 8,
-	})
-
-	let sortableRegex = /^(St\.? Olaf(?: College)?|The) +/i
-
-	let cleaned = orgs.map((org) => cleanOrg(org, sortableRegex))
-
-	return sortOrgs(cleaned)
+	return sortOrgs(body.map((org) => cleanOrg(org, SORTABLE_PREFIXES)))
 }
 
 /// One row per org-category membership — an org with two categories appears
@@ -115,4 +130,40 @@ export async function presenceCategories(school: string): Promise<OrgCategoryTyp
 	let memberships = PresenceCategoryMembershipSchema.array().parse(await getJson(categoriesUrl))
 
 	return groupCategories(memberships)
+}
+
+/// One org with what only its own Presence pages hold: contacts, advisors,
+/// social links and the like, from its portal view, which is too heavy to
+/// read for every org at once. The rest comes from the list, as `/orgs` has
+/// it -- an org's own record lacks `hasUpcomingEvents` -- so the two never
+/// disagree. Undefined when Presence lists no such org.
+export async function presenceOrg(
+	school: string,
+	uri: string,
+): Promise<DetailedStudentOrgType | undefined> {
+	let base = `https://api.presence.io/${school}/v1`
+	let [list, portal] = await Promise.all([
+		getJson(`${base}/organizations`),
+		http.get(`${base}/grid/portal-view/Organization/${uri}/`),
+	])
+
+	let listed = BasicPresenceOrgSchema.array()
+		.parse(list)
+		.find((org) => org.uri === uri)
+	if (!listed) {
+		return undefined
+	}
+
+	let fields = portalFields(await portal.json())
+
+	return DetailedStudentOrgSchema.parse({
+		...cleanOrg(listed, SORTABLE_PREFIXES),
+		contacts: contactsOf(fields),
+		advisors: advisorsOf(fields),
+		socialLinks: instagramLinks(fields.instagram),
+		constitutionUrl: urlOrBlank(fields.constitution),
+		officeHours: fields.officeHours,
+		officeLocation: fields.officeLocation,
+		additionalInformation: plainText(fields.additionalInformation),
+	})
 }
