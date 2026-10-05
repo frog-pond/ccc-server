@@ -9,7 +9,12 @@ export type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
 export const WpJsonFeedEntrySchema = z.object({
 	_embedded: z.optional(
 		z.object({
-			author: z.array(z.object({id: z.unknown(), name: z.string().or(z.undefined())})).optional(),
+			/// Where a site has turned off its users endpoint, WordPress embeds an
+			/// error (`{code, message, data}`) in place of each author. Such a
+			/// post has an unknown author rather than failing the whole feed.
+			author: z
+				.array(z.object({id: z.unknown().optional(), name: z.string().optional()}))
+				.optional(),
 			/// Where WordPress cannot show a post's image -- the attachment was
 			/// deleted, or is private -- it embeds an error (`{code, message,
 			/// data}`) in its place, with none of the media fields. Such a post

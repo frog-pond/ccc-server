@@ -72,3 +72,19 @@ void test('one post with an unavailable image does not fail the feed', async (t)
 		['https://example.com/image-768.jpg', null],
 	)
 })
+
+/// What WordPress embeds in place of an author it cannot show: a site that
+/// has turned off its users endpoint, as the Olaf Messenger has.
+const UNAVAILABLE_AUTHOR = {
+	code: 'rest_no_route',
+	message: 'No route was found matching the URL and request method.',
+	data: {status: 404},
+}
+
+void test('a post whose author WordPress will not show has an unknown author', (t) => {
+	let entry = post(IMAGE)
+	let withoutAuthor = {...entry, _embedded: {...entry._embedded, author: [UNAVAILABLE_AUTHOR]}}
+	let result = convertWpJsonItemToStory(WpJsonFeedEntrySchema.parse(withoutAuthor))
+	t.assert.deepEqual(result.authors, ['Unknown Author'])
+	t.assert.equal(result.title, 'Headline')
+})
