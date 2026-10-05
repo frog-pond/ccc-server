@@ -16,7 +16,8 @@ async function serve(
 		fillWaitTimeout?: number
 		before?: Koa.Middleware
 		stream?: PassThrough
-		dedupe?: (ctx: Koa.ExtendableContext) => boolean
+		shareFetch?: (ctx: Koa.ExtendableContext) => boolean
+		onBurst?: (ctx: Koa.ExtendableContext, shared: boolean) => void
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -27,7 +28,8 @@ async function serve(
 			set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
 			...(options.hash && {hash: options.hash}),
 			...(options.fillWaitTimeout && {fillWaitTimeout: options.fillWaitTimeout}),
-			...(options.dedupe && {dedupe: options.dedupe}),
+			...(options.shareFetch && {shareFetch: options.shareFetch}),
+			...(options.onBurst && {onBurst: options.onBurst}),
 		}),
 	)
 	if (options.before) app.use(options.before)
@@ -356,37 +358,79 @@ void test('a stream of string chunks is cached and shared', async (t) => {
 	t.assert.equal(calls.length, 1)
 })
 
-void test('requests left out of dedupe each fetch for themselves, as before', async (t) => {
+void test('in a burst that does not share, every request fetches for itself, as before', async (t) => {
 	let {calls, release, fetchUpstream} = slowUpstream(t)
-	let get = await serve(t, fetchUpstream, {dedupe: () => false})
+	let told: boolean[] = []
+	let get = await serve(t, fetchUpstream, {
+		shareFetch: () => false,
+		onBurst: (_ctx, shared) => told.push(shared),
+	})
 
-	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	let first = get('/menu')
+	await tick()
+	let rest = [get('/menu'), get('/menu')]
 	await tick()
 	t.assert.equal(calls.length, 3)
 	release()
 
-	let statuses = (await responses).map((r) => r.status)
+	let statuses = (await Promise.all([first, ...rest])).map((r) => r.status)
 	t.assert.deepEqual(statuses, [200, 200, 200])
+	t.assert.deepEqual(told, [false, false, false])
 })
 
-void test('a request left out of dedupe neither waits on a fill nor starts one', async (t) => {
+void test('a burst is decided once, by its first miss, for every request in it', async (t) => {
 	let {calls, release, fetchUpstream} = slowUpstream(t)
-	// the first and third requests take part; the second does not
-	let decisions = [true, false, true]
-	let get = await serve(t, fetchUpstream, {dedupe: () => decisions.shift() ?? true})
+	let asked = 0
+	let told: boolean[] = []
+	let get = await serve(t, fetchUpstream, {
+		// would share, for every request after the first
+		shareFetch: () => asked++ > 0,
+		onBurst: (_ctx, shared) => told.push(shared),
+	})
 
 	let first = get('/menu')
 	await tick()
-	let second = get('/menu')
+	let rest = [get('/menu'), get('/menu')]
 	await tick()
-	let third = get('/menu')
-	await tick()
-	// the second fetched for itself; the third waits on the first's fill
-	t.assert.equal(calls.length, 2)
+	// the first said not to share, so the rest fetch too, without asking
+	t.assert.equal(asked, 1)
+	t.assert.equal(calls.length, 3)
 	release()
+	await Promise.all([first, ...rest])
+	t.assert.deepEqual(told, [false, false, false])
+})
 
-	let statuses = (await Promise.all([first, second, third])).map((r) => r.status)
-	t.assert.deepEqual(statuses, [200, 200, 200])
+void test('every request in a burst that shares is told so, and a cache hit is not told', async (t) => {
+	let {calls, release, fetchUpstream} = slowUpstream(t)
+	let told: boolean[] = []
+	let get = await serve(t, fetchUpstream, {onBurst: (_ctx, shared) => told.push(shared)})
+
+	let burst = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick()
+	release()
+	await burst
+	t.assert.deepEqual(told, [true, true, true])
+	t.assert.equal(calls.length, 1)
+
+	t.assert.equal((await get('/menu')).status, 200)
+	t.assert.equal(told.length, 3, 'served from the cache, so not in a burst')
+})
+
+void test('the next burst after one that did not share is decided afresh', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	release()
+	let decisions = [false, true]
+	let asked = 0
+	let get = await serve(t, fetchUpstream, {
+		shareFetch: () => {
+			asked += 1
+			return decisions.shift() ?? true
+		},
+	})
+
+	await get('/a')
+	await get('/b')
+	t.assert.equal(asked, 2)
 })
 
 void test('the key is hashed once, before later middleware can change it', async (t) => {

@@ -24,16 +24,7 @@ export function parsePercent(name: string, raw: string | undefined): number {
 	return percent
 }
 
-/// A flag that is on for `percent` of the times it is checked, chosen at
-/// random each time, and recorded each time.
-export function percentRollout(
-	name: string,
-	percent: number,
-	{random = Math.random, record = recordFlagInSentry} = {},
-): () => boolean {
-	return () => {
-		let enabled = random() * 100 < percent
-		record(name, enabled)
-		return enabled
-	}
+/// A chance that comes up `percent` of the times it is checked.
+export function percentChance(percent: number, random = Math.random): () => boolean {
+	return () => random() * 100 < percent
 }

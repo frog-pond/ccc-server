@@ -54,7 +54,7 @@ const CACHE_KEY: unique symbol = Symbol('koa-cache key')
 const CACHE_INFO_KEY: unique symbol = Symbol('koa-cache info key')
 const CACHE_FILL_KEY: unique symbol = Symbol('koa-cache fill key')
 const CACHE_WAITED_KEY: unique symbol = Symbol('koa-cache waited key')
-const CACHE_DEDUPE_KEY: unique symbol = Symbol('koa-cache dedupe key')
+const CACHE_BYPASS_KEY: unique symbol = Symbol('koa-cache bypass key')
 
 /// How a fill ended, for the requests waiting on it.
 type FillOutcome =
@@ -134,10 +134,10 @@ declare module 'koa' {
 		 */
 		[CACHE_WAITED_KEY]?: boolean
 		/**
-		 * Whether this request takes part in sharing fills: waiting on another's,
-		 * and letting others wait on its own
+		 * Set when this request was the first to miss its key in a burst that
+		 * doesn't share one fetch; cleared once it is done
 		 */
-		[CACHE_DEDUPE_KEY]?: boolean
+		[CACHE_BYPASS_KEY]?: object | undefined
 	}
 }
 
@@ -187,13 +187,20 @@ interface Options {
 	fillWaitTimeout?: number | undefined
 
 	/**
-	 * Whether a request takes part in sharing fills, asked once as it comes in.
-	 * One that doesn't never waits on another request's fill, nor lets others
-	 * wait on its own: it fetches for itself, as every request did before fills
-	 * were shared.
-	 * @default every request takes part
+	 * Whether a burst of concurrent misses for a key shares one fetch, asked
+	 * of the first request in the burst to miss. If not, every request in the
+	 * burst fetches for itself, as every request did before fetches were shared.
+	 * @default every burst shares
 	 */
-	dedupe?(ctx: ExtendableContext): boolean
+	shareFetch?(ctx: ExtendableContext): boolean
+
+	/**
+	 * Told, for each request in a burst of misses, whether the burst shares one
+	 * fetch: for the first to miss, the requests that wait on it, and the
+	 * requests that miss while a burst that doesn't share is under way.
+	 * Requests served from the cache are not in a burst, and aren't told.
+	 */
+	onBurst?(ctx: ExtendableContext, shared: boolean): void
 
 	/**
 	 * Get a value from a store.
@@ -222,7 +229,8 @@ export function cachable(options: Options): Middleware {
 		set,
 		hash = (ctx) => ctx.request.url,
 		fillWaitTimeout = 10_000,
-		dedupe = () => true,
+		shareFetch = () => true,
+		onBurst = () => undefined,
 	} = options
 	/* eslint-enable @typescript-eslint/unbound-method */
 
@@ -235,6 +243,11 @@ export function cachable(options: Options): Middleware {
 	// its uncached response, so neither a failing upstream nor an uncacheable
 	// route is hit again by every waiter at once. Any request that stores the
 	// key ends its fill, so no one waits past a fresh copy.
+	//
+	// Whether a burst shares one fetch is decided once, by its first miss, and
+	// holds for every request in it. One that doesn't share leaves a marker in
+	// `bypassing` instead of a fill, so the rest of the burst knows to fetch for
+	// itself too, until that first request is done or the key is stored.
 	//
 	// A fill that runs past `fillWaitTimeout` has hung: its waiters are let go
 	// together, and the first of them takes the fill over, fetching while the
@@ -262,6 +275,37 @@ export function cachable(options: Options): Middleware {
 		return fill
 	}
 
+	// Keys whose current burst of misses doesn't share one fetch, to the marker
+	// its first request left.
+	const bypassing = new Map<string, object>()
+
+	/// A request has missed its key: it joins the burst under way, or starts one.
+	function joinBurst(ctx: ExtendableContext): void {
+		// a waiter joined its burst when it began to wait
+		if (ctx[CACHE_WAITED_KEY]) return
+
+		let key = ctx[CACHE_KEY]
+		if (filling.has(key)) {
+			// a fill began after this request came in, too late to wait on
+			onBurst(ctx, true)
+			return
+		}
+		if (bypassing.has(key)) {
+			onBurst(ctx, false)
+			return
+		}
+
+		let shared = shareFetch(ctx)
+		onBurst(ctx, shared)
+		if (shared) {
+			ctx[CACHE_FILL_KEY] = startFill(key)
+		} else {
+			let marker = {}
+			bypassing.set(key, marker)
+			ctx[CACHE_BYPASS_KEY] = marker
+		}
+	}
+
 	// allow for manual cache clearing
 	function evictCachedItem(key: string): void {
 		set(key, undefined)
@@ -284,9 +328,7 @@ export function cachable(options: Options): Middleware {
 		if (!body) {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
-			if (this[CACHE_DEDUPE_KEY] && !this[CACHE_WAITED_KEY] && !filling.has(this[CACHE_KEY])) {
-				this[CACHE_FILL_KEY] = startFill(this[CACHE_KEY])
-			}
+			joinBurst(this)
 			return false
 		}
 
@@ -329,11 +371,11 @@ export function cachable(options: Options): Middleware {
 			// One key for the whole request, so the fill it may wait on and the
 			// fill it may start are the same.
 			ctx[CACHE_KEY] = hash(ctx)
-			ctx[CACHE_DEDUPE_KEY] = dedupe(ctx)
 
 			// Another request is filling this key: wait for it, and take its outcome.
-			let fill = ctx[CACHE_DEDUPE_KEY] ? filling.get(ctx[CACHE_KEY]) : undefined
+			let fill = filling.get(ctx[CACHE_KEY])
 			if (fill) {
+				onBurst(ctx, true)
 				ctx[CACHE_WAITED_KEY] = true
 				let outcome = await waitFor(ctx, fill)
 				if (outcome.kind === 'error') {
@@ -365,6 +407,10 @@ export function cachable(options: Options): Middleware {
 			throw error
 		} finally {
 			ctx[CACHE_FILL_KEY]?.settle(outcome)
+			let marker = ctx[CACHE_BYPASS_KEY]
+			if (marker && bypassing.get(ctx[CACHE_KEY]) === marker) {
+				bypassing.delete(ctx[CACHE_KEY])
+			}
 		}
 	}
 
@@ -497,6 +543,8 @@ export function cachable(options: Options): Middleware {
 		set(ctx[CACHE_KEY], obj, ctx[CACHE_INFO_KEY].maxAge ?? options.maxAge ?? 0)
 		// Whoever is filling the key, its waiters can have this copy now.
 		filling.get(ctx[CACHE_KEY])?.settle({kind: 'stored'})
+		// and a burst that doesn't share is over: later requests hit the cache
+		bypassing.delete(ctx[CACHE_KEY])
 		return true
 	}
 
