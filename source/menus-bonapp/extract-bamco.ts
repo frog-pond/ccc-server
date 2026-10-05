@@ -14,7 +14,7 @@ const ANY_ASSIGNMENT = /\bBamco\.\w+(?:\[[^\]]*\])?\s*=(?!=)/
 /// The assignments read below, however written, to count against what the
 /// patterns after them actually read.
 const READ_ASSIGNMENT =
-	/\bBamco\.(?:menu_items|cor_icons|current_cafe)\s*=(?!=)|\bBamco\.dayparts\s*\[/g
+	/\bBamco\.(?:menu_items|cor_icons|current_cafe)\s*=(?!=)|\bBamco\.dayparts\s*\[[^\]]*\]\s*=(?!=)/g
 
 // Each on a line of its own. Lines end only at \n, not at U+2028 or U+2029,
 // which JSON allows inside strings.

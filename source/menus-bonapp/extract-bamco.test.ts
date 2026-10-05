@@ -103,6 +103,14 @@ void test('a comparison with a Bamco value is not counted as an assignment', (t)
 	t.assert.doesNotThrow(() => extractBamco(html))
 })
 
+void test('reading a daypart is not counted as an assignment', (t) => {
+	let html = page(
+		"Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};",
+		"if (Bamco.dayparts['1'].label === Bamco.dayparts[id]) {}",
+	)
+	t.assert.doesNotThrow(() => extractBamco(html))
+})
+
 void test('JSON with a line separator inside a string is read whole', (t) => {
 	let separator = String.fromCharCode(0x2028)
 	let html = page("Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};").replace(
