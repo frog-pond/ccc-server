@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {HTTPError} from 'ky'
 import moment from 'moment'
 import getUrls from 'get-urls'
 import {htmlFragment, textFromHtml} from '../../ccc-lib/dom.ts'
@@ -86,10 +87,33 @@ export function convertJobPost(post: JobPost) {
 	}
 }
 
+const PAGE_SIZE = 100
+
+/// WordPress caps `per_page` at 100, so a longer list is read a page at a time.
+/// A page past the end answers 400, which is how a list of exactly 100n posts
+/// shows its end.
+async function fetchAllPosts() {
+	let posts: JobPost[] = []
+	for (let page = 1; ; page++) {
+		let batch: JobPost[]
+		try {
+			batch = z
+				.array(JobPostSchema)
+				.parse(
+					await getJson(jobsUrl, {searchParams: {per_page: PAGE_SIZE, page, _embed: 'wp:term'}}),
+				)
+		} catch (error) {
+			if (page > 1 && error instanceof HTTPError && error.response.status === 400) break
+			throw error
+		}
+		posts.push(...batch)
+		if (batch.length < PAGE_SIZE) break
+	}
+	return posts
+}
+
 export async function getAllJobs() {
-	let posts = z
-		.array(JobPostSchema)
-		.parse(await getJson(jobsUrl, {searchParams: {per_page: 100, _embed: 'wp:term'}}))
+	let posts = await fetchAllPosts()
 	return posts
 		.filter((p) => !p._embedded?.['wp:term']?.flat().some((t) => t.name === 'Archived'))
 		.map(convertJobPost)
