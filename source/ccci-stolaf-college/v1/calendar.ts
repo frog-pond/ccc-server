@@ -45,7 +45,9 @@ export async function northfield(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = await getInternetCalendar('https://events.northfieldmn.gov/calendar.ics')
+	ctx.body = await getInternetCalendar(
+		'https://www.northfieldmn.gov/common/modules/iCalendar/iCalendar.aspx?catID=41&feed=calendar',
+	)
 }
 
 export async function krlx(ctx: Context) {
