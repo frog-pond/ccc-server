@@ -35,8 +35,14 @@ async function serve(
 		if (ctx.cached(60_000)) return
 		let body = await fetchUpstream(ctx.path)
 		if (body === undefined) {
-			ctx.set('X-Upstream', 'missing')
+			ctx.set('Cache-Control', 'max-age=60')
+			ctx.set('Set-Cookie', 'session=first')
 			ctx.status = 404
+			return
+		}
+		if (body === '') {
+			// a 200 the cache won't hold
+			ctx.body = ''
 			return
 		}
 		ctx.body = body
@@ -142,12 +148,37 @@ void test('when the first request is a 404, its waiters answer the same without 
 	await tick()
 	upstream.releaseFirst()
 
-	let answers = (await responses).map((r) => [r.status, r.headers.get('X-Upstream')])
+	let answers = (await responses).map((r) => [r.status, r.headers.get('Cache-Control')])
 	t.assert.deepEqual(answers, [
-		[404, 'missing'],
-		[404, 'missing'],
-		[404, 'missing'],
+		[404, 'max-age=60'],
+		[404, 'max-age=60'],
+		[404, 'max-age=60'],
 	])
+	t.assert.equal(upstream.calls.length, 1)
+})
+
+void test("waiters don't take the first response's cookies", async (t) => {
+	let upstream = slowUpstream(() => undefined)
+	let get = await serve(t, upstream.fetchUpstream)
+
+	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+
+	let cookies = (await responses).map((r) => r.headers.get('Set-Cookie'))
+	t.assert.deepEqual(cookies.toSorted(), [null, null, 'session=first'])
+})
+
+void test('when the first response is a 200 the cache will not hold, waiters share it', async (t) => {
+	let upstream = slowUpstream(() => '')
+	let get = await serve(t, upstream.fetchUpstream)
+
+	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+
+	let statuses = (await responses).map((r) => r.status)
+	t.assert.deepEqual(statuses, [200, 200, 200])
 	t.assert.equal(upstream.calls.length, 1)
 })
 

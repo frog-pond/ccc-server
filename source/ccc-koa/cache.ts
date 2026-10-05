@@ -51,12 +51,25 @@ const CACHE_WAITED_KEY: unique symbol = Symbol('koa-cache waited key')
 type FillOutcome =
 	/** Its response is in the cache: serve it from there. */
 	| {kind: 'stored'}
-	/** It failed with this response (a 404, a 502): answer the same. */
+	/** It answered without caching (a 404, a 502, an empty 200): answer the same. */
 	| {kind: 'replay'; status: number; headers: Record<string, string | string[]>; body: unknown}
 	/** It threw: fail with the same error. */
 	| {kind: 'error'; error: unknown}
-	/** It ended some other way (a 200 not cached, a stream): fetch for yourself. */
+	/** Its body can't be shared (a type the cache can't hold either): fetch for yourself. */
 	| {kind: 'own'}
+
+/// The headers a waiter takes from the response it waited on: those that
+/// describe the content. Anything about the other request -- a cookie, an
+/// etag the server computes per response, a tracing id -- stays with it.
+const SHARED_HEADERS = [
+	'cache-control',
+	'content-language',
+	'content-type',
+	'expires',
+	'last-modified',
+	'location',
+	'retry-after',
+]
 
 declare module 'koa' {
 	interface ExtendableContext {
@@ -179,11 +192,12 @@ export function cachable(options: Options): Middleware {
 	// Keys some request is fetching right now, to how that fetch ends. A
 	// request for one of these waits for that fetch instead of making its own,
 	// so a burst of misses for one route costs one upstream fetch, not one each.
-	// The waiters share its outcome: its cached response, or its error or non-200
-	// response, so a failing upstream isn't hit again by every waiter at once.
-	// Only a fill that hangs past `fillWaitTimeout`, or ends some way that can't
-	// be shared, sends a waiter upstream itself; it never fills the key, so
-	// requests arriving later don't queue behind it.
+	// The waiters share its outcome: its cached response, or else its error or
+	// its uncached response, so neither a failing upstream nor an uncacheable
+	// route is hit again by every waiter at once. Only a fill that hangs past
+	// `fillWaitTimeout`, or answers with a body that can't be shared, sends a
+	// waiter upstream itself; it never fills the key, so requests arriving later
+	// don't queue behind it.
 	const filling = new Map<string, Promise<FillOutcome>>()
 
 	// allow for manual cache clearing
@@ -271,14 +285,15 @@ export function cachable(options: Options): Middleware {
 					return
 				}
 				// 'stored' goes on to serve from the cache; 'own' and a timeout
-				// go on to fetch for themselves.
+				// go on to fetch for themselves, as does 'stored' when the store
+				// has already let the entry go (a maxAge of 0).
 			}
 		}
 
 		let outcome: FillOutcome = {kind: 'own'}
 		try {
 			await next()
-			outcome = (await store(ctx)) ? {kind: 'stored'} : shareable(ctx)
+			outcome = (await store(ctx)) ? {kind: 'stored'} : await shareable(ctx)
 		} catch (error) {
 			outcome = {kind: 'error', error}
 			throw error
@@ -300,16 +315,21 @@ export function cachable(options: Options): Middleware {
 		})
 	}
 
-	/// A response that wasn't cached, as waiters can answer with it: a non-200
-	/// whose body is not a stream (which only one response can read).
-	function shareable(ctx: ExtendableContext): FillOutcome {
+	/// A response that wasn't cached, as waiters can answer with it. A stream
+	/// can only be read once, so it is read into a buffer for everyone.
+	async function shareable(ctx: ExtendableContext): Promise<FillOutcome> {
 		let body: unknown = ctx.response.body
-		if (ctx.response.status === 200 || isStream(body)) {
+		if (isStream(body)) {
+			body = Buffer.concat(await Array.fromAsync(body))
+			ctx.response.body = body
+		} else if (body !== null && body !== undefined && !isJson(body) && !Buffer.isBuffer(body)) {
 			return {kind: 'own'}
 		}
+
 		let headers: Record<string, string | string[]> = {}
-		for (let [name, value] of Object.entries(ctx.response.headers)) {
-			if (name !== 'content-length' && value !== undefined) {
+		for (let name of SHARED_HEADERS) {
+			let value = ctx.response.headers[name]
+			if (value !== undefined) {
 				headers[name] = typeof value === 'number' ? String(value) : value
 			}
 		}
