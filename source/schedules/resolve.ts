@@ -29,8 +29,9 @@ export function resolveSchedules<T>(
 			assert(policy !== undefined, `missing authored alias target ${key}`)
 			let result: Schedule<T>
 			if (typeof policy !== 'string') result = policy
-			else if (policy === 'normal') result = {schedule: space.schedule, exceptions: []}
-			else if (policy === 'inherit') {
+			else if (policy === 'normal') {
+				result = {schedule: space.schedule, exceptions: space.exceptions ?? []}
+			} else if (policy === 'inherit') {
 				let fallback = calendar.breaks[key]?.defaultSpaceSchedule
 				assert(fallback !== undefined, `inherit requires a break default for ${key}`)
 				result = typeof fallback === 'string' ? template(key, fallback) : fallback

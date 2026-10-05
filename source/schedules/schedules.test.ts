@@ -38,6 +38,25 @@ void describe('server schedule contracts', () => {
 		assert.deepEqual(input, before)
 		assert.equal(must(must(parsed.spaces[0]).breakSchedule)['easter'], 'spring')
 	})
+	void it('preserves normal schedule exceptions through break aliases', () => {
+		let input = pair()
+		let christmasEve = {date: '2026-12-24', schedule: closed}
+		set(input, 'spaces.0.exceptions', [christmasEve])
+		set(input, 'spaces.0.breakSchedule', {winter: 'normal', fall: 'winter'})
+		let before = structuredClone(input)
+		let resolved = must(resolveScheduleData(input.calendar, input.spaces).data[0])
+		for (let key of ['winter', 'fall']) {
+			assert.deepEqual(must(must(resolved.breakSchedule)[key]).exceptions, [christmasEve])
+		}
+		assert.deepEqual(input, before)
+	})
+	void it('normal schedules without space exceptions resolve to an empty exception list', () => {
+		let input = pair()
+		set(input, 'spaces.0.exceptions', undefined)
+		set(input, 'spaces.0.breakSchedule', {winter: 'normal'})
+		let resolved = must(resolveScheduleData(input.calendar, input.spaces).data[0])
+		assert.deepEqual(must(must(resolved.breakSchedule)['winter']).exceptions, [])
+	})
 	void it('resolves forward chains in the target context and retains exceptions', () => {
 		let input = pair()
 		set(input, 'spaces.0.breakSchedule', {
