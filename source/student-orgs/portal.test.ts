@@ -179,11 +179,40 @@ void test('each paragraph of plain text keeps a line of its own', (t) => {
 	)
 })
 
-void test('a heading, a break and a list item each end a line', (t) => {
+void test('a heading, a break and a list each keep their lines', (t) => {
 	t.assert.equal(
-		plainText('<p></p><h1>Who Are We?</h1><p>One<br>Two</p><ul><li>Three</li><li>Four</li></ul>'),
-		'Who Are We?\nOne\nTwo\nThree\nFour',
+		plainText(
+			'<h4>Ways to Get Involved</h4><ul><li>Come to <b>meetings</b></li><li>Volunteer</li></ul>Fridays<br>4-5pm',
+		),
+		'Ways to Get Involved\n• Come to meetings\n• Volunteer\nFridays\n4-5pm',
 	)
+})
+
+void test('an ordered list is bulleted too', (t) => {
+	t.assert.equal(
+		plainText('<p>Rules:</p><ol><li>Be enrolled</li><li>Be kind</li></ol>'),
+		'Rules:\n• Be enrolled\n• Be kind',
+	)
+})
+
+void test("a list item's own paragraph stays on its bullet's line", (t) => {
+	t.assert.equal(
+		plainText(
+			'<ul><li><p><b>Workshops:</b> soldering and CAD</p></li><li><p>Projects</p></li></ul>',
+		),
+		'• Workshops: soldering and CAD\n• Projects',
+	)
+})
+
+void test('zero-width characters the editor leaves behind are dropped', (t) => {
+	t.assert.equal(
+		plainText('<p>\u200BYou can also join us</p><p>\u200B</p>'),
+		'You can also join us',
+	)
+})
+
+void test('inline tags do not break a line, or a word', (t) => {
+	t.assert.equal(plainText('<p><b>W</b>affles &amp; <i>more</i></p>'), 'Waffles & more')
 })
 
 void test("a paragraph's own line breaks and runs of spaces read as one space", (t) => {

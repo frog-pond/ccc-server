@@ -106,20 +106,50 @@ export function urlOrBlank(text: string): string {
 	return URL.canParse(text) && /^https?:/u.test(text) ? text : ''
 }
 
-/// Elements that start and end a line of their own, as a browser lays them out.
-const BLOCKS = new Set(['BLOCKQUOTE', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'P', 'TR'])
+/// Elements that start and end a line of their own, as a browser lays them
+/// out. These are the ones officers' text uses; no org's holds a DL, ARTICLE,
+/// SECTION, ASIDE or FIGURE.
+const BLOCKS = new Set([
+	'BLOCKQUOTE',
+	'DIV',
+	'H1',
+	'H2',
+	'H3',
+	'H4',
+	'H5',
+	'H6',
+	'LI',
+	'OL',
+	'P',
+	'TR',
+	'UL',
+])
 
 const TEXT_NODE = 3
 
+/// What starts a list item's line, ordered list or not.
+const BULLET = '• '
+
 /// Officers' rich text as lines: one to a paragraph, heading, list item or
 /// `<br>`, since `textContent` alone runs paragraphs together -- a list of
-/// names, one to a paragraph, would read as one long word. Empty lines go,
-/// and whitespace within a line reads as one space, as a browser shows it.
+/// names, one to a paragraph, would read as one long word. A list item is
+/// bulleted. Empty lines go, and whitespace within a line reads as one
+/// space, as a browser shows it.
 export function plainText(html: string): string {
 	let lines: string[] = []
 	let line = ''
 	let endLine = () => {
-		lines.push(line.replace(/\s+/gu, ' ').trim())
+		// A list item's own paragraph stays on its bullet's line.
+		if (line === BULLET) {
+			return
+		}
+		lines.push(
+			line
+				// The portal's editor leaves these behind, and `\s` does not match them.
+				.replace(/[\u200B-\u200D\uFEFF]/gu, '')
+				.replace(/\s+/gu, ' ')
+				.trim(),
+		)
 		line = ''
 	}
 	let read = (node: Node) => {
@@ -127,6 +157,11 @@ export function plainText(html: string): string {
 			if (child.nodeType === TEXT_NODE) {
 				line += child.textContent ?? ''
 			} else if (child.nodeName === 'BR') {
+				endLine()
+			} else if (child.nodeName === 'LI') {
+				endLine()
+				line = BULLET
+				read(child)
 				endLine()
 			} else if (BLOCKS.has(child.nodeName)) {
 				endLine()
