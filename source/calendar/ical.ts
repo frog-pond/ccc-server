@@ -1,7 +1,7 @@
 import {getText} from '../ccc-lib/http.ts'
 import moment from 'moment'
 import getUrls from 'get-urls'
-import {JSDOM} from 'jsdom'
+import {textFromHtml} from '../ccc-lib/dom.ts'
 import InternetCalendar from 'ical.js'
 import {EventSchema} from './types.ts'
 import {sortBy} from 'lodash-es'
@@ -9,7 +9,7 @@ import {sortBy} from 'lodash-es'
 function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	let description = JSDOM.fragment(event.description ?? '').textContent.trim()
+	let description = textFromHtml(event.description ?? '')
 
 	return EventSchema.parse({
 		dataSource: 'ical',

@@ -1,4 +1,4 @@
-import {JSDOM} from 'jsdom'
+import {htmlFragment} from '../ccc-lib/dom.ts'
 import {htmlToMarkdown} from '../ccc-lib/html-to-markdown.ts'
 import {z} from 'zod'
 import {AdvisorSchema, ContactPersonSchema} from './types.ts'
@@ -142,9 +142,8 @@ function isAllEmphasis(block: Element): boolean {
 /// wholly in bold or italics, and zero-width characters, which `\s` does
 /// not match. Turndown numbers an ordered list as its items stand.
 export function markdownOf(html: string): string {
-	let {document} = new JSDOM().window
-	let root = document.createElement('div')
-	root.innerHTML = html
+	let root = htmlFragment(html)
+	let document = root.ownerDocument
 
 	// Stripped once parsed, since some are written as entities.
 	let walker = document.createTreeWalker(root, NODE_FILTER_SHOW_TEXT)

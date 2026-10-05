@@ -1,7 +1,7 @@
 import {z} from 'zod'
 import moment from 'moment'
 import getUrls from 'get-urls'
-import {JSDOM} from 'jsdom'
+import {htmlFragment, textFromHtml} from '../../ccc-lib/dom.ts'
 import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
@@ -31,7 +31,7 @@ const DEPARTMENT_LABELS = ['Department or Office', 'Department/Office']
 /// Renders the post's HTML as text, keeping line and paragraph breaks.
 function htmlToText(html: string) {
 	let withBreaks = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n')
-	return JSDOM.fragment(withBreaks)
+	return htmlFragment(withBreaks)
 		.textContent.replace(/\u00a0/g, ' ')
 		.replace(/[ \t]+\n/g, '\n')
 		.replace(/\n{3,}/g, '\n\n')
@@ -62,7 +62,7 @@ export function convertJobPost(post: JobPost) {
 		? text.slice(descriptionStart.index + descriptionStart[0].length)
 		: text
 
-	let hrefs = [...JSDOM.fragment(post.content.rendered).querySelectorAll('a[href]')].map((a) =>
+	let hrefs = [...htmlFragment(post.content.rendered).querySelectorAll('a[href]')].map((a) =>
 		a.getAttribute('href'),
 	)
 	let links = [
@@ -75,7 +75,7 @@ export function convertJobPost(post: JobPost) {
 
 	return {
 		id: String(post.id),
-		title: JSDOM.fragment(post.title.rendered).textContent.trim(),
+		title: textFromHtml(post.title.rendered),
 		offCampus: categories.some((c) => /CBWS/i.test(c)),
 		department: field(text, DEPARTMENT_LABELS) ?? '',
 		dateOpen: field(text, ['Date Open']) ?? moment.utc(post.date_gmt).format('MM/DD/YYYY'),

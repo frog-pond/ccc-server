@@ -1,4 +1,4 @@
-import {JSDOM} from 'jsdom'
+import {htmlFragment} from '../ccc-lib/dom.ts'
 
 /// Zero-width characters the posting editor leaves around values.
 const INVISIBLE = /[\u200B-\u200D\uFEFF]/gu
@@ -23,7 +23,7 @@ const LABEL = /unit number(?:\s*\(5 digits\))?\s*:/iu
 /// cannot run on into the unit before it. Within one element text still runs
 /// together, so the value is read up to its fifth digit.
 export function unitNumberOfDescription(html: string): string | null {
-	let text = Array.from(JSDOM.fragment(html).childNodes, (node) => node.textContent ?? '').join(' ')
+	let text = Array.from(htmlFragment(html).childNodes, (node) => node.textContent ?? '').join(' ')
 	let label = LABEL.exec(text)
 	if (!label) return null
 	return unitNumber(text.slice(label.index + label[0].length))

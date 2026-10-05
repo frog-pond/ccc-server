@@ -49,6 +49,7 @@
     "koa-compress": "5.2.2",
     "koa-json-error": "3.1.2",
     "ky": "^2.0.0",
+    "linkedom": "^0.18.13",
     "lodash-es": "^4.17.21",
     "moment": "2.31.0",
     "moment-timezone": "0.6.5",
@@ -56,6 +57,7 @@
     "p-map": "7.0.8",
     "quick-lru": "^7.3.0",
     "safe-stable-stringify": "^2.5.0",
+    "saxes": "^6.0.0",
     "turndown": "7.2.4",
     "zod": "^4.0.0"
   },
