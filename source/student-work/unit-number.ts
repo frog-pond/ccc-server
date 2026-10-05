@@ -4,10 +4,11 @@ import {htmlFragment} from '../ccc-lib/dom.ts'
 const INVISIBLE = /[\u200B-\u200D\uFEFF]/gu
 
 /// A St. Olaf unit: five digits, sometimes behind a two- or three-digit fund
-/// ("10-13001", "010-11725"). The fund is not part of the unit, and the areas
-/// file lists units without one. When a posting names two units, the first
-/// is the one it is filed under.
-const UNIT = /^(?:\d{2,3}-)?(\d{5})(?!\d)/u
+/// ("10-13001", "010-11725") or a five-digit unit of another office, as in
+/// the account strings "41066-11300" and "41203-11184-53000-00512". Neither
+/// prefix is part of the unit, and the areas file lists units without one.
+/// When a posting names two units, the first is the one it is filed under.
+const UNIT = /^(?:\d{2,3}-|\d{5}-)?(\d{5})(?!\d)/u
 
 /// The unit a "Unit Number" value names, or null when it names none.
 export function unitNumber(value: string): string | null {
