@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {parseHtml, parseXml, textFromHtml} from './dom.ts'
+import {htmlFragment, parseHtml, parseXml, textFromHtml} from './dom.ts'
 
 const RSS = `<?xml version="1.0"?>
 <rss xmlns:dc="http://purl.org/dc/elements/1.1/"><channel><item>
@@ -61,4 +61,12 @@ void test('textFromHtml trims surrounding whitespace', (t) => {
 
 void test('textFromHtml returns an empty string for empty input', (t) => {
 	t.assert.equal(textFromHtml(''), '')
+})
+
+void test('htmlFragment keeps text split by an entity as one node', (t) => {
+	let fragment = htmlFragment('Unit Number: 10-13&#8203;001<p>next</p>')
+	t.assert.deepEqual(
+		Array.from(fragment.childNodes, (node) => node.textContent),
+		['Unit Number: 10-13​001', 'next'],
+	)
 })

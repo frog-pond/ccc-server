@@ -14,10 +14,16 @@ export function parseXml(body: string): Document {
 }
 
 /// An element holding `html`'s nodes, to walk or read without a page around it.
+/// It is the body of a document of its own, parsed inertly. linkedom splits
+/// text at each entity ("a &amp; b" is three nodes), which jsdom does not, so
+/// the text is merged back: callers read top-level nodes as whole runs of text.
 export function htmlFragment(html: string): HTMLElement {
-	let container = parseHtml('<html><body></body></html>').createElement('div')
-	container.innerHTML = html
-	return container
+	let doc = new DOMParser().parseFromString(
+		`<!doctype html><html><head></head><body>${html}</body></html>`,
+		'text/html',
+	) as unknown as Document
+	doc.body.normalize()
+	return doc.body
 }
 
 /// The text a reader would see: tags removed, entities decoded, trimmed.
