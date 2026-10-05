@@ -26,13 +26,13 @@ async function serve(t: test.TestContext, fetchUpstream: (path: string) => Promi
 	t.after(() => server.close())
 	await new Promise((resolve) => server.once('listening', resolve))
 	let {port} = server.address() as AddressInfo
-	return (path: string) => fetch(`http://localhost:${port}${path}`)
+	return (path: string) => fetch(`http://localhost:${String(port)}${path}`)
 }
 
 /// An upstream that answers only when told to, and counts its calls.
 function slowUpstream() {
 	let calls: string[] = []
-	let {promise: released, resolve: release} = Promise.withResolvers<void>()
+	let {promise: released, resolve: release} = Promise.withResolvers<undefined>()
 	let fetchUpstream = async (path: string) => {
 		calls.push(path)
 		await released
@@ -47,7 +47,7 @@ void test('concurrent misses for one key share one upstream fetch', async (t) =>
 
 	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
 	await new Promise((resolve) => setTimeout(resolve, 50))
-	release()
+	release(undefined)
 
 	let bodies = await Promise.all((await responses).map((r) => r.json()))
 	t.assert.deepEqual(calls, ['/menu'])
@@ -60,7 +60,7 @@ void test('concurrent misses for different keys fetch separately', async (t) => 
 
 	let responses = Promise.all([get('/a'), get('/b')])
 	await new Promise((resolve) => setTimeout(resolve, 50))
-	release()
+	release(undefined)
 	await responses
 
 	t.assert.deepEqual(calls.toSorted(), ['/a', '/b'])
@@ -73,13 +73,13 @@ void test('routes that do not cache are not held up behind each other', async (t
 	let responses = Promise.all([get('/uncached'), get('/uncached')])
 	await new Promise((resolve) => setTimeout(resolve, 50))
 	t.assert.equal(calls.length, 2)
-	release()
+	release(undefined)
 	await responses
 })
 
 void test('a waiting request fetches for itself when the first one fails', async (t) => {
 	let calls = 0
-	let {promise: released, resolve: release} = Promise.withResolvers<void>()
+	let {promise: released, resolve: release} = Promise.withResolvers<undefined>()
 	let get = await serve(t, async () => {
 		calls += 1
 		await released
@@ -90,7 +90,7 @@ void test('a waiting request fetches for itself when the first one fails', async
 
 	let responses = Promise.all([get('/menu'), get('/menu')])
 	await new Promise((resolve) => setTimeout(resolve, 50))
-	release()
+	release(undefined)
 
 	let statuses = (await responses).map((r) => r.status)
 	t.assert.deepEqual(statuses, [500, 200])

@@ -181,12 +181,12 @@ export function cachable(options: Options): Middleware {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
 			if (!filling.has(this[CACHE_KEY])) {
-				let {promise, resolve} = Promise.withResolvers<void>()
+				let {promise, resolve} = Promise.withResolvers<undefined>()
 				let key = this[CACHE_KEY]
 				filling.set(key, promise)
 				this[CACHE_FILL_KEY] = () => {
 					filling.delete(key)
-					resolve()
+					resolve(undefined)
 				}
 			}
 			return false
