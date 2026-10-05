@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {JSDOM} from 'jsdom'
+import {parseXml} from '../ccc-lib/dom.ts'
 import {convertRssItemToStory} from './rss.ts'
 
 /// One item as WordPress publishes it, namespaces and all.
@@ -7,7 +7,7 @@ function wordpressItem(inner: string) {
 	const xml = `<rss xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
 <channel><item><title>Dryers Down</title><description>Short teaser</description>${inner}</item></channel>
 </rss>`
-	const item = new JSDOM(xml, {contentType: 'text/xml'}).window.document.querySelector('item')
+	const item = parseXml(xml).querySelector('item')
 	if (!item) throw new Error('no item')
 	return item
 }

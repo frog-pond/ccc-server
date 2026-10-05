@@ -1,7 +1,7 @@
 import {test} from 'node:test'
 import InternetCalendar from 'ical.js'
 import moment from 'moment'
-import {JSDOM} from 'jsdom'
+import {textFromHtml} from '../ccc-lib/dom.ts'
 import getUrls from 'get-urls'
 import {EventSchema} from './types.ts'
 import {ical} from './ical.ts'
@@ -39,7 +39,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
+	const description = textFromHtml(event.description ?? '')
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
@@ -82,7 +82,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
+	const description = textFromHtml(event.description ?? '')
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
@@ -123,7 +123,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
+	const description = textFromHtml(event.description ?? '')
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',
@@ -167,7 +167,7 @@ END:VCALENDAR`
 	const now = moment()
 	const startTime = moment(event.startDate.toString())
 	const endTime = moment(event.endDate.toString())
-	const description = JSDOM.fragment(event.description ?? '').textContent.trim()
+	const description = textFromHtml(event.description ?? '')
 
 	const result = EventSchema.parse({
 		dataSource: 'ical',

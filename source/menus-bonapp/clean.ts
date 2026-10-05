@@ -1,5 +1,5 @@
-import {JSDOM} from 'jsdom'
 import {toLaxTitleCase} from '@frogpond/titlecase'
+import {htmlFragment} from '../ccc-lib/dom.ts'
 
 /// Cleans BonApp's menu text on the server, as the app's `prepareFood` has
 /// done on the phone since 2018 (#58), so every client gets readable names.
@@ -16,7 +16,7 @@ const BLOCK_BOUNDARY = /<(?:br|\/?(?:p|div|li|ul|ol|h[1-6]|tr|td|th))\b[^>]*>/gi
 
 /// HTML's text: tags gone, entities decoded, whitespace evened out.
 export function textOf(html: string): string {
-	let text = JSDOM.fragment(html.replace(BLOCK_BOUNDARY, ' $&')).textContent
+	let text = htmlFragment(html.replace(BLOCK_BOUNDARY, ' $&')).textContent
 	return text.split(/\s+/u).join(' ').trim()
 }
 

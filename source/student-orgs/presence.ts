@@ -9,7 +9,7 @@ import {
 } from './portal.ts'
 import {groupableName, sortOrgs, sortableName} from './names.ts'
 import {groupBy, sortBy, toPairs} from 'lodash-es'
-import {JSDOM} from 'jsdom'
+import {textFromHtml} from '../ccc-lib/dom.ts'
 import {z} from 'zod'
 import {
 	DetailedStudentOrgSchema,
@@ -76,7 +76,7 @@ export function cleanOrg(org: PresenceOrgType, sortableRegex: RegExp, campus?: P
 	let meetingLocation = org.regularMeetingLocation?.trim() ?? ''
 	let meetingTime = org.regularMeetingTime?.trim() ?? ''
 	let meetings = [meetingLocation, meetingTime].filter(Boolean).join(', ')
-	let description = JSDOM.fragment(org.description).textContent.trim()
+	let description = textFromHtml(org.description)
 	let website = org.website?.trim() ?? ''
 	if (website && !/^https?:\/\//.test(website)) {
 		website = `http://${website}`
