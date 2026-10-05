@@ -16,6 +16,11 @@ const ANY_ASSIGNMENT = /\bBamco\.\w+(?:\[[^\]]*\])?\s*=(?!=)/
 const READ_ASSIGNMENT =
 	/\bBamco\.(?:menu_items|cor_icons|current_cafe)\s*=(?!=)|\bBamco\.dayparts\s*\[[^\]]*\]\s*=(?!=)/g
 
+/// `dayparts` assigned as a whole, other than the empty object each daypart's
+/// script starts from (`Bamco.dayparts = Bamco.dayparts || {};`). The
+/// dayparts are read one by one below, so one written this way couldn't be.
+const WHOLE_DAYPARTS = /\bBamco\.dayparts\s*=(?!=)(?!\s*(?:Bamco\.dayparts\s*\|\|\s*)?\{\s*\}\s*;)/
+
 // Each on a line of its own. Lines end only at \n, not at U+2028 or U+2029,
 // which JSON allows inside strings.
 const JSON_ASSIGNMENT = /(?:^|\n)[ \t]*Bamco\.(menu_items|cor_icons) = ([^\n]+?);[ \t]*\r?(?=\n|$)/g
@@ -57,6 +62,10 @@ export function unescapeJsString(literal: string): string {
 export function extractBamco(html: string): unknown {
 	if (!ANY_ASSIGNMENT.test(html)) {
 		return undefined
+	}
+
+	if (WHOLE_DAYPARTS.test(html)) {
+		throw new BamcoFormatError('BonApp page assigns its dayparts in a way this cannot read')
 	}
 
 	let cafe = CURRENT_CAFE.exec(html)

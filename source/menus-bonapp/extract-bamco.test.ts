@@ -103,6 +103,22 @@ void test('a comparison with a Bamco value is not counted as an assignment', (t)
 	t.assert.doesNotThrow(() => extractBamco(html))
 })
 
+void test('dayparts assigned as a whole throw, rather than read as none', (t) => {
+	let html = page(
+		"Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};",
+		'Bamco.dayparts = {"3": {"id": "3", "label": "Dinner"}};',
+	)
+	t.assert.throws(() => extractBamco(html), BamcoFormatError)
+})
+
+void test('the empty dayparts each daypart starts from are not counted', (t) => {
+	let html = page(
+		"Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};",
+		'Bamco.dayparts = Bamco.dayparts || {};\nBamco.dayparts = {};',
+	)
+	t.assert.doesNotThrow(() => extractBamco(html))
+})
+
 void test('reading a daypart is not counted as an assignment', (t) => {
 	let html = page(
 		"Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};",
