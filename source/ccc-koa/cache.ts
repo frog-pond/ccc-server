@@ -47,6 +47,17 @@ const CACHE_INFO_KEY: unique symbol = Symbol('koa-cache info key')
 const CACHE_FILL_KEY: unique symbol = Symbol('koa-cache fill key')
 const CACHE_WAITED_KEY: unique symbol = Symbol('koa-cache waited key')
 
+/// How a fill ended, for the requests waiting on it.
+type FillOutcome =
+	/** Its response is in the cache: serve it from there. */
+	| {kind: 'stored'}
+	/** It failed with this response (a 404, a 502): answer the same. */
+	| {kind: 'replay'; status: number; headers: Record<string, string | string[]>; body: unknown}
+	/** It threw: fail with the same error. */
+	| {kind: 'error'; error: unknown}
+	/** It ended some other way (a 200 not cached, a stream): fetch for yourself. */
+	| {kind: 'own'}
+
 declare module 'koa' {
 	interface ExtendableContext {
 		/**
@@ -86,10 +97,10 @@ declare module 'koa' {
 		 * Set when this request is the one filling the cache for its key; called
 		 * once it is done, to let the requests waiting on it through
 		 */
-		[CACHE_FILL_KEY]?: () => void
+		[CACHE_FILL_KEY]?: (outcome: FillOutcome) => void
 		/**
 		 * Set when this request waited on another's fill. It never fills the key
-		 * itself, so that if the fill wasn't cached, every waiter fetches at once
+		 * itself, so that requests arriving later don't queue behind its fetch
 		 */
 		[CACHE_WAITED_KEY]?: boolean
 	}
@@ -165,13 +176,15 @@ export function cachable(options: Options): Middleware {
 
 	const methods = {...defaultMethods, ...options.methods}
 
-	// Keys some request is fetching right now, to the moment it is done. A
+	// Keys some request is fetching right now, to how that fetch ends. A
 	// request for one of these waits for that fetch instead of making its own,
 	// so a burst of misses for one route costs one upstream fetch, not one each.
-	// A request that waited never fills: if the fill wasn't cached (an error, a
-	// non-200, a hang past `fillWaitTimeout`), the waiters all fetch at once, as
-	// they would have without the wait, rather than queueing behind each other.
-	const filling = new Map<string, Promise<unknown>>()
+	// The waiters share its outcome: its cached response, or its error or non-200
+	// response, so a failing upstream isn't hit again by every waiter at once.
+	// Only a fill that hangs past `fillWaitTimeout`, or ends some way that can't
+	// be shared, sends a waiter upstream itself; it never fills the key, so
+	// requests arriving later don't queue behind it.
+	const filling = new Map<string, Promise<FillOutcome>>()
 
 	// allow for manual cache clearing
 	function evictCachedItem(key: string): void {
@@ -196,12 +209,12 @@ export function cachable(options: Options): Middleware {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
 			if (!this[CACHE_WAITED_KEY] && !filling.has(this[CACHE_KEY])) {
-				let {promise, resolve} = Promise.withResolvers<undefined>()
+				let {promise, resolve} = Promise.withResolvers<FillOutcome>()
 				let key = this[CACHE_KEY]
 				filling.set(key, promise)
-				this[CACHE_FILL_KEY] = () => {
+				this[CACHE_FILL_KEY] = (outcome) => {
 					filling.delete(key)
-					resolve(undefined)
+					resolve(outcome)
 				}
 			}
 			return false
@@ -243,53 +256,89 @@ export function cachable(options: Options): Middleware {
 			// fill it may start are the same.
 			ctx[CACHE_KEY] = hash(ctx)
 
-			// Another request is filling this key: wait for it, then go on as
-			// usual, which serves its response from the cache.
+			// Another request is filling this key: wait for it, and take its outcome.
 			let fill = filling.get(ctx[CACHE_KEY])
 			if (fill) {
 				ctx[CACHE_WAITED_KEY] = true
-				await Sentry.startSpan({name: 'wait for cache fill', op: 'cache.wait'}, async (span) => {
-					let timer: NodeJS.Timeout | undefined
-					let timeout = new Promise<'timeout'>((resolve) => {
-						timer = setTimeout(resolve, fillWaitTimeout, 'timeout')
-					})
-					let outcome = await Promise.race([fill, timeout])
-					clearTimeout(timer)
-					span.setAttribute('cache.wait.timed_out', outcome === 'timeout')
-				})
+				let outcome = await waitFor(fill)
+				if (outcome.kind === 'error') {
+					throw outcome.error
+				}
+				if (outcome.kind === 'replay') {
+					ctx.set(outcome.headers)
+					ctx.status = outcome.status
+					if (outcome.body !== null && outcome.body !== undefined) ctx.body = outcome.body
+					return
+				}
+				// 'stored' goes on to serve from the cache; 'own' and a timeout
+				// go on to fetch for themselves.
 			}
 		}
 
+		let outcome: FillOutcome = {kind: 'own'}
 		try {
 			await next()
-			await store(ctx)
+			outcome = (await store(ctx)) ? {kind: 'stored'} : shareable(ctx)
+		} catch (error) {
+			outcome = {kind: 'error', error}
+			throw error
 		} finally {
-			ctx[CACHE_FILL_KEY]?.()
+			ctx[CACHE_FILL_KEY]?.(outcome)
 		}
 	}
 
-	async function store(ctx: ExtendableContext): Promise<void> {
+	function waitFor(fill: Promise<FillOutcome>): Promise<FillOutcome | {kind: 'timeout'}> {
+		return Sentry.startSpan({name: 'wait for cache fill', op: 'cache.wait'}, async (span) => {
+			let timer: NodeJS.Timeout | undefined
+			let timeout = new Promise<{kind: 'timeout'}>((resolve) => {
+				timer = setTimeout(resolve, fillWaitTimeout, {kind: 'timeout'})
+			})
+			let outcome = await Promise.race([fill, timeout])
+			clearTimeout(timer)
+			span.setAttribute('cache.wait.outcome', outcome.kind)
+			return outcome
+		})
+	}
+
+	/// A response that wasn't cached, as waiters can answer with it: a non-200
+	/// whose body is not a stream (which only one response can read).
+	function shareable(ctx: ExtendableContext): FillOutcome {
+		let body: unknown = ctx.response.body
+		if (ctx.response.status === 200 || isStream(body)) {
+			return {kind: 'own'}
+		}
+		let headers: Record<string, string | string[]> = {}
+		for (let [name, value] of Object.entries(ctx.response.headers)) {
+			if (name !== 'content-length' && value !== undefined) {
+				headers[name] = typeof value === 'number' ? String(value) : value
+			}
+		}
+		return {kind: 'replay', status: ctx.response.status, headers, body}
+	}
+
+	/// Caches the response if it can; says whether it did.
+	async function store(ctx: ExtendableContext): Promise<boolean> {
 		// check for HTTP caching just in case
 		if (!ctx[CACHE_INFO_KEY]) {
 			if (ctx.request.fresh) {
 				ctx.response.status = 304
 			}
-			return
+			return false
 		}
 
 		// cache the response
 
 		// only cache GET/HEAD 200s
 		if (ctx.response.status !== 200) {
-			return
+			return false
 		}
 		if (!methods[ctx.request.method]) {
-			return
+			return false
 		}
 
 		let body: unknown = ctx.response.body
 		if (!body) {
-			return
+			return false
 		}
 
 		let serializedBody: Buffer | string
@@ -307,7 +356,7 @@ export function cachable(options: Options): Middleware {
 		} else {
 			// unsupported body type
 			console.warn('Unsupported response body type:', typeof body)
-			return
+			return false
 		}
 
 		// avoid any potential errors with middleware ordering
@@ -338,6 +387,7 @@ export function cachable(options: Options): Middleware {
 		}
 
 		set(ctx[CACHE_KEY], obj, ctx[CACHE_INFO_KEY].maxAge ?? options.maxAge ?? 0)
+		return true
 	}
 
 	return cache

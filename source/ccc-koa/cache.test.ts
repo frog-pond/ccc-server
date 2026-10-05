@@ -35,6 +35,7 @@ async function serve(
 		if (ctx.cached(60_000)) return
 		let body = await fetchUpstream(ctx.path)
 		if (body === undefined) {
+			ctx.set('X-Upstream', 'missing')
 			ctx.status = 404
 			return
 		}
@@ -117,7 +118,7 @@ void test('routes that do not cache are not held up behind each other', async (t
 	await responses
 })
 
-void test('when the first request fails, its waiters all fetch at once', async (t) => {
+void test('when the first request fails, its waiters fail the same way without fetching', async (t) => {
 	let upstream = slowUpstream(() => {
 		throw new Error('upstream down')
 	})
@@ -127,34 +128,41 @@ void test('when the first request fails, its waiters all fetch at once', async (
 	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu'), get('/menu')])
 	await tick()
 	upstream.releaseFirst()
-	await tick()
-	// Every waiter is fetching, rather than one at a time behind a new filler.
-	t.assert.equal(upstream.calls.length, 4)
-	upstream.releaseLater()
 
 	let statuses = (await responses).map((r) => r.status)
-	t.assert.deepEqual(statuses, [500, 200, 200, 200])
+	t.assert.deepEqual(statuses, [500, 500, 500, 500])
+	t.assert.equal(upstream.calls.length, 1)
 })
 
-void test('a request arriving while waiters retry a 404 does not queue behind them', async (t) => {
+void test('when the first request is a 404, its waiters answer the same without fetching', async (t) => {
 	let upstream = slowUpstream(() => undefined)
 	let get = await serve(t, upstream.fetchUpstream)
 
-	let responses = [get('/menu'), get('/menu'), get('/menu')]
+	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
 	await tick()
 	upstream.releaseFirst()
-	await tick()
-	t.assert.equal(upstream.calls.length, 3)
 
-	// The waiters are retrying. A new request fetches at once, rather than
-	// waiting on one of them as though it were filling the cache.
-	responses.push(get('/menu'))
+	let answers = (await responses).map((r) => [r.status, r.headers.get('X-Upstream')])
+	t.assert.deepEqual(answers, [
+		[404, 'missing'],
+		[404, 'missing'],
+		[404, 'missing'],
+	])
+	t.assert.equal(upstream.calls.length, 1)
+})
+
+void test('after a fill ends, the next request starts a fill of its own', async (t) => {
+	let upstream = slowUpstream(() => undefined)
+	let get = await serve(t, upstream.fetchUpstream)
+
+	let first = get('/menu')
 	await tick()
-	t.assert.equal(upstream.calls.length, 4)
+	upstream.releaseFirst()
+	t.assert.equal((await first).status, 404)
+
 	upstream.releaseLater()
-
-	let statuses = (await Promise.all(responses)).map((r) => r.status)
-	t.assert.deepEqual(statuses, [404, 200, 200, 200])
+	t.assert.equal((await get('/menu')).status, 200)
+	t.assert.equal(upstream.calls.length, 2)
 })
 
 void test('a waiter stops waiting on a fill that hangs, and fetches for itself', async (t) => {
