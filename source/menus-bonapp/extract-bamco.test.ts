@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {extractBamco} from './extract-bamco.ts'
+import {BamcoFormatError, extractBamco, unescapeJsString} from './extract-bamco.ts'
 
 void test('a page with no Bamco assignments yields undefined', (t) => {
 	t.assert.equal(extractBamco('<html><body>closed</body></html>'), undefined)
@@ -57,4 +57,73 @@ Bamco.current_cafe = {
 Bamco.menu_items = {"broken": };
 </script>`
 	t.assert.throws(() => extractBamco(html), SyntaxError)
+})
+
+/// A page as BonApp writes it, with `current_cafe` as given.
+function page(currentCafe: string, rest = ''): string {
+	return [
+		'<script>',
+		'Bamco = (typeof Bamco !== "undefined") ? Bamco : {};',
+		currentCafe,
+		'Bamco.menu_items = {};',
+		'Bamco.cor_icons = [];',
+		'Bamco.dayparts = Bamco.dayparts || {};',
+		'Bamco.dayparts[\'1\'] = {"id":"1","label":"Lunch"};',
+		rest,
+		'</script>',
+	].join('\n')
+}
+
+void test('a current_cafe written some other way throws, rather than read as closed', (t) => {
+	let drifted = page('Bamco.current_cafe = {\n\tname: "Stav Hall",\n\tid: 261};')
+	t.assert.throws(() => extractBamco(drifted), BamcoFormatError)
+})
+
+void test('a daypart written over several lines throws, rather than be skipped', (t) => {
+	let html = page(
+		"Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};",
+		'Bamco.dayparts[\'3\'] = {\n\t"id": "3",\n\t"label": "Dinner"\n};',
+	)
+	t.assert.throws(() => extractBamco(html), BamcoFormatError)
+})
+
+void test('a menu written over several lines throws, rather than be skipped', (t) => {
+	let html = page("Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};").replace(
+		'Bamco.menu_items = {};',
+		'Bamco.menu_items = {\n};',
+	)
+	t.assert.throws(() => extractBamco(html), BamcoFormatError)
+})
+
+void test('a comparison with a Bamco value is not counted as an assignment', (t) => {
+	let html = page(
+		"Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};",
+		'if (Bamco.menu_items == null) {}',
+	)
+	t.assert.doesNotThrow(() => extractBamco(html))
+})
+
+void test('JSON with a line separator inside a string is read whole', (t) => {
+	let separator = String.fromCharCode(0x2028)
+	let html = page("Bamco.current_cafe = {\n\tname: 'X',\n\tid: 1};").replace(
+		'Bamco.menu_items = {};',
+		`Bamco.menu_items = {"1":{"label":"a${separator}b"}};`,
+	)
+	let bamco = extractBamco(html) as {menu_items: Record<string, {label: string}>}
+	t.assert.equal(bamco.menu_items['1']?.label, `a${separator}b`)
+})
+
+void test('a café name is read as the page script would read it', (t) => {
+	let html = page(
+		"Bamco.current_cafe = {\n\tname: 'Caf\\u00e9 \\x27Stav\\x27\\tHall\\\\',\n\tid: 1};",
+	)
+	let bamco = extractBamco(html) as {current_cafe: {name: string}}
+	t.assert.equal(bamco.current_cafe.name, "Café 'Stav'\tHall\\")
+})
+
+void test('unescapeJsString decodes each kind of escape', (t) => {
+	t.assert.equal(unescapeJsString(String.raw`\n\t\'\"\\\0`), '\n\t\'"\\\0')
+	t.assert.equal(unescapeJsString(String.raw`é\x41\u{1F600}`), 'éA\u{1F600}')
+	t.assert.equal(unescapeJsString('a\\\nb'), 'ab', 'a line continuation')
+	t.assert.equal(unescapeJsString(String.raw`\q`), 'q', 'an escape that means nothing')
 })
