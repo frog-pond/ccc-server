@@ -6,6 +6,7 @@ import type {ExtendableContext, Middleware, Next} from 'koa'
 import {isPlainObject} from 'lodash-es'
 import {Readable} from 'node:stream'
 import stringify from 'safe-stable-stringify'
+import * as Sentry from '@sentry/node'
 
 // methods we cache
 const defaultMethods = {HEAD: true, GET: true} as Record<string, boolean>
@@ -43,6 +44,7 @@ export function isStream(stream: unknown): stream is Readable {
 
 const CACHE_KEY: unique symbol = Symbol('koa-cache key')
 const CACHE_INFO_KEY: unique symbol = Symbol('koa-cache info key')
+const CACHE_FILL_KEY: unique symbol = Symbol('koa-cache fill key')
 
 declare module 'koa' {
 	interface ExtendableContext {
@@ -79,6 +81,11 @@ declare module 'koa' {
 		 * `cache` is set when you want to cache this response
 		 */
 		[CACHE_INFO_KEY]?: {maxAge?: number | undefined}
+		/**
+		 * Set when this request is the one filling the cache for its key; called
+		 * once it is done, to let the requests waiting on it through
+		 */
+		[CACHE_FILL_KEY]?: () => void
 	}
 }
 
@@ -145,6 +152,11 @@ export function cachable(options: Options): Middleware {
 
 	const methods = {...defaultMethods, ...options.methods}
 
+	// Keys some request is fetching right now, to the moment it is done. A
+	// request for one of these waits for that fetch instead of making its own,
+	// so a burst of misses for one route costs one upstream fetch, not one each.
+	const filling = new Map<string, Promise<unknown>>()
+
 	// allow for manual cache clearing
 	function evictCachedItem(key: string): void {
 		set(key, undefined)
@@ -168,6 +180,15 @@ export function cachable(options: Options): Middleware {
 		if (!body) {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
+			if (!filling.has(this[CACHE_KEY])) {
+				let {promise, resolve} = Promise.withResolvers<void>()
+				let key = this[CACHE_KEY]
+				filling.set(key, promise)
+				this[CACHE_FILL_KEY] = () => {
+					filling.delete(key)
+					resolve()
+				}
+			}
 			return false
 		}
 
@@ -202,8 +223,23 @@ export function cachable(options: Options): Middleware {
 		ctx.evictCachedItem = evictCachedItem.bind(ctx)
 		ctx.setCacheTTL = setCacheTTL.bind(ctx)
 
-		await next()
+		// Another request is filling this key: wait for it, then go on as usual,
+		// which serves its response from the cache. If it could not be cached (an
+		// error, a non-200), this request makes its own attempt.
+		let fill = methods[ctx.request.method] ? filling.get(hash(ctx)) : undefined
+		if (fill) {
+			await Sentry.startSpan({name: 'wait for cache fill', op: 'cache.wait'}, () => fill)
+		}
 
+		try {
+			await next()
+			await store(ctx)
+		} finally {
+			ctx[CACHE_FILL_KEY]?.()
+		}
+	}
+
+	async function store(ctx: ExtendableContext): Promise<void> {
 		// check for HTTP caching just in case
 		if (!ctx[CACHE_INFO_KEY]) {
 			if (ctx.request.fresh) {
