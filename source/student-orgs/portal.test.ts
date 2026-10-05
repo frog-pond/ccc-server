@@ -3,7 +3,7 @@ import {
 	advisorsOf,
 	contactsOf,
 	instagramLinks,
-	plainText,
+	markdownOf,
 	portalFields,
 	urlOrBlank,
 } from './portal.ts'
@@ -161,35 +161,103 @@ void test('only a web address passes as a link', (t) => {
 	t.assert.equal(urlOrBlank('javascript:alert(1)'), '')
 })
 
-void test('additional information is read as plain text', (t) => {
-	t.assert.equal(plainText('<p>Everyone is <b>welcome</b>!</p>'), 'Everyone is welcome!')
+void test('rich text is read as markdown', (t) => {
+	t.assert.equal(markdownOf('<p>Everyone is <b>welcome</b>!</p>'), 'Everyone is **welcome**!')
 })
 
 /// Habitat for Humanity's, as Presence has it: one name to a paragraph, a
 /// paste's leftover markers, and trailing breaks.
-void test('each paragraph of plain text keeps a line of its own', (t) => {
+void test('each paragraph stays a paragraph of its own', (t) => {
 	let html =
 		'<p style="font-size: 14px;">Executive Committee: 2026 Fall</p>' +
 		'<p style="font-size: 14px;">Yousef Abualatta</p>' +
 		'<p style="font-size: 14px;"><!--StartFragment--><span>Alex Walk</span></p>' +
 		'<p style="font-size: 14px;"><!--EndFragment-->Sam Fineran<br/><br/><br/></p>'
 	t.assert.equal(
-		plainText(html),
-		'Executive Committee: 2026 Fall\nYousef Abualatta\nAlex Walk\nSam Fineran',
+		markdownOf(html),
+		'Executive Committee: 2026 Fall\n\nYousef Abualatta\n\nAlex Walk\n\nSam Fineran',
 	)
 })
 
-void test('a heading, a break and a list item each end a line', (t) => {
+void test('a short heading stays a heading', (t) => {
 	t.assert.equal(
-		plainText('<p></p><h1>Who Are We?</h1><p>One<br>Two</p><ul><li>Three</li><li>Four</li></ul>'),
-		'Who Are We?\nOne\nTwo\nThree\nFour',
+		markdownOf('<h1>Who Are We?</h1><p>A ministry.</p>'),
+		'# Who Are We?\n\nA ministry.',
 	)
 })
 
-void test("a paragraph's own line breaks and runs of spaces read as one space", (t) => {
+/// Officers set whole paragraphs as headings for the size; AED's first
+/// paragraph is a 35-word `<h3>`.
+void test('a heading of more than ten words is a paragraph', (t) => {
 	t.assert.equal(
-		plainText('<p>Meets\n   weekly  in <a href="#">Buntrock</a></p>'),
-		'Meets weekly in Buntrock',
+		markdownOf(
+			'<h3>We are a society that gives pre-health students resources and service opportunities.</h3>',
+		),
+		'We are a society that gives pre-health students resources and service opportunities.',
+	)
+	t.assert.equal(
+		markdownOf('<h3>One two three four five six seven eight nine ten</h3>'),
+		'### One two three four five six seven eight nine ten',
+	)
+})
+
+void test('a paragraph entirely in bold or italics is plain', (t) => {
+	t.assert.equal(
+		markdownOf(
+			'<p><b><span>All of it is bold.</span></b></p><p><i>All</i> <em>of it italic.</em></p>',
+		),
+		'All of it is bold.\n\nAll of it italic.',
+	)
+})
+
+void test('a paragraph only partly in bold keeps its bold', (t) => {
+	t.assert.equal(markdownOf('<p><b>Meetings:</b> Thursdays</p>'), '**Meetings:** Thursdays')
+})
+
+/// A paste from Google Docs wraps its text in a `<b>` set to normal weight.
+void test("a Google Docs paste's wrapper is not bold", (t) => {
+	t.assert.equal(
+		markdownOf(
+			'<b id="docs-internal-guid-f4d66d7b" style="font-weight:normal;"><p>Welcome, <b>everyone</b>.</p><p>Come by.</p></b>',
+		),
+		'Welcome, **everyone**.\n\nCome by.',
+	)
+})
+
+void test('an unordered list is bulleted', (t) => {
+	t.assert.equal(
+		markdownOf('<ul><li>Come to <b>meetings</b></li><li>Volunteer</li></ul>'),
+		'-   Come to **meetings**\n-   Volunteer',
+	)
+})
+
+void test('an ordered list is numbered', (t) => {
+	t.assert.equal(
+		markdownOf('<ol><li>Be enrolled</li><li>Be kind</li></ol>'),
+		'1.  Be enrolled\n2.  Be kind',
+	)
+})
+
+/// Eight orgs put a paragraph inside each list item. Its markdown is a loose
+/// list; the lines left holding only indentation are emptied.
+void test("a list item's own paragraph leaves no whitespace-only lines", (t) => {
+	let markdown = markdownOf('<ul><li><p>Workshops</p></li><li><p>Projects</p></li></ul>')
+	t.assert.doesNotMatch(markdown, /^[ \t]+$/mu)
+	t.assert.doesNotMatch(markdown, /\n{3}/u)
+	t.assert.match(markdown, /^-\s+Workshops\n\n-\s+Projects$/u)
+})
+
+void test('zero-width characters the editor leaves behind are dropped', (t) => {
+	t.assert.equal(
+		markdownOf('<p>\u200BYou can also join us</p><p>\u200B</p>'),
+		'You can also join us',
+	)
+})
+
+void test('zero-width characters written as entities are dropped too', (t) => {
+	t.assert.equal(
+		markdownOf('<p>a senator who&#65279; can help&#8203;</p>'),
+		'a senator who can help',
 	)
 })
 

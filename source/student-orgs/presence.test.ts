@@ -192,7 +192,7 @@ void test('withoutDemoCategory removes Demo and its orgs from other categories',
 
 /// Presence's list runs a description's paragraphs together -- "Who Are
 /// We?InterVarsity…" -- where the portal's statement of purpose keeps them.
-void test('orgDetail describes an org from its statement of purpose, a line to a paragraph', (t) => {
+void test('orgDetail describes an org from its statement of purpose, as markdown', (t) => {
 	let fields = portalFields({
 		fieldData: [{label: 'Statement of Purpose', value: '<h1>Who Are We?</h1><p>A ministry.</p>'}],
 	})
@@ -201,7 +201,18 @@ void test('orgDetail describes an org from its statement of purpose, a line to a
 		fields,
 	)
 
-	t.assert.equal(org.description, 'Who Are We?\nA ministry.')
+	t.assert.equal(org.description, '# Who Are We?\n\nA ministry.')
+})
+
+void test('orgDetail reads additional information as markdown', (t) => {
+	let fields = portalFields({
+		fieldData: [{label: 'Additional Information', value: '<p>Join <b>us</b></p>'}],
+	})
+
+	t.assert.equal(
+		orgDetail(cleanOrg(RAW_ORG, sortableRegex), fields).additionalInformation,
+		'Join **us**',
+	)
 })
 
 void test('orgDetail keeps the list description when the statement of purpose is blank', (t) => {

@@ -3,7 +3,7 @@ import {
 	advisorsOf,
 	contactsOf,
 	instagramLinks,
-	plainText,
+	markdownOf,
 	portalFields,
 	urlOrBlank,
 } from './portal.ts'
@@ -200,21 +200,22 @@ export async function presenceOrg(
 }
 
 /// An org from the list, with what its portal view adds. The description is
-/// the portal's statement of purpose, a line to a paragraph, since the list
-/// runs its paragraphs together; the list's stands when the portal's is blank.
+/// the portal's statement of purpose, as markdown, since the list runs its
+/// paragraphs together; the list's plain text stands when the portal's is
+/// blank, and reads as markdown too.
 export function orgDetail(
 	org: SortableStudentOrgType,
 	fields: ReturnType<typeof portalFields>,
 ): DetailedStudentOrgType {
 	return DetailedStudentOrgSchema.parse({
 		...org,
-		description: plainText(fields.statementOfPurpose) || org.description,
+		description: markdownOf(fields.statementOfPurpose) || org.description,
 		contacts: contactsOf(fields),
 		advisors: advisorsOf(fields),
 		socialLinks: instagramLinks(fields.instagram),
 		constitutionUrl: urlOrBlank(fields.constitution),
 		officeHours: fields.officeHours,
 		officeLocation: fields.officeLocation,
-		additionalInformation: plainText(fields.additionalInformation),
+		additionalInformation: markdownOf(fields.additionalInformation),
 	})
 }
