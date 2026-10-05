@@ -97,11 +97,12 @@ async function fetchAllPosts() {
 	for (let page = 1; ; page++) {
 		let batch: JobPost[]
 		try {
-			batch = z
-				.array(JobPostSchema)
-				.parse(
-					await getJson(jobsUrl, {searchParams: {per_page: PAGE_SIZE, page, _embed: 'wp:term'}}),
-				)
+			// pages are read in turn: whether there is a next one depends on this one
+			// eslint-disable-next-line no-await-in-loop
+			let body = await getJson(jobsUrl, {
+				searchParams: {per_page: PAGE_SIZE, page, _embed: 'wp:term'},
+			})
+			batch = z.array(JobPostSchema).parse(body)
 		} catch (error) {
 			if (page > 1 && error instanceof HTTPError && error.response.status === 400) break
 			throw error
