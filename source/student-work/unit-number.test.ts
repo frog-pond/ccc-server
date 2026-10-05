@@ -20,6 +20,12 @@ void test('unitNumber drops a two- or three-digit fund prefix', (t) => {
 	t.assert.equal(unitNumber('010-11725'), '11725')
 })
 
+void test('unitNumber reads the unit after an account-string prefix', (t) => {
+	t.assert.equal(unitNumber('41066-11300'), '11300')
+	t.assert.equal(unitNumber('45452-11565.'), '11565')
+	t.assert.equal(unitNumber('41203-11184-53000-00512'), '11184')
+})
+
 void test('unitNumber takes the first of two units', (t) => {
 	t.assert.equal(unitNumber('10-13001 / 10-13000'), '13001')
 })
