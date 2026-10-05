@@ -28,11 +28,14 @@ function isJson(body: unknown): boolean {
 	return false
 }
 
-/// A stream's whole body, whether it yields buffers or strings.
+/// A stream's whole body, whether it yields bytes (Buffers or Uint8Arrays) or
+/// strings.
 async function readAll(stream: Readable): Promise<Buffer> {
-	let chunks = await Array.fromAsync(stream, (chunk: unknown) =>
-		Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)),
-	)
+	let chunks = await Array.fromAsync(stream, (chunk: unknown) => {
+		if (typeof chunk === 'string') return Buffer.from(chunk)
+		if (chunk instanceof Uint8Array) return chunk
+		throw new TypeError(`cannot cache a stream chunk of type ${typeof chunk}`)
+	})
 	return Buffer.concat(chunks)
 }
 

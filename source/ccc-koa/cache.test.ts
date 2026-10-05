@@ -358,6 +358,26 @@ void test('a stream of string chunks is cached and shared', async (t) => {
 	t.assert.equal(calls.length, 1)
 })
 
+void test('a stream of Uint8Array chunks is cached and shared as bytes', async (t) => {
+	let {calls, release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, async (path) => {
+		await fetchUpstream(path)
+		// an object-mode stream that yields plain Uint8Arrays, not buffers
+		let stream = new PassThrough({objectMode: true})
+		stream.write(new TextEncoder().encode('menu '))
+		stream.end(new TextEncoder().encode('of the day'))
+		return stream
+	})
+
+	let responses = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	release()
+
+	let bodies = await Promise.all((await responses).map((r) => r.text()))
+	t.assert.deepEqual(bodies, ['menu of the day', 'menu of the day'])
+	t.assert.equal(calls.length, 1)
+})
+
 void test('in a burst that does not share, every request fetches for itself, as before', async (t) => {
 	let {calls, release, fetchUpstream} = slowUpstream(t)
 	let told: boolean[] = []
