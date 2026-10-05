@@ -1,6 +1,7 @@
 import {test} from 'node:test'
 import type {AddressInfo} from 'node:net'
 import Koa from 'koa'
+import {PassThrough} from 'node:stream'
 import {cachable, type CacheObject} from './cache.ts'
 
 type Upstream = (path: string) => Promise<unknown>
@@ -14,6 +15,7 @@ async function serve(
 		hash?: (ctx: Koa.ExtendableContext) => string
 		fillWaitTimeout?: number
 		before?: Koa.Middleware
+		stream?: PassThrough
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -28,6 +30,10 @@ async function serve(
 	)
 	if (options.before) app.use(options.before)
 	app.use(async (ctx) => {
+		if (ctx.path === '/stream') {
+			ctx.body = options.stream
+			return
+		}
 		if (ctx.path === '/uncached') {
 			ctx.body = await fetchUpstream(ctx.path)
 			return
@@ -196,7 +202,7 @@ void test('after a fill ends, the next request starts a fill of its own', async 
 	t.assert.equal(upstream.calls.length, 2)
 })
 
-void test('a waiter stops waiting on a fill that hangs, and fetches for itself', async (t) => {
+void test('a waiter takes over a fill that hangs', async (t) => {
 	let upstream = slowUpstream()
 	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
 
@@ -204,14 +210,88 @@ void test('a waiter stops waiting on a fill that hangs, and fetches for itself',
 	await tick()
 	let second = get('/menu')
 	await tick(20)
-	t.assert.equal(upstream.calls.length, 1, 'still waiting before the timeout')
+	t.assert.equal(upstream.calls.length, 1, 'still waiting before the fill hangs')
 	await tick(150)
-	t.assert.equal(upstream.calls.length, 2, 'fetching for itself after the timeout')
+	t.assert.equal(upstream.calls.length, 2, 'fetching once the fill has hung')
 
 	upstream.releaseLater()
 	t.assert.equal((await second).status, 200)
 	upstream.releaseFirst()
 	t.assert.equal((await first).status, 200)
+})
+
+void test('when a fill hangs, one waiter takes it over and the rest wait on that', async (t) => {
+	let upstream = slowUpstream()
+	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
+
+	let first = get('/menu')
+	await tick()
+	let waiters = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick(150)
+	t.assert.equal(upstream.calls.length, 2, 'one takeover, not one fetch per waiter')
+
+	upstream.releaseLater()
+	t.assert.deepEqual(
+		(await waiters).map((r) => r.status),
+		[200, 200, 200],
+	)
+	upstream.releaseFirst()
+	await first
+})
+
+void test('a copy stored by the hung request lets its takeover’s waiters go', async (t) => {
+	let upstream = slowUpstream()
+	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
+
+	let first = get('/menu')
+	await tick()
+	let taker = get('/menu')
+	let follower = get('/menu')
+	await tick(100)
+	t.assert.equal(upstream.calls.length, 2)
+
+	// The hung request finishes after all, while the takeover is still out.
+	upstream.releaseFirst()
+	t.assert.equal((await first).status, 200)
+	t.assert.equal((await follower).status, 200)
+
+	upstream.releaseLater()
+	t.assert.equal((await taker).status, 200)
+})
+
+void test('once a takeover stores a copy, later requests do not wait on the hung fill', async (t) => {
+	let upstream = slowUpstream()
+	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
+
+	let first = get('/menu')
+	await tick()
+	let taker = get('/menu')
+	await tick(100)
+	upstream.releaseLater()
+	t.assert.equal((await taker).status, 200)
+
+	let started = Date.now()
+	t.assert.equal((await get('/menu')).status, 200)
+	let elapsed = Date.now() - started
+	t.assert.equal(
+		elapsed < 50,
+		true,
+		`served from the cache, without waiting (took ${String(elapsed)} ms)`,
+	)
+	t.assert.equal(upstream.calls.length, 2)
+
+	upstream.releaseFirst()
+	await first
+})
+
+void test('a route that does not cache streams its body without buffering', async (t) => {
+	let stream = new PassThrough()
+	let get = await serve(t, () => Promise.resolve(undefined), {stream})
+
+	stream.write('first chunk')
+	let response = await Promise.race([get('/stream'), tick(200).then(() => 'still buffering')])
+	t.assert.notEqual(response, 'still buffering')
+	stream.end()
 })
 
 void test('the key is hashed once, before later middleware can change it', async (t) => {
