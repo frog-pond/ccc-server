@@ -20,7 +20,7 @@ function upstream(t: TestContext) {
 	let send = globalThis.fetch.bind(globalThis)
 	let requests: string[] = []
 	let responses = new Map<string, Response | Error>([
-		[GH_PAGES('building-hours-authored.json').href, Response.json({data: fixture('spaces')})],
+		[GH_PAGES('building-hours.json').href, Response.json({data: fixture('spaces')})],
 		[GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')})],
 	])
 	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL, init?: RequestInit) => {
@@ -83,7 +83,7 @@ void test('/spaces/hours resolves both published inputs against the matched cont
 	assert.deepEqual(await response.json(), fixture('spaces-resolved'))
 	assert.deepEqual(
 		requests.toSorted(),
-		[GH_PAGES('breaks.json').href, GH_PAGES('building-hours-authored.json').href].toSorted(),
+		[GH_PAGES('breaks.json').href, GH_PAGES('building-hours.json').href].toSorted(),
 	)
 })
 
@@ -144,16 +144,11 @@ firstSpace.breakSchedule = {fall: 'missing-template'}
 for (let [name, file, response, routes] of [
 	[
 		'unresolved reference',
-		'building-hours-authored.json',
+		'building-hours.json',
 		Response.json({data: invalidHours}),
 		['/v1/spaces/hours'],
 	],
-	[
-		'malformed hours',
-		'building-hours-authored.json',
-		Response.json({data: [{}]}),
-		['/v1/spaces/hours'],
-	],
+	['malformed hours', 'building-hours.json', Response.json({data: [{}]}), ['/v1/spaces/hours']],
 	[
 		'invalid calendar',
 		'breaks.json',
@@ -168,7 +163,7 @@ for (let [name, file, response, routes] of [
 	],
 	[
 		'missing hours envelope',
-		'building-hours-authored.json',
+		'building-hours.json',
 		Response.json(fixture('spaces')),
 		['/v1/spaces/hours'],
 	],
@@ -181,7 +176,7 @@ for (let [name, file, response, routes] of [
 	['malformed JSON', 'breaks.json', new Response('{'), ['/v1/spaces/hours', '/v1/breaks']],
 	[
 		'hours fetch failure',
-		'building-hours-authored.json',
+		'building-hours.json',
 		new Response('bad request', {status: 400}),
 		['/v1/spaces/hours'],
 	],
