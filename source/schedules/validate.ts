@@ -95,9 +95,9 @@ export function validateSchedules<T>(
 			}
 		}
 	}
-	let hasTemplate = (key: string, name: string) => {
+	let hasTemplate = (key: string, name: string, path: string) => {
 		let entry = calendar.breaks[key]
-		if (entry === undefined) fail(key, 'unknown break key')
+		if (entry === undefined) fail(path, 'unknown break key')
 		return Object.hasOwn(entry.templates ?? {}, name) || Object.hasOwn(globalTemplates, name)
 	}
 	for (let [name, policy] of Object.entries(globalTemplates)) {
@@ -116,7 +116,7 @@ export function validateSchedules<T>(
 					'defaults cannot use normal, inherit or break references',
 				)
 			}
-			if (!hasTemplate(key, defaultPolicy)) {
+			if (!hasTemplate(key, defaultPolicy, `${path}.defaultSpaceSchedule`)) {
 				fail(`${path}.defaultSpaceSchedule`, `unknown template ${defaultPolicy}`)
 			}
 		} else if (defaultPolicy !== undefined) {
@@ -160,7 +160,7 @@ export function validateSchedules<T>(
 				if (breakKeys.has(policy)) {
 					if (policy === key) fail(path, 'a break cannot reference itself')
 					visit(policy, [...trail, key])
-				} else if (!hasTemplate(key, policy)) {
+				} else if (!hasTemplate(key, policy, path)) {
 					fail(path, `unknown template ${policy} in ${key}'s context`)
 				}
 			}

@@ -169,6 +169,11 @@ void describe('server schedule contracts', () => {
 			/spaces\[1\]\.name: duplicate space name Example office; first defined at spaces\[0\]\.name/u,
 		)
 	})
+	void it('validates reference graphs when resolving typed inputs directly', () => {
+		let {calendar, spaces} = parseScheduleData(fixture('calendar'), fixture('spaces'))
+		must(spaces[0]).breakSchedule = {fall: 'missing-template'}
+		assert.throws(() => resolveSchedules(calendar, spaces), /unknown template missing-template/u)
+	})
 	for (let reserved of ['normal', 'inherit']) {
 		invalid.push(
 			[
