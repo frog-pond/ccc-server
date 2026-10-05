@@ -16,6 +16,7 @@ async function serve(
 		fillWaitTimeout?: number
 		before?: Koa.Middleware
 		stream?: PassThrough
+		dedupe?: (ctx: Koa.ExtendableContext) => boolean
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -26,6 +27,7 @@ async function serve(
 			set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
 			...(options.hash && {hash: options.hash}),
 			...(options.fillWaitTimeout && {fillWaitTimeout: options.fillWaitTimeout}),
+			...(options.dedupe && {dedupe: options.dedupe}),
 		}),
 	)
 	if (options.before) app.use(options.before)
@@ -352,6 +354,39 @@ void test('a stream of string chunks is cached and shared', async (t) => {
 	let bodies = await Promise.all((await responses).map((r) => r.text()))
 	t.assert.deepEqual(bodies, ['menu of the day', 'menu of the day'])
 	t.assert.equal(calls.length, 1)
+})
+
+void test('requests left out of dedupe each fetch for themselves, as before', async (t) => {
+	let {calls, release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {dedupe: () => false})
+
+	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick()
+	t.assert.equal(calls.length, 3)
+	release()
+
+	let statuses = (await responses).map((r) => r.status)
+	t.assert.deepEqual(statuses, [200, 200, 200])
+})
+
+void test('a request left out of dedupe neither waits on a fill nor starts one', async (t) => {
+	let {calls, release, fetchUpstream} = slowUpstream(t)
+	// the first and third requests take part; the second does not
+	let decisions = [true, false, true]
+	let get = await serve(t, fetchUpstream, {dedupe: () => decisions.shift() ?? true})
+
+	let first = get('/menu')
+	await tick()
+	let second = get('/menu')
+	await tick()
+	let third = get('/menu')
+	await tick()
+	// the second fetched for itself; the third waits on the first's fill
+	t.assert.equal(calls.length, 2)
+	release()
+
+	let statuses = (await Promise.all([first, second, third])).map((r) => r.status)
+	t.assert.deepEqual(statuses, [200, 200, 200])
 })
 
 void test('the key is hashed once, before later middleware can change it', async (t) => {

@@ -54,6 +54,7 @@ const CACHE_KEY: unique symbol = Symbol('koa-cache key')
 const CACHE_INFO_KEY: unique symbol = Symbol('koa-cache info key')
 const CACHE_FILL_KEY: unique symbol = Symbol('koa-cache fill key')
 const CACHE_WAITED_KEY: unique symbol = Symbol('koa-cache waited key')
+const CACHE_DEDUPE_KEY: unique symbol = Symbol('koa-cache dedupe key')
 
 /// How a fill ended, for the requests waiting on it.
 type FillOutcome =
@@ -132,6 +133,11 @@ declare module 'koa' {
 		 * itself, so that requests arriving later don't queue behind its fetch
 		 */
 		[CACHE_WAITED_KEY]?: boolean
+		/**
+		 * Whether this request takes part in sharing fills: waiting on another's,
+		 * and letting others wait on its own
+		 */
+		[CACHE_DEDUPE_KEY]?: boolean
 	}
 }
 
@@ -181,6 +187,15 @@ interface Options {
 	fillWaitTimeout?: number | undefined
 
 	/**
+	 * Whether a request takes part in sharing fills, asked once as it comes in.
+	 * One that doesn't never waits on another request's fill, nor lets others
+	 * wait on its own: it fetches for itself, as every request did before fills
+	 * were shared.
+	 * @default every request takes part
+	 */
+	dedupe?(ctx: ExtendableContext): boolean
+
+	/**
 	 * Get a value from a store.
 	 * @param key Cache key
 	 * @param maxAge Max age (in milliseconds) for the cache
@@ -201,8 +216,15 @@ interface Options {
 export function cachable(options: Options): Middleware {
 	options.setCachedHeader ??= false
 
-	// eslint-disable-next-line @typescript-eslint/unbound-method
-	const {get, set, hash = (ctx) => ctx.request.url, fillWaitTimeout = 10_000} = options
+	/* eslint-disable @typescript-eslint/unbound-method */
+	const {
+		get,
+		set,
+		hash = (ctx) => ctx.request.url,
+		fillWaitTimeout = 10_000,
+		dedupe = () => true,
+	} = options
+	/* eslint-enable @typescript-eslint/unbound-method */
 
 	const methods = {...defaultMethods, ...options.methods}
 
@@ -262,7 +284,7 @@ export function cachable(options: Options): Middleware {
 		if (!body) {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
-			if (!this[CACHE_WAITED_KEY] && !filling.has(this[CACHE_KEY])) {
+			if (this[CACHE_DEDUPE_KEY] && !this[CACHE_WAITED_KEY] && !filling.has(this[CACHE_KEY])) {
 				this[CACHE_FILL_KEY] = startFill(this[CACHE_KEY])
 			}
 			return false
@@ -307,9 +329,10 @@ export function cachable(options: Options): Middleware {
 			// One key for the whole request, so the fill it may wait on and the
 			// fill it may start are the same.
 			ctx[CACHE_KEY] = hash(ctx)
+			ctx[CACHE_DEDUPE_KEY] = dedupe(ctx)
 
 			// Another request is filling this key: wait for it, and take its outcome.
-			let fill = filling.get(ctx[CACHE_KEY])
+			let fill = ctx[CACHE_DEDUPE_KEY] ? filling.get(ctx[CACHE_KEY]) : undefined
 			if (fill) {
 				ctx[CACHE_WAITED_KEY] = true
 				let outcome = await waitFor(ctx, fill)

@@ -14,6 +14,7 @@ import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
 import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
 import QuickLRU from 'quick-lru'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
+import {parsePercent, percentRollout} from '../ccc-lib/feature-flags.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
@@ -88,6 +89,12 @@ async function main() {
 	app.use(
 		cachable({
 			setCachedHeader: true,
+			// share one upstream fetch among concurrent misses for a key, for
+			// this percentage of requests
+			dedupe: percentRollout(
+				'cache-fill-dedupe',
+				parsePercent('CACHE_FILL_DEDUPE_PERCENT', process.env['CACHE_FILL_DEDUPE_PERCENT']),
+			),
 			get(key) {
 				return cache.get(key)
 			},
