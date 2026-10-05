@@ -1,77 +1,103 @@
-import {getText} from '../../ccc-lib/http.ts'
-import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import {JSDOM} from 'jsdom'
+import {z} from 'zod'
+import moment from 'moment'
 import getUrls from 'get-urls'
-import pMap from 'p-map'
+import {JSDOM} from 'jsdom'
+import {getJson} from '../../ccc-lib/http.ts'
+import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
-import assert from 'node:assert/strict'
-import {buildDetailMap} from '../../ccc-lib/html.ts'
-import {unavailableJobs} from './deprecated.ts'
 
-const jobsUrl = 'https://apps.carleton.edu/campus/sfs/employment/feeds/jobs'
+const jobsUrl = 'https://www.carleton.edu/student-employment/post-jobs/wp-json/wp/v2/posts'
 
-const BOOLEAN_KEYS = ['Position available during term', 'Position available during break']
+const JobPostSchema = z.object({
+	id: z.number(),
+	date_gmt: z.string(),
+	link: z.url(),
+	title: z.object({rendered: z.string()}),
+	content: z.object({rendered: z.string()}),
+	_embedded: z
+		.object({
+			'wp:term': z.array(z.array(z.object({taxonomy: z.string(), name: z.string()}))).optional(),
+		})
+		.optional(),
+})
+type JobPost = z.infer<typeof JobPostSchema>
 
-const PARAGRAPHICAL_KEYS = ['Description']
+/// Postings come in two shapes. Most start with a "Department or Office:" /
+/// "Date Open:" / "Position available:" / "Description:" block; community-based
+/// work-study postings (category "CBWS Postings") are free-form, with a
+/// "Job title:" and "Name and address of employer" instead.
+const DEPARTMENT_LABELS = ['Department or Office', 'Department/Office']
 
-export async function fetchJob(link: URL) {
-	let id = link.searchParams.get('job_id')
-	assert(id)
+/// Renders the post's HTML as text, keeping line and paragraph breaks.
+function htmlToText(html: string) {
+	let withBreaks = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n')
+	return JSDOM.fragment(withBreaks)
+		.textContent.replace(/\u00a0/g, ' ')
+		.replace(/[ \t]+\n/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim()
+}
 
-	if (link.protocol === 'http:') {
-		link.protocol = 'https:'
+/// The text after `Label:` on its own line, if the post has one.
+function field(text: string, labels: string[]) {
+	for (let label of labels) {
+		let match = new RegExp(`^${label}\\s*:[ \\t]*(.*)$`, 'im').exec(text)
+		if (match?.[1]) return match[1].trim()
 	}
+	return undefined
+}
 
-	const body = await getText(link)
-	const dom = new JSDOM(body)
+export function convertJobPost(post: JobPost) {
+	let text = htmlToText(post.content.rendered)
+	let categories = (post._embedded?.['wp:term'] ?? [])
+		.flat()
+		.filter((t) => t.taxonomy === 'category')
+		.map((t) => t.name)
 
-	const jobs = dom.window.document.querySelector('#jobs')
-	assert(jobs)
-	const title = jobs.querySelector('h3')
-	assert(title)
+	/// The category is authoritative; the "Position available" line is a fallback.
+	let availability = [...categories, field(text, ['Position available']) ?? ''].join(' ')
 
-	let titleText = title.textContent.trim()
-	const offCampus = titleText.startsWith('Off Campus')
-	if (offCampus) {
-		titleText = titleText.replace(/^Off Campus: +/, '')
-	}
+	let descriptionStart = /^Description\s*:[ \t]*/im.exec(text)
+	let description = descriptionStart
+		? text.slice(descriptionStart.index + descriptionStart[0].length)
+		: text
 
-	let details = jobs.querySelectorAll('ul:first-of-type > li')
-	let detailMap = buildDetailMap(details, {paragraphs: PARAGRAPHICAL_KEYS, boolean: BOOLEAN_KEYS})
-
-	const description = detailMap.get('Description') ?? ''
-	const links = Array.from(getUrls(description === true ? '' : description))
+	let hrefs = [...JSDOM.fragment(post.content.rendered).querySelectorAll('a[href]')].map((a) =>
+		a.getAttribute('href'),
+	)
+	let links = [
+		...new Set([
+			post.link,
+			...hrefs.filter((h) => h !== null && URL.canParse(h)),
+			...getUrls(text),
+		]),
+	]
 
 	return {
-		id: id,
-		title: titleText,
-		offCampus: offCampus,
-		department: detailMap.get('Department or Office'),
-		dateOpen: detailMap.get('Date Open') ?? 'Unknown',
-		duringTerm: Boolean(detailMap.get('Position available during term')),
-		duringBreak: Boolean(detailMap.get('Position available during break')),
-		description: detailMap.get('Description') ?? '',
+		id: String(post.id),
+		title: JSDOM.fragment(post.title.rendered).textContent.trim(),
+		offCampus: categories.some((c) => /CBWS/i.test(c)),
+		department: field(text, DEPARTMENT_LABELS) ?? '',
+		dateOpen: field(text, ['Date Open']) ?? moment.utc(post.date_gmt).format('MM/DD/YYYY'),
+		duringTerm: /term/i.test(availability),
+		duringBreak: /break/i.test(availability),
+		description: description,
 		links: links,
 	}
 }
 
-/// Kept against the block being lifted: the feed's shape has not changed,
-/// only our ability to reach it.
 export async function getAllJobs() {
-	let body = await getText(jobsUrl)
-	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
-		(link) => {
-			let href = link.textContent.trim()
-			return URL.canParse(href) ? [new URL(href)] : []
-		},
-	)
-	return pMap(jobLinks, fetchJob, {concurrency: 4})
+	let posts = z
+		.array(JobPostSchema)
+		.parse(await getJson(jobsUrl, {searchParams: {per_page: 100, _embed: 'wp:term'}}))
+	return posts
+		.filter((p) => !p._embedded?.['wp:term']?.flat().some((t) => t.name === 'Archived'))
+		.map(convertJobPost)
 }
 
-export function jobs(ctx: Context) {
+export async function jobs(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = unavailableJobs()
+	ctx.body = await getAllJobs()
 }
