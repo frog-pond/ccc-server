@@ -2,11 +2,12 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {test, type TestContext} from 'node:test'
 import Koa from 'koa'
+import {noop} from 'lodash-es'
 import {api} from '../index.ts'
 import {api as carletonApi} from '../../ccci-carleton-college/index.ts'
 import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
 import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
-import {ONE_HOUR} from '../../ccc-lib/constants.ts'
+import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {parseScheduleData} from '../../schedules/parse.ts'
 import {GH_PAGES} from './gh-pages.ts'
 
@@ -16,7 +17,7 @@ function fixture(name: string): unknown {
 	) as unknown
 }
 
-function upstream(t: TestContext) {
+function upstream(t: TestContext, beforeResponse?: () => Promise<void>) {
 	let send = globalThis.fetch.bind(globalThis)
 	let requests: string[] = []
 	let responses = new Map<string, Response | Error>([
@@ -30,17 +31,20 @@ function upstream(t: TestContext) {
 		let response = responses.get(url)
 		if (response instanceof Error) return Promise.reject(response)
 		if (!response) return Promise.reject(new Error(`unexpected upstream request ${url}`))
-		return Promise.resolve(response.clone())
+		return beforeResponse
+			? beforeResponse().then(() => response.clone())
+			: Promise.resolve(response.clone())
 	})
 	return {send, requests, responses}
 }
 
 /** Use the server's actual cache middleware, with a controllable store expiry. */
-async function serve(t: TestContext) {
+async function serve(t: TestContext, onRequest?: () => void) {
 	let app = new Koa()
 	app.silent = true
 	ctxCacheControl(app)
 	let now = 0
+	t.mock.method(Date, 'now', () => now)
 	let store = new Map<string, {value: CacheObject; expires: number}>()
 	app.use(
 		cachable({
@@ -59,6 +63,10 @@ async function serve(t: TestContext) {
 			},
 		}),
 	)
+	app.use(async (_ctx, next) => {
+		onRequest?.()
+		await next()
+	})
 	app.use(api.routes())
 	let server = app.listen(0)
 	t.after(() => server.close())
@@ -68,6 +76,9 @@ async function serve(t: TestContext) {
 	return {
 		base: `http://localhost:${address.port.toFixed(0)}`,
 		store,
+		advance: (duration: number) => {
+			now += duration
+		},
 		expire: () => {
 			now += ONE_HOUR
 		},
@@ -94,12 +105,15 @@ void test('/breaks serves only timezone, names and dates from validated definiti
 	assert.equal(response.status, 200)
 	assert.equal(response.headers.get('cache-control'), 'public, max-age=3600')
 	assert.deepEqual(await response.json(), fixture('calendar-response'))
-	assert.deepEqual(requests, [GH_PAGES('breaks.json').href])
+	assert.deepEqual(
+		requests.toSorted(),
+		[GH_PAGES('breaks.json').href, GH_PAGES('building-hours.json').href].toSorted(),
+	)
 })
 
 for (let [route, expected, fetches] of [
 	['/v1/spaces/hours', 'spaces-resolved', 2],
-	['/v1/breaks', 'calendar-response', 1],
+	['/v1/breaks', 'calendar-response', 2],
 ] as const) {
 	void test(`${route} caches successful responses for one hour and refetches on expiry`, async (t) => {
 		let {base, expire} = await serve(t)
@@ -136,6 +150,146 @@ for (let [route, expected, fetches] of [
 const badCalendar = {
 	data: {timezone: 'America/Chicago', breaks: {fall: {name: 'Fall', date: '2026-02-29'}}},
 }
+
+function updatedInputs() {
+	let {calendar, spaces} = parseScheduleData(fixture('calendar'), fixture('spaces'))
+	let fall = calendar.breaks['fall']
+	assert.ok(fall)
+	calendar.breaks['autumn'] = fall
+	delete calendar.breaks['fall']
+	for (let space of spaces) {
+		if (space.breakSchedule) {
+			space.breakSchedule = Object.fromEntries(
+				Object.entries(space.breakSchedule).map(([key, policy]) => [
+					key === 'fall' ? 'autumn' : key,
+					policy === 'fall' ? 'autumn' : policy,
+				]),
+			)
+		}
+	}
+	return {calendar, spaces}
+}
+
+void test('both routes share a snapshot and its expiry, including after break keys change', async (t) => {
+	let {base, advance, store} = await serve(t)
+	let {send, requests, responses} = upstream(t)
+	let hours = await send(`${base}/v1/spaces/hours`)
+	assert.deepEqual(await hours.json(), fixture('spaces-resolved'))
+	let updated = updatedInputs()
+	responses.set(GH_PAGES('breaks.json').href, Response.json({data: updated.calendar}))
+	responses.set(GH_PAGES('building-hours.json').href, Response.json({data: updated.spaces}))
+	advance(ONE_HOUR / 2)
+	let calendar = await send(`${base}/v1/breaks`)
+	assert.deepEqual(await calendar.json(), fixture('calendar-response'))
+	assert.equal(calendar.headers.get('cache-control'), 'public, max-age=1800')
+	assert.equal(requests.length, 2)
+	advance(ONE_HOUR / 2)
+	let refreshedCalendar = await send(`${base}/v1/breaks`)
+	assert.equal(refreshedCalendar.status, 200)
+	let calendarBody = (await refreshedCalendar.json()) as {data: {breaks: Record<string, unknown>}}
+	assert.ok(calendarBody.data.breaks['autumn'])
+	assert.equal(calendarBody.data.breaks['fall'], undefined)
+	let refreshedHours = await send(`${base}/v1/spaces/hours`)
+	assert.equal(refreshedHours.status, 200)
+	let hoursBody = (await refreshedHours.json()) as {
+		data: {breakSchedule: Record<string, unknown>}[]
+	}
+	assert.ok(hoursBody.data[0]?.breakSchedule['autumn'])
+	assert.equal(hoursBody.data[0].breakSchedule['fall'], undefined)
+	assert.equal(requests.length, 4)
+	// URL-specific response caches must not give either route an independent expiry.
+	assert.equal(store.size, 0)
+})
+
+for (let [name, file, failed] of [
+	['invalid calendar', 'breaks.json', Response.json(badCalendar)],
+	['invalid hours', 'building-hours.json', Response.json({data: [{}]})],
+	['upstream outage', 'breaks.json', new Response('unavailable', {status: 400})],
+] as const) {
+	void test(`both routes retain the last-good pair after ${name}, throttle retries and recover`, async (t) => {
+		t.mock.method(console, 'warn', noop)
+		let {base, expire, advance, store} = await serve(t)
+		let {send, requests, responses} = upstream(t)
+		assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
+		let original = responses.get(GH_PAGES(file).href)
+		assert.ok(original)
+		responses.set(GH_PAGES(file).href, failed)
+		expire()
+		await Promise.all(
+			[
+				['/v1/breaks', 'calendar-response'],
+				['/v1/spaces/hours', 'spaces-resolved'],
+			].map(async ([route, expected]) => {
+				assert.ok(route)
+				assert.ok(expected)
+				let stale = await send(`${base}${route}`)
+				assert.equal(stale.status, 200)
+				assert.deepEqual(await stale.json(), fixture(expected))
+				assert.equal(stale.headers.get('x-cached-response'), 'STALE')
+				assert.equal(stale.headers.get('cache-control'), 'private, no-cache, no-store')
+			}),
+		)
+		assert.equal(requests.length, 4)
+		assert.equal(store.size, 0)
+		responses.set(GH_PAGES(file).href, original)
+		advance(ONE_MINUTE - 1)
+		assert.equal((await send(`${base}/v1/breaks`)).headers.get('x-cached-response'), 'STALE')
+		assert.equal(requests.length, 4)
+		advance(1)
+		let recovered = await send(`${base}/v1/spaces/hours`)
+		assert.deepEqual(await recovered.json(), fixture('spaces-resolved'))
+		assert.equal(recovered.headers.get('x-cached-response'), null)
+		assert.equal(recovered.headers.get('cache-control'), 'public, max-age=3600')
+		assert.equal((await send(`${base}/v1/breaks`)).headers.get('x-cached-response'), 'HIT')
+		assert.equal(requests.length, 6)
+	})
+}
+
+void test('fallback stops 24 hours after the last successful snapshot, without extending on failures', async (t) => {
+	t.mock.method(console, 'warn', noop)
+	let {base, advance} = await serve(t)
+	let {send, responses} = upstream(t)
+	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
+	responses.set(GH_PAGES('breaks.json').href, Response.json(badCalendar))
+	advance(ONE_DAY - 1)
+	assert.equal((await send(`${base}/v1/breaks`)).headers.get('x-cached-response'), 'STALE')
+	advance(1)
+	await Promise.all(
+		['/v1/breaks', '/v1/spaces/hours'].map(async (route) => {
+			let failed = await send(`${base}${route}`)
+			assert.equal(failed.status, 500)
+			assert.equal(failed.headers.get('x-cached-response'), null)
+		}),
+	)
+	responses.set(GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')}))
+	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
+})
+
+void test('concurrent requests to both routes share one in-flight upstream pair', async (t) => {
+	let entered = Promise.withResolvers<undefined>()
+	let count = 0
+	let {base} = await serve(t, () => {
+		count += 1
+		if (count === 2) entered.resolve(undefined)
+	})
+	let gate = Promise.withResolvers<undefined>()
+	let started = Promise.withResolvers<undefined>()
+	let {send, requests} = upstream(t, () => {
+		if (requests.length === 2) started.resolve(undefined)
+		return gate.promise
+	})
+	let pending = [send(`${base}/v1/breaks`), send(`${base}/v1/spaces/hours`)]
+	await Promise.all([started.promise, entered.promise])
+	gate.resolve(undefined)
+	let [calendar, hours] = await Promise.all(pending)
+	assert.ok(calendar)
+	assert.ok(hours)
+	assert.equal(calendar.status, 200)
+	assert.equal(hours.status, 200)
+	assert.deepEqual(await calendar.json(), fixture('calendar-response'))
+	assert.deepEqual(await hours.json(), fixture('spaces-resolved'))
+	assert.equal(requests.length, 2)
+})
 const invalidHours = parseScheduleData(fixture('calendar'), fixture('spaces')).spaces
 let firstSpace = invalidHours[0]
 assert.ok(firstSpace)
@@ -146,9 +300,14 @@ for (let [name, file, response, routes] of [
 		'unresolved reference',
 		'building-hours.json',
 		Response.json({data: invalidHours}),
-		['/v1/spaces/hours'],
+		['/v1/spaces/hours', '/v1/breaks'],
 	],
-	['malformed hours', 'building-hours.json', Response.json({data: [{}]}), ['/v1/spaces/hours']],
+	[
+		'malformed hours',
+		'building-hours.json',
+		Response.json({data: [{}]}),
+		['/v1/spaces/hours', '/v1/breaks'],
+	],
 	[
 		'invalid calendar',
 		'breaks.json',
@@ -165,7 +324,7 @@ for (let [name, file, response, routes] of [
 		'missing hours envelope',
 		'building-hours.json',
 		Response.json(fixture('spaces')),
-		['/v1/spaces/hours'],
+		['/v1/spaces/hours', '/v1/breaks'],
 	],
 	[
 		'missing calendar envelope',
@@ -178,7 +337,7 @@ for (let [name, file, response, routes] of [
 		'hours fetch failure',
 		'building-hours.json',
 		new Response('bad request', {status: 400}),
-		['/v1/spaces/hours'],
+		['/v1/spaces/hours', '/v1/breaks'],
 	],
 	[
 		'calendar fetch failure',
