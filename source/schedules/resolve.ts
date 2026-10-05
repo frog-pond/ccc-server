@@ -12,6 +12,14 @@ export function resolveSchedules<T>(
 		calendar,
 		spaces.map((schedules, index) => ({label: `spaces[${index.toFixed(0)}]`, schedules})),
 	)
+	return resolveValidatedSchedules(calendar, spaces)
+}
+
+/** Internal expansion for inputs whose complete reference graph has been validated. */
+function resolveValidatedSchedules<T>(
+	calendar: BreakCalendar<T>,
+	spaces: readonly Space<T, string | Schedule<T>>[],
+): Space<T>[] {
 	return spaces.map((space) => {
 		let {breakSchedule: entries, ...fields} = space
 		if (entries === undefined) return fields
@@ -50,7 +58,7 @@ export function resolveSchedules<T>(
 /** Validates the complete pair before returning any canonical hours. */
 export function resolveScheduleData(calendarInput: unknown, spacesInput: unknown) {
 	let {calendar, spaces} = parseScheduleData(calendarInput, spacesInput)
-	return {data: resolveSchedules(calendar, spaces)}
+	return {data: resolveValidatedSchedules(calendar, spaces)}
 }
 
 /** Pure calendar projection for the matched response contract; no route integration. */
