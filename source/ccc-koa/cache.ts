@@ -45,6 +45,7 @@ export function isStream(stream: unknown): stream is Readable {
 const CACHE_KEY: unique symbol = Symbol('koa-cache key')
 const CACHE_INFO_KEY: unique symbol = Symbol('koa-cache info key')
 const CACHE_FILL_KEY: unique symbol = Symbol('koa-cache fill key')
+const CACHE_WAITED_KEY: unique symbol = Symbol('koa-cache waited key')
 
 declare module 'koa' {
 	interface ExtendableContext {
@@ -86,6 +87,11 @@ declare module 'koa' {
 		 * once it is done, to let the requests waiting on it through
 		 */
 		[CACHE_FILL_KEY]?: () => void
+		/**
+		 * Set when this request waited on another's fill. It never fills the key
+		 * itself, so that if the fill wasn't cached, every waiter fetches at once
+		 */
+		[CACHE_WAITED_KEY]?: boolean
 	}
 }
 
@@ -127,6 +133,13 @@ interface Options {
 	hash?(ctx: ExtendableContext): string
 
 	/**
+	 * How long (in milliseconds) a request waits on another request that is
+	 * already filling its key, before fetching for itself.
+	 * @default 10_000
+	 */
+	fillWaitTimeout?: number | undefined
+
+	/**
 	 * Get a value from a store.
 	 * @param key Cache key
 	 * @param maxAge Max age (in milliseconds) for the cache
@@ -148,13 +161,16 @@ export function cachable(options: Options): Middleware {
 	options.setCachedHeader ??= false
 
 	// eslint-disable-next-line @typescript-eslint/unbound-method
-	const {get, set, hash = (ctx) => ctx.request.url} = options
+	const {get, set, hash = (ctx) => ctx.request.url, fillWaitTimeout = 10_000} = options
 
 	const methods = {...defaultMethods, ...options.methods}
 
 	// Keys some request is fetching right now, to the moment it is done. A
 	// request for one of these waits for that fetch instead of making its own,
 	// so a burst of misses for one route costs one upstream fetch, not one each.
+	// A request that waited never fills: if the fill wasn't cached (an error, a
+	// non-200, a hang past `fillWaitTimeout`), the waiters all fetch at once, as
+	// they would have without the wait, rather than queueing behind each other.
 	const filling = new Map<string, Promise<unknown>>()
 
 	// allow for manual cache clearing
@@ -174,13 +190,12 @@ export function cachable(options: Options): Middleware {
 		// uncacheable request method
 		if (!methods[this.request.method]) return false
 
-		this[CACHE_KEY] = hash(this)
 		const obj = get(this[CACHE_KEY], maxAge ?? options.maxAge ?? 0)
 		const body = obj?.body
 		if (!body) {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
-			if (!filling.has(this[CACHE_KEY])) {
+			if (!this[CACHE_WAITED_KEY] && !filling.has(this[CACHE_KEY])) {
 				let {promise, resolve} = Promise.withResolvers<undefined>()
 				let key = this[CACHE_KEY]
 				filling.set(key, promise)
@@ -223,12 +238,26 @@ export function cachable(options: Options): Middleware {
 		ctx.evictCachedItem = evictCachedItem.bind(ctx)
 		ctx.setCacheTTL = setCacheTTL.bind(ctx)
 
-		// Another request is filling this key: wait for it, then go on as usual,
-		// which serves its response from the cache. If it could not be cached (an
-		// error, a non-200), this request makes its own attempt.
-		let fill = methods[ctx.request.method] ? filling.get(hash(ctx)) : undefined
-		if (fill) {
-			await Sentry.startSpan({name: 'wait for cache fill', op: 'cache.wait'}, () => fill)
+		if (methods[ctx.request.method]) {
+			// One key for the whole request, so the fill it may wait on and the
+			// fill it may start are the same.
+			ctx[CACHE_KEY] = hash(ctx)
+
+			// Another request is filling this key: wait for it, then go on as
+			// usual, which serves its response from the cache.
+			let fill = filling.get(ctx[CACHE_KEY])
+			if (fill) {
+				ctx[CACHE_WAITED_KEY] = true
+				await Sentry.startSpan({name: 'wait for cache fill', op: 'cache.wait'}, async (span) => {
+					let timer: NodeJS.Timeout | undefined
+					let timeout = new Promise<'timeout'>((resolve) => {
+						timer = setTimeout(resolve, fillWaitTimeout, 'timeout')
+					})
+					let outcome = await Promise.race([fill, timeout])
+					clearTimeout(timer)
+					span.setAttribute('cache.wait.timed_out', outcome === 'timeout')
+				})
+			}
 		}
 
 		try {
