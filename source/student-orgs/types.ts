@@ -59,7 +59,7 @@ export const DetailedStudentOrgSchema = SortableStudentOrgSchema.extend({
 	constitutionUrl: z.union([z.url(), z.literal('')]),
 	officeHours: z.string(),
 	officeLocation: z.string(),
-	/** Plain text, like `description`. */
+	/** Markdown, as `description` is here. */
 	additionalInformation: z.string(),
 })
 

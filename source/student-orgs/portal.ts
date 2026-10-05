@@ -1,4 +1,5 @@
 import {JSDOM} from 'jsdom'
+import {htmlToMarkdown} from '../ccc-lib/html-to-markdown.ts'
 import {z} from 'zod'
 import {AdvisorSchema, ContactPersonSchema} from './types.ts'
 import type {AdvisorType, ContactPersonType} from './types.ts'
@@ -106,74 +107,73 @@ export function urlOrBlank(text: string): string {
 	return URL.canParse(text) && /^https?:/u.test(text) ? text : ''
 }
 
-/// Elements that start and end a line of their own, as a browser lays them
-/// out. These are the ones officers' text uses; no org's holds a DL, ARTICLE,
-/// SECTION, ASIDE or FIGURE.
-const BLOCKS = new Set([
-	'BLOCKQUOTE',
-	'DIV',
-	'H1',
-	'H2',
-	'H3',
-	'H4',
-	'H5',
-	'H6',
-	'LI',
-	'OL',
-	'P',
-	'TR',
-	'UL',
-])
+/// A heading longer than this is a paragraph an officer set large.
+const MAX_HEADING_WORDS = 10
 
-const TEXT_NODE = 3
+const EMPHASIS = 'b, strong, i, em'
 
-/// What starts a list item's line, ordered list or not.
-const BULLET = '• '
+const NODE_FILTER_SHOW_TEXT = 4
 
-/// Officers' rich text as lines: one to a paragraph, heading, list item or
-/// `<br>`, since `textContent` alone runs paragraphs together -- a list of
-/// names, one to a paragraph, would read as one long word. A list item is
-/// bulleted. Empty lines go, and whitespace within a line reads as one
-/// space, as a browser shows it.
-export function plainText(html: string): string {
-	let lines: string[] = []
-	let line = ''
-	let endLine = () => {
-		// A list item's own paragraph stays on its bullet's line.
-		if (line === BULLET) {
-			return
+/// Replaces an element with its children.
+const unwrap = (element: Element) => {
+	element.replaceWith(...element.childNodes)
+}
+
+/// Whether every visible character of a block is inside bold or italics.
+function isAllEmphasis(block: Element): boolean {
+	let walker = block.ownerDocument.createTreeWalker(block, NODE_FILTER_SHOW_TEXT)
+	let anyText = false
+	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+		if (!node.textContent?.trim()) {
+			continue
 		}
-		lines.push(
-			line
-				// The portal's editor leaves these behind, and `\s` does not match them.
-				.replace(/[\u200B-\u200D\uFEFF]/gu, '')
-				.replace(/\s+/gu, ' ')
-				.trim(),
-		)
-		line = ''
-	}
-	let read = (node: Node) => {
-		for (let child of node.childNodes) {
-			if (child.nodeType === TEXT_NODE) {
-				line += child.textContent ?? ''
-			} else if (child.nodeName === 'BR') {
-				endLine()
-			} else if (child.nodeName === 'LI') {
-				endLine()
-				line = BULLET
-				read(child)
-				endLine()
-			} else if (BLOCKS.has(child.nodeName)) {
-				endLine()
-				read(child)
-				endLine()
-			} else {
-				read(child)
-			}
+		anyText = true
+		let emphasis = node.parentElement?.closest(EMPHASIS)
+		if (!emphasis || !block.contains(emphasis)) {
+			return false
 		}
 	}
-	read(JSDOM.fragment(html))
-	endLine()
+	return anyText
+}
 
-	return lines.filter(Boolean).join('\n')
+/// Officers' rich text as markdown, cleaned of what their editor adds that
+/// they did not mean: the normal-weight `<b>` a Google Docs paste wraps its
+/// text in, a long heading used to make a paragraph large, a paragraph set
+/// wholly in bold or italics, and zero-width characters, which `\s` does
+/// not match. Turndown numbers an ordered list as its items stand.
+export function markdownOf(html: string): string {
+	let {document} = new JSDOM().window
+	let root = document.createElement('div')
+	root.innerHTML = html
+
+	// Stripped once parsed, since some are written as entities.
+	let walker = document.createTreeWalker(root, NODE_FILTER_SHOW_TEXT)
+	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+		node.textContent = node.textContent?.replace(/[\u200B-\u200D\uFEFF]/gu, '') ?? ''
+	}
+
+	for (let wrapper of root.querySelectorAll('b[id^="docs-internal-guid"]')) {
+		unwrap(wrapper)
+	}
+	for (let heading of root.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+		let words = heading.textContent.trim().split(/\s+/u)
+		if (words.length > MAX_HEADING_WORDS) {
+			let paragraph = document.createElement('p')
+			paragraph.append(...heading.childNodes)
+			heading.replaceWith(paragraph)
+		}
+	}
+	for (let paragraph of root.querySelectorAll('p')) {
+		if (isAllEmphasis(paragraph)) {
+			paragraph.querySelectorAll(EMPHASIS).forEach(unwrap)
+		}
+	}
+
+	return (
+		htmlToMarkdown(root.innerHTML)
+			// A list item's own paragraph leaves lines holding only indentation.
+			.replace(/^[ \t]+$/gmu, '')
+			.replace(/\n{3,}/gu, '\n\n')
+			.trim()
+	)
 }
