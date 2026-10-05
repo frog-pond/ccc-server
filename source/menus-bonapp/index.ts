@@ -1,5 +1,4 @@
 import {getJson, getText} from '../ccc-lib/http.ts'
-import {JSDOM, VirtualConsole} from 'jsdom'
 import * as Sentry from '@sentry/node'
 import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe, campusToday} from './helpers.ts'
 import {cleanDayPart, cleanMenuItem} from './clean.ts'
@@ -11,33 +10,20 @@ import {
 } from './types.ts'
 
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
+import {extractBamco} from './extract-bamco.ts'
 
-async function getBonAppWebpage(url: string | URL) {
-	const virtualConsole = new VirtualConsole()
-	virtualConsole.forwardTo(console, {jsdomErrors: 'none'})
-	virtualConsole.on('jsdomError', (err) => {
-		let messagesToSkip = [
-			'Uncaught [ReferenceError: wp is not defined]',
-			'Uncaught [ReferenceError: jQuery is not defined]',
-		]
-		if (messagesToSkip.includes(err.message)) {
-			return
-		}
-		console.error(err)
-		Sentry.captureException(err)
-	})
+/// Each stage of turning a café page into our data, as a span, so a slow
+/// request's trace shows which one took the time.
+const stage = <T>(name: string, fn: () => T): T => Sentry.startSpan({name, op: 'function'}, fn)
 
-	const body = await getText(url.toString())
-	return new JSDOM(body, {
-		runScripts: 'dangerously',
-		virtualConsole,
-	})
+async function getBamco(url: string | URL) {
+	let html = await getText(url.toString())
+	let raw = stage('bonapp.extract', () => extractBamco(html))
+	return stage('bonapp.validate', () => BamcoPageContentsSchema.parse(raw))
 }
 
 export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
-	let dom = await getBonAppWebpage(cafeUrl)
-
-	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
+	let bamco = await getBamco(cafeUrl)
 	if (typeof bamco === 'undefined') {
 		return CustomCafe('Café is closed')
 	}
@@ -78,25 +64,28 @@ export function nutrition(itemId: string) {
 }
 
 export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
-	let dom = await getBonAppWebpage(cafeUrl)
-
-	let bamco = BamcoPageContentsSchema.parse(dom.window['Bamco'])
+	let bamco = await getBamco(cafeUrl)
 	if (typeof bamco === 'undefined') {
 		return CafeMenuIsClosed()
 	}
 
-	return CafeMenuResponseSchema.parse({
-		cor_icons: Array.isArray(bamco.cor_icons) ? {} : bamco.cor_icons,
+	let {items, dayparts} = stage('bonapp.clean', () => ({
 		items: Object.fromEntries(
 			Object.entries(bamco.menu_items).map(([id, item]) => [id, cleanMenuItem(item)]),
 		),
+		dayparts: Object.values(bamco.dayparts).map(cleanDayPart),
+	}))
+
+	return CafeMenuResponseSchema.parse({
+		cor_icons: Array.isArray(bamco.cor_icons) ? {} : bamco.cor_icons,
+		items,
 		days: [
 			{
 				date: campusToday(),
 				cafe: {
 					name: bamco.current_cafe.name,
 					menu_id: '1',
-					dayparts: [Object.values(bamco.dayparts).map(cleanDayPart)],
+					dayparts: [dayparts],
 				},
 			},
 		],
