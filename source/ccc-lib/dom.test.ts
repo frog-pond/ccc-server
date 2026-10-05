@@ -70,3 +70,20 @@ void test('htmlFragment keeps text split by an entity as one node', (t) => {
 		['Unit Number: 10-13​001', 'next'],
 	)
 })
+
+void test('parseHtml keeps text split by an entity as one node, however deep', (t) => {
+	let item = parseHtml('<ul><li><strong>Date Open:</strong> Jan &amp; Feb</li></ul>').querySelector(
+		'li',
+	)
+	t.assert.deepEqual(
+		Array.from(item?.childNodes ?? [], (node) => node.textContent),
+		['Date Open:', ' Jan & Feb'],
+	)
+})
+
+void test('parseXml keeps text split by an entity as one node', (t) => {
+	let title = parseXml('<rss><item><title>Tom &amp; Jerry</title></item></rss>').querySelector(
+		'title',
+	)
+	t.assert.equal(title?.childNodes.length, 1)
+})
