@@ -64,3 +64,7 @@ void test('unitNumberOfDescription keeps a unit apart from the paragraph after i
 
 	t.assert.equal(unitNumberOfDescription(html), '11725')
 })
+
+void test('a unit written with an entity inside it is still read whole', (t) => {
+	t.assert.equal(unitNumberOfDescription('Unit Number: 10-13&#8203;001'), '13001')
+})

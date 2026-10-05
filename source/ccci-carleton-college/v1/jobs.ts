@@ -1,6 +1,6 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
-import {JSDOM} from 'jsdom'
+import {parseHtml, parseXml} from '../../ccc-lib/dom.ts'
 import getUrls from 'get-urls'
 import pMap from 'p-map'
 import type {Context} from '../../ccc-server/context.ts'
@@ -23,9 +23,9 @@ export async function fetchJob(link: URL) {
 	}
 
 	const body = await getText(link)
-	const dom = new JSDOM(body)
+	const dom = parseHtml(body)
 
-	const jobs = dom.window.document.querySelector('#jobs')
+	const jobs = dom.querySelector('#jobs')
 	assert(jobs)
 	const title = jobs.querySelector('h3')
 	assert(title)
@@ -59,13 +59,11 @@ export async function fetchJob(link: URL) {
 /// only our ability to reach it.
 export async function getAllJobs() {
 	let body = await getText(jobsUrl)
-	let dom = new JSDOM(body, {contentType: 'text/xml'})
-	let jobLinks = Array.from(dom.window.document.querySelectorAll('rss channel item link')).flatMap(
-		(link) => {
-			let href = link.textContent.trim()
-			return URL.canParse(href) ? [new URL(href)] : []
-		},
-	)
+	let dom = parseXml(body)
+	let jobLinks = Array.from(dom.querySelectorAll('rss channel item link')).flatMap((link) => {
+		let href = link.textContent.trim()
+		return URL.canParse(href) ? [new URL(href)] : []
+	})
 	return pMap(jobLinks, fetchJob, {concurrency: 4})
 }
 
