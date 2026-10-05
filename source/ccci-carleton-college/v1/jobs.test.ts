@@ -27,7 +27,7 @@ void test('convertJobPost reads the labelled block', (t) => {
 	t.assert.equal(job.duringBreak, false)
 	t.assert.equal(job.offCampus, false)
 	t.assert.match(job.description, /^Help patrons\./)
-	t.assert.equal(job.links.includes('https://forms.gle/abc'), true)
+	t.assert.deepEqual(job.links, [post('').link, 'https://forms.gle/abc'])
 })
 
 void test('convertJobPost handles free-form community work-study postings', (t) => {
