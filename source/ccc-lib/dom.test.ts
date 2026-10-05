@@ -87,3 +87,24 @@ void test('parseXml keeps text split by an entity as one node', (t) => {
 	)
 	t.assert.equal(title?.childNodes.length, 1)
 })
+
+void test('parseXml rejects a truncated feed', (t) => {
+	let truncated = RSS.slice(0, RSS.indexOf('</item>') + '</item>'.length)
+	t.assert.throws(() => parseXml(truncated), SyntaxError)
+})
+
+void test('parseXml rejects an HTML page served in place of a feed', (t) => {
+	let page =
+		'<!doctype html><html><head><meta charset="utf-8"><title>Down</title></head><body><p>Back soon<br></body></html>'
+	t.assert.throws(() => parseXml(page), SyntaxError)
+})
+
+void test('parseXml rejects an empty body', (t) => {
+	t.assert.throws(() => parseXml(''), SyntaxError)
+})
+
+void test('parseXml does not reject entities a feed declares for itself', (t) => {
+	t.assert.doesNotThrow(() =>
+		parseXml('<!DOCTYPE rss [<!ENTITY nbsp "&#160;">]><rss><title>a&nbsp;b</title></rss>'),
+	)
+})

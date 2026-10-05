@@ -1,4 +1,5 @@
 import {DOMParser, parseHTML} from 'linkedom'
+import {SaxesParser} from 'saxes'
 
 /// The one place that knows which DOM library we use. linkedom builds a
 /// document several times faster than jsdom and runs no scripts, which is all
@@ -22,7 +23,28 @@ export function parseHtml(body: string): Document {
 	return mergeText(parseHTML(body).document)
 }
 
+/// Throws a SyntaxError unless `body` is well-formed XML. linkedom parses
+/// anything -- a truncated feed, an HTML error page, an empty body -- and
+/// would hand those back as a document with fewer items, or none, as though
+/// the feed were fine. This checks with saxes, set up as jsdom set it up, so
+/// a feed fails here exactly where it failed before linkedom.
+function assertWellFormedXml(body: string): void {
+	let parser = new SaxesParser({xmlns: true, defaultXMLVersion: '1.0', forceXMLVersion: true})
+	parser.on('doctype', (doctype) => {
+		// entities a feed declares for itself, which jsdom accepted too (linkedom
+		// leaves them as written, where jsdom expanded them)
+		for (let [, name, value] of doctype.matchAll(/<!ENTITY ([^ ]+) "([^"]+)">/g)) {
+			if (name && value && !(name in parser.ENTITIES)) parser.ENTITIES[name] = value
+		}
+	})
+	parser.on('error', (error) => {
+		throw new SyntaxError(`Malformed XML: ${error.message}`)
+	})
+	parser.write(body).close()
+}
+
 export function parseXml(body: string): Document {
+	assertWellFormedXml(body)
 	// linkedom's XMLDocument type doesn't declare the HTML-only Document members
 	return mergeText(new DOMParser().parseFromString(body, 'text/xml') as unknown as Document)
 }
