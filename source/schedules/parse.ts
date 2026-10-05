@@ -54,7 +54,7 @@ const calendarSchema = z.strictObject({
 })
 // Space metadata is retained, including fields added by future upstream revisions.
 const spaceSchema = z.looseObject({
-	name: z.string(),
+	name: text,
 	category: z.string(),
 	kind: z.enum(['building', 'office', 'space', 'service']),
 	schedule: services,

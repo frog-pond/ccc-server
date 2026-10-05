@@ -124,7 +124,16 @@ export function validateSchedules<T>(
 		}
 	}
 
+	let names = new Map<string, string>()
 	for (let {label, schedules} of spaces) {
+		let previous = names.get(schedules.name)
+		if (previous !== undefined) {
+			fail(
+				`${label}.name`,
+				`duplicate space name ${schedules.name}; first defined at ${previous}.name`,
+			)
+		}
+		names.set(schedules.name, label)
 		validateSchedule({schedule: schedules.schedule, exceptions: schedules.exceptions ?? []}, label)
 		let entries = schedules.breakSchedule ?? {}
 		for (let key of Object.keys(entries)) {

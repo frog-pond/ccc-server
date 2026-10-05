@@ -115,6 +115,8 @@ void describe('server schedule contracts', () => {
 	})
 
 	const invalid: [string, string, unknown][] = [
+		['empty space name', 'spaces.0.name', ''],
+		['blank space name', 'spaces.0.name', '   '],
 		['unknown break', 'spaces.0.breakSchedule.fal', 'normal'],
 		['unknown template', 'spaces.0.breakSchedule.spring', 'typo'],
 		['template from another context', 'spaces.0.breakSchedule.easter', 'spring-only'],
@@ -159,6 +161,14 @@ void describe('server schedule contracts', () => {
 			{name: 'Duplicate', start: '2027-03-28', end: '2027-03-28'},
 		],
 	]
+	void it('rejects duplicate space names with both input locations', () => {
+		let input = pair()
+		set(input, 'spaces.1.name', 'Example office')
+		assert.throws(
+			() => resolveScheduleData(input.calendar, input.spaces),
+			/spaces\[1\]\.name: duplicate space name Example office; first defined at spaces\[0\]\.name/u,
+		)
+	})
 	for (let reserved of ['normal', 'inherit']) {
 		invalid.push(
 			[
