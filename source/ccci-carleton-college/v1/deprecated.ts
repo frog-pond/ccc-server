@@ -1,4 +1,5 @@
-import {DISCUSSION_URL, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
+import {DISCUSSION_URL, RETIRED_TITLE, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
+import {FeedItemSchema} from '../../feeds/types.ts'
 import {SortableCarletonStudentOrgSchema} from './orgs.ts'
 
 /// apps.carleton.edu answers every path with a bot challenge, so the scrapers
@@ -8,7 +9,7 @@ import {SortableCarletonStudentOrgSchema} from './orgs.ts'
 /// has nothing to list. These payloads say what actually happened instead.
 ///
 /// They are shaped for the renderers the shipped clients already have: an org
-/// row draws its name and description, a job row its title and description.
+/// row draws its name and description, a feed item its title and excerpt.
 /// Nothing here needs a client change.
 
 const OUTAGE_TEXT =
@@ -31,18 +32,20 @@ export function unavailableOrgs() {
 	])
 }
 
-export function unavailableJobs() {
-	return [
+/// The Noon News Bulletin was published from apps.carleton.edu and is not
+/// coming back, so this says so rather than promising a return.
+export function retiredNnb() {
+	return FeedItemSchema.array().parse([
 		{
-			id: 'deprecated',
-			title: UNAVAILABLE_TITLE,
-			offCampus: false,
-			department: '',
-			dateOpen: '',
-			duringTerm: false,
-			duringBreak: false,
-			description: OUTAGE_TEXT,
-			links: [DISCUSSION_URL],
+			authors: [],
+			categories: [],
+			datePublished: new Date().toISOString(),
+			content: '',
+			excerpt:
+				'The Noon News Bulletin is no longer published. For campus announcements, see Carleton Now.',
+			link: DISCUSSION_URL,
+			title: RETIRED_TITLE,
+			featuredImage: null,
 		},
-	]
+	])
 }
