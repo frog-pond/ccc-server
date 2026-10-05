@@ -23,6 +23,9 @@ END:VCALENDAR`),
 	const ctx = {cacheControl: noop, cached: () => false, body: null} as Context
 	await northfield(ctx)
 
-	t.assert.equal(requestedUrl, 'https://events.northfieldmn.gov/calendar.ics')
+	t.assert.equal(
+		requestedUrl,
+		'https://www.northfieldmn.gov/common/modules/iCalendar/iCalendar.aspx?catID=41&feed=calendar',
+	)
 	t.assert.equal((ctx.body as {title: string}[])[0]?.title, 'Northfield test event')
 })
