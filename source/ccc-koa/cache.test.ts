@@ -55,7 +55,11 @@ async function serve(
 	})
 
 	let server = app.listen(0)
-	t.after(() => server.close())
+	t.after(() => {
+		// a failed assertion can leave a request waiting on its upstream
+		server.closeAllConnections()
+		server.close()
+	})
 	await new Promise((resolve) => server.once('listening', resolve))
 	let {port} = server.address() as AddressInfo
 	return (path: string) => fetch(`http://localhost:${String(port)}${path}`)
@@ -63,10 +67,14 @@ async function serve(
 
 /// An upstream that answers only when told to, and counts its calls. The first
 /// call answers with `first`, later ones with `{path}`, each when released.
-function slowUpstream(first: (path: string) => unknown = (path) => ({path})) {
+function slowUpstream(t: test.TestContext, first: (path: string) => unknown = (path) => ({path})) {
 	let calls: string[] = []
 	let firstGate = Promise.withResolvers<undefined>()
 	let laterGate = Promise.withResolvers<undefined>()
+	t.after(() => {
+		firstGate.resolve(undefined)
+		laterGate.resolve(undefined)
+	})
 	let fetchUpstream: Upstream = async (path) => {
 		calls.push(path)
 		if (calls.length === 1) {
@@ -95,7 +103,7 @@ function slowUpstream(first: (path: string) => unknown = (path) => ({path})) {
 const tick = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms))
 
 void test('concurrent misses for one key share one upstream fetch', async (t) => {
-	let {calls, release, fetchUpstream} = slowUpstream()
+	let {calls, release, fetchUpstream} = slowUpstream(t)
 	let get = await serve(t, fetchUpstream)
 
 	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
@@ -108,7 +116,7 @@ void test('concurrent misses for one key share one upstream fetch', async (t) =>
 })
 
 void test('concurrent misses for different keys fetch separately', async (t) => {
-	let {calls, release, fetchUpstream} = slowUpstream()
+	let {calls, release, fetchUpstream} = slowUpstream(t)
 	let get = await serve(t, fetchUpstream)
 
 	let responses = Promise.all([get('/a'), get('/b')])
@@ -120,7 +128,7 @@ void test('concurrent misses for different keys fetch separately', async (t) => 
 })
 
 void test('routes that do not cache are not held up behind each other', async (t) => {
-	let {calls, release, fetchUpstream} = slowUpstream()
+	let {calls, release, fetchUpstream} = slowUpstream(t)
 	let get = await serve(t, fetchUpstream)
 
 	let responses = Promise.all([get('/uncached'), get('/uncached')])
@@ -131,7 +139,7 @@ void test('routes that do not cache are not held up behind each other', async (t
 })
 
 void test('when the first request fails, its waiters fail the same way without fetching', async (t) => {
-	let upstream = slowUpstream(() => {
+	let upstream = slowUpstream(t, () => {
 		throw new Error('upstream down')
 	})
 	let get = await serve(t, upstream.fetchUpstream)
@@ -147,7 +155,7 @@ void test('when the first request fails, its waiters fail the same way without f
 })
 
 void test('when the first request is a 404, its waiters answer the same without fetching', async (t) => {
-	let upstream = slowUpstream(() => undefined)
+	let upstream = slowUpstream(t, () => undefined)
 	let get = await serve(t, upstream.fetchUpstream)
 
 	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
@@ -164,7 +172,7 @@ void test('when the first request is a 404, its waiters answer the same without 
 })
 
 void test("waiters don't take the first response's cookies", async (t) => {
-	let upstream = slowUpstream(() => undefined)
+	let upstream = slowUpstream(t, () => undefined)
 	let get = await serve(t, upstream.fetchUpstream)
 
 	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
@@ -176,7 +184,7 @@ void test("waiters don't take the first response's cookies", async (t) => {
 })
 
 void test('when the first response is a 200 the cache will not hold, waiters share it', async (t) => {
-	let upstream = slowUpstream(() => '')
+	let upstream = slowUpstream(t, () => '')
 	let get = await serve(t, upstream.fetchUpstream)
 
 	let responses = Promise.all([get('/menu'), get('/menu'), get('/menu')])
@@ -189,7 +197,7 @@ void test('when the first response is a 200 the cache will not hold, waiters sha
 })
 
 void test('after a fill ends, the next request starts a fill of its own', async (t) => {
-	let upstream = slowUpstream(() => undefined)
+	let upstream = slowUpstream(t, () => undefined)
 	let get = await serve(t, upstream.fetchUpstream)
 
 	let first = get('/menu')
@@ -203,7 +211,7 @@ void test('after a fill ends, the next request starts a fill of its own', async 
 })
 
 void test('a waiter takes over a fill that hangs', async (t) => {
-	let upstream = slowUpstream()
+	let upstream = slowUpstream(t)
 	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
 
 	let first = get('/menu')
@@ -221,13 +229,14 @@ void test('a waiter takes over a fill that hangs', async (t) => {
 })
 
 void test('when a fill hangs, one waiter takes it over and the rest wait on that', async (t) => {
-	let upstream = slowUpstream()
+	let upstream = slowUpstream(t)
 	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
 
 	let first = get('/menu')
 	await tick()
 	let waiters = Promise.all([get('/menu'), get('/menu'), get('/menu')])
-	await tick(150)
+	// between the first fill hanging (100 ms) and the takeover hanging (200 ms)
+	await tick(100)
 	t.assert.equal(upstream.calls.length, 2, 'one takeover, not one fetch per waiter')
 
 	upstream.releaseLater()
@@ -240,7 +249,7 @@ void test('when a fill hangs, one waiter takes it over and the rest wait on that
 })
 
 void test('a copy stored by the hung request lets its takeover’s waiters go', async (t) => {
-	let upstream = slowUpstream()
+	let upstream = slowUpstream(t)
 	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
 
 	let first = get('/menu')
@@ -260,7 +269,7 @@ void test('a copy stored by the hung request lets its takeover’s waiters go', 
 })
 
 void test('once a takeover stores a copy, later requests do not wait on the hung fill', async (t) => {
-	let upstream = slowUpstream()
+	let upstream = slowUpstream(t)
 	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
 
 	let first = get('/menu')
@@ -294,8 +303,59 @@ void test('a route that does not cache streams its body without buffering', asyn
 	stream.end()
 })
 
+void test('when a takeover hangs too, one follower takes over and the rest fetch for themselves', async (t) => {
+	let calls = 0
+	let gate = Promise.withResolvers<undefined>()
+	t.after(() => {
+		gate.resolve(undefined)
+	})
+	let get = await serve(
+		t,
+		async (path) => {
+			calls += 1
+			await gate.promise
+			return {path}
+		},
+		{fillWaitTimeout: 100},
+	)
+
+	let first = get('/menu')
+	await tick()
+	// arrive before the first fill hangs, at 100 ms
+	let followers = [get('/menu'), get('/menu'), get('/menu')]
+	await tick(100)
+	t.assert.equal(calls, 2, 'one takeover when the first fill hangs')
+	await tick(100)
+	// the takeover hung at about 200 ms: one follower took over in turn, and
+	// the other fetched for itself
+	t.assert.equal(calls, 4)
+
+	gate.resolve(undefined)
+	let statuses = (await Promise.all([first, ...followers])).map((r) => r.status)
+	t.assert.deepEqual(statuses, [200, 200, 200, 200])
+})
+
+void test('a stream of string chunks is cached and shared', async (t) => {
+	let {calls, release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, async (path) => {
+		await fetchUpstream(path)
+		// a stream that yields strings, not buffers
+		let stream = new PassThrough({encoding: 'utf8'})
+		stream.end('menu of the day')
+		return stream
+	})
+
+	let responses = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	release()
+
+	let bodies = await Promise.all((await responses).map((r) => r.text()))
+	t.assert.deepEqual(bodies, ['menu of the day', 'menu of the day'])
+	t.assert.equal(calls.length, 1)
+})
+
 void test('the key is hashed once, before later middleware can change it', async (t) => {
-	let {calls, release, fetchUpstream} = slowUpstream()
+	let {calls, release, fetchUpstream} = slowUpstream(t)
 	let get = await serve(t, fetchUpstream, {
 		hash: (ctx) => `${ctx.get('x-cache-key')}:${ctx.url}`,
 		before: async (ctx, next) => {

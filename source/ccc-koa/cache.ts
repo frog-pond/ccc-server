@@ -28,6 +28,14 @@ function isJson(body: unknown): boolean {
 	return false
 }
 
+/// A stream's whole body, whether it yields buffers or strings.
+async function readAll(stream: Readable): Promise<Buffer> {
+	let chunks = await Array.fromAsync(stream, (chunk: unknown) =>
+		Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)),
+	)
+	return Buffer.concat(chunks)
+}
+
 export function isStream(stream: unknown): stream is Readable {
 	return (
 		stream !== null &&
@@ -208,9 +216,10 @@ export function cachable(options: Options): Middleware {
 	//
 	// A fill that runs past `fillWaitTimeout` has hung: its waiters are let go
 	// together, and the first of them takes the fill over, fetching while the
-	// rest wait on it instead. A request follows at most one takeover, so it
-	// waits at most about twice `fillWaitTimeout`; one whose takeover hangs too
-	// fetches for itself.
+	// rest wait on it instead. A request waits on at most two fills, the one it
+	// found and one takeover, so about twice `fillWaitTimeout` at most. When a
+	// takeover hangs too, the first waiter to hear of it takes over in turn and
+	// the rest of its followers fetch for themselves.
 	const filling = new Map<string, Fill>()
 
 	function startFill(key: string): Fill {
@@ -376,7 +385,7 @@ export function cachable(options: Options): Middleware {
 	async function shareable(ctx: ExtendableContext): Promise<FillOutcome> {
 		let body: unknown = ctx.response.body
 		if (isStream(body)) {
-			body = Buffer.concat(await Array.fromAsync(body))
+			body = await readAll(body)
 			ctx.response.body = body
 		} else if (body !== null && body !== undefined && !isJson(body) && !Buffer.isBuffer(body)) {
 			return {kind: 'own'}
@@ -422,7 +431,7 @@ export function cachable(options: Options): Middleware {
 		// stringify JSON bodies
 		if (isStream(body)) {
 			// buffer streams
-			serializedBody = Buffer.concat(await Array.fromAsync(body))
+			serializedBody = await readAll(body)
 			ctx.response.body = serializedBody
 		} else if (isJson(body)) {
 			serializedBody = stringify(body)
