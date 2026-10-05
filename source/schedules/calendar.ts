@@ -1,20 +1,46 @@
+import {TZDateMini} from '@date-fns/tz'
+import {addDays, differenceInCalendarDays, format, isValid, parse} from 'date-fns'
 import type {CalendarInterval} from './types.ts'
 
-/** Date-only ordinal arithmetic counts calendar days independently of DST and process TZ. */
-function day(date: string): number {
-	if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) throw new Error('expected a date in YYYY-MM-DD form')
-	let timestamp = Date.parse(`${date}T00:00:00Z`)
-	if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== date) {
-		throw new Error(`invalid calendar date ${date}`)
+/** Parses a real date without allowing timestamps or rollover into another month. */
+function parseCalendarDate(date: string, timezone: string): Date {
+	if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) {
+		throw new Error(`Invalid calendar date: ${date}`)
 	}
-	return timestamp / 86_400_000
+	let parsed = parse(date, 'yyyy-MM-dd', new TZDateMini(2000, 0, 1, timezone))
+	if (!isValid(parsed) || format(parsed, 'yyyy-MM-dd') !== date) {
+		throw new Error(`Invalid calendar date: ${date}`)
+	}
+	return parsed
 }
 
-/** Only validation ordinals are needed here; no active-break or service-window selection. */
+/**
+ * Normalizes inclusive local dates to half-open epoch boundaries. The final
+ * midnight advances by calendar day, so a DST day can last 23 or 25 hours.
+ */
 export function normalizeCalendarInterval(interval: CalendarInterval, timezone: string) {
-	new Intl.DateTimeFormat('en-US', {timeZone: timezone}).format(0)
-	let start = day(interval.date ?? interval.start)
-	let end = day(interval.date ?? interval.end)
-	if (start > end) throw new Error('start must be on or before end')
-	return {startDay: start, endDay: end + 1, calendarDays: end - start + 1}
+	// Check the zone before date-fns asks Intl for offsets. An empty zone must
+	// not silently select the device's timezone.
+	if (!timezone) throw new Error('A calendar timezone is required')
+	new Intl.DateTimeFormat('en-US', {timeZone: timezone})
+	let input: {date?: string; start?: string; end?: string} = interval
+	let startDate = input.date ?? input.start
+	let endDate = input.date ?? input.end
+	if (
+		(input.date !== undefined && (input.start !== undefined || input.end !== undefined)) ||
+		startDate === undefined ||
+		endDate === undefined
+	) {
+		throw new Error('A calendar interval requires date or both start and end')
+	}
+	let start = parseCalendarDate(startDate, timezone)
+	let end = parseCalendarDate(endDate, timezone)
+	if (start.getTime() > end.getTime()) {
+		throw new Error('A calendar interval must start on or before its end')
+	}
+	return {
+		startMs: start.getTime(),
+		endMs: addDays(end, 1).getTime(),
+		calendarDays: differenceInCalendarDays(end, start) + 1,
+	}
 }

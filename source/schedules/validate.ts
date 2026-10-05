@@ -57,13 +57,13 @@ export function validateSchedules<T>(
 	})
 	for (let [index, first] of intervals.entries()) {
 		for (let second of intervals.slice(index + 1)) {
-			if (first.startDay === second.startDay && first.endDay === second.endDay) {
+			if (first.startMs === second.startMs && first.endMs === second.endMs) {
 				fail(`${calendarLabel}.breaks.${second.key}`, `duplicates the interval of ${first.key}`)
 			}
 			if (
 				first.calendarDays === second.calendarDays &&
-				first.startDay < second.endDay &&
-				second.startDay < first.endDay
+				first.startMs < second.endMs &&
+				second.startMs < first.endMs
 			) {
 				fail(
 					`${calendarLabel}.breaks.${second.key}`,

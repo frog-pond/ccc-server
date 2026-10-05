@@ -196,11 +196,11 @@ void describe('server schedule contracts', () => {
 			assert.throws(() => resolveScheduleData(input.calendar, input.spaces))
 		})
 	}
-	const transitions: [string, string][] = [
-		['2026-03-07', '2026-03-09'],
-		['2026-10-31', '2026-11-02'],
+	const transitions: [string, string, string][] = [
+		['2026-03-07', '2026-03-09', '2026-03-11'],
+		['2026-10-31', '2026-11-02', '2026-11-04'],
 	]
-	for (let [start, end] of transitions) {
+	for (let [start, end, secondEnd] of transitions) {
 		void it(`rejects equal-day-span overlaps across DST from ${start}`, () => {
 			let calendar = {
 				timezone: 'America/Chicago',
@@ -209,9 +209,7 @@ void describe('server schedule contracts', () => {
 					second: {
 						name: 'Second',
 						start: end,
-						end: new Date(Date.parse(`${end}T00:00:00Z`) + 2 * 86_400_000)
-							.toISOString()
-							.slice(0, 10),
+						end: secondEnd,
 					},
 				},
 			}
