@@ -6,6 +6,7 @@ import {responseCache} from '../ccc-server/response-cache.ts'
 import {setupHelpers} from '../ccc-server/helpers.ts'
 import * as appData from './v1/app-data.ts'
 import * as athletics from './v1/athletics.ts'
+import * as breaks from './v1/breaks.ts'
 import * as calendar from './v1/calendar.ts'
 import * as contacts from './v1/contacts.ts'
 import * as departments from './v1/departments.ts'
@@ -149,6 +150,7 @@ api.get('/v1/news/mess/wp/v2/:resource/:id', mess.wordpress)
 // hours
 api.get('/v1/spaces/hours', hours.buildingHours)
 api.get('/v1/spaces/directory', hours.campusDirectory)
+api.get('/v1/breaks', breaks.breaks)
 
 // transit
 api.get('/v1/transit/bus', transit.bus)
