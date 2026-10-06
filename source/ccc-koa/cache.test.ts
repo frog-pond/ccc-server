@@ -666,12 +666,28 @@ void test('without storedHeaders, a hit gives back none of the headers it was fe
 
 void test('a hit says in Cache-Control how long its copy has left, not how long it was stored for', async (t) => {
 	let {release, fetchUpstream} = slowUpstream(t)
-	let get = await serve(t, fetchUpstream, {expiresIn: () => 42_900})
+	let get = await serve(t, fetchUpstream, {
+		expiresIn: () => 42_900,
+		before: async (ctx, next) => {
+			ctx.set('Cache-Control', 'public, max-age=60')
+			await next()
+		},
+	})
 	release()
 
 	await get('/menu')
 	let response = await get('/menu')
 	t.assert.equal(response.headers.get('Cache-Control'), 'public, max-age=42')
+})
+
+void test('a hit adds no Cache-Control to a route that sets none', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {expiresIn: () => 42_900})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Control'), null)
 })
 
 void test('waiters on a fill the cache did not hold get its stored headers too', async (t) => {

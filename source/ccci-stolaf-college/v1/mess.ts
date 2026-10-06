@@ -2,6 +2,7 @@ import {Buffer} from 'node:buffer'
 import QuickLRU from 'quick-lru'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {http} from '../../ccc-lib/http.ts'
+import {WORDPRESS_PAGING_HEADERS} from '../../ccc-lib/stored-headers.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 /// The Olaf Messenger's WordPress REST API, which this module serves the app
@@ -178,12 +179,9 @@ export interface Answer {
 	headers: Record<string, string>
 }
 
-/// WordPress's paging headers, which the app may read in either mode.
-const PASSED_HEADERS = ['x-wp-total', 'x-wp-totalpages']
-
-/// The headers a cached copy of this route's answers must keep, for the
-/// response cache's `storedHeaders`.
-export const PAGING_HEADERS = ['link', ...PASSED_HEADERS]
+/// WordPress's paging headers, which the app may read in either mode. The
+/// response cache keeps them, with `Link`, through its `STORED_HEADERS`.
+const PASSED_HEADERS = WORDPRESS_PAGING_HEADERS
 
 /// UTF-8's byte order mark.
 const BYTE_ORDER_MARK = Buffer.from([0xef, 0xbb, 0xbf])
@@ -212,8 +210,11 @@ async function fetchUpstream(url: string, timeout: number): Promise<Answer | und
 			signal: AbortSignal.timeout(timeout),
 		})
 		let type = response.headers.get('content-type')
-		if (!type?.includes('json')) return undefined
-		if (response.status >= 500 || OUTAGE_STATUSES.has(response.status)) return undefined
+		if (!type?.includes('json') || response.status >= 500 || OUTAGE_STATUSES.has(response.status)) {
+			// let the connection go now, rather than when the timeout fires
+			await response.body?.cancel().catch(() => undefined)
+			return undefined
+		}
 		let body = Buffer.from(await response.arrayBuffer())
 		// A byte order mark, which a stray one in a theme's PHP file puts ahead of
 		// every answer, is dropped: JSON.parse refuses it, and the app needs none.
@@ -277,22 +278,28 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 		}
 		let {ttl} = verdict.rules
 		let lastGood = lastGoodFor(verdict.rules)
-
-		// A hit's Cache-Control is the life its copy has left, which for a last
-		// good copy is at most a minute, not the whole ttl.
-		if (ctx.cached(ttl)) return
-
 		let path = id === undefined ? resource : `${resource}/${id}`
-		let url = `${UPSTREAM}/${path}${ctx.querystring ? `?${ctx.querystring}` : ''}`
 		let key = canonicalKey(path, new URLSearchParams(ctx.querystring))
+
+		// Declared before asking the cache, so a hit counts its max-age down to
+		// the life its copy has left: at most a minute for a last good copy.
+		ctx.cacheControl(ttl)
+		if (ctx.cached(ttl)) {
+			// a read keeps its last good copy among the most recent, so in an
+			// outage the stories read most are the ones still to hand
+			lastGood.get(key)
+			return
+		}
+
+		let url = `${UPSTREAM}/${path}${ctx.querystring ? `?${ctx.querystring}` : ''}`
 		let answer = await fetchUpstream(url, timeout)
 
 		if (answer) {
-			// a 4xx is passed on but not cached: the cache holds only 200s, and
-			// Cache-Control goes only on an answer worth keeping
 			if (answer.status === 200) {
 				lastGood.set(key, answer)
-				ctx.cacheControl(ttl)
+			} else {
+				// a 4xx is passed on but not cached, so it says nothing of keeping it
+				ctx.remove('Cache-Control')
 			}
 			send(ctx, answer, verdict.rules)
 			return

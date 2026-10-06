@@ -91,6 +91,21 @@ const SHARED_HEADERS = [
 	'retry-after',
 ]
 
+/// The headers among `names` that `ctx`'s response carries.
+function pickHeaders(
+	ctx: ExtendableContext,
+	names: readonly string[],
+): Record<string, string | string[]> {
+	let headers: Record<string, string | string[]> = {}
+	for (let name of names) {
+		let value = ctx.response.headers[name]
+		if (value !== undefined && value !== '') {
+			headers[name] = typeof value === 'number' ? String(value) : value
+		}
+	}
+	return headers
+}
+
 declare module 'koa' {
 	interface ExtendableContext {
 		/**
@@ -151,7 +166,7 @@ export interface CacheObject {
 	etag: string | null
 	gzip?: Buffer
 	/** The response headers named in `storedHeaders`, given back with this copy */
-	headers?: Record<string, string>
+	headers?: Record<string, string | string[]>
 }
 
 interface Options {
@@ -403,14 +418,15 @@ export function cachable(options: Options): Middleware {
 		if (obj.headers) {
 			this.response.set(obj.headers)
 		}
-		// The life the copy has left, rather than any Cache-Control stored with
-		// it, which would promise the whole of its life again on every hit. A
-		// route that has already forbidden shared caching keeps its policy.
+		// A max-age the route declared counts down to the life its copy has left,
+		// rather than promising the whole of that life again on every hit. A
+		// route that declared none, or forbade shared caching, keeps its policy.
 		const ttl = expiresIn(this[CACHE_KEY])
 		const policy = this.response.get('Cache-Control')
 		const forbidden = /\b(?:private|no-cache|no-store)\b/u.test(policy)
-		if (ttl !== undefined && Number.isFinite(ttl) && !forbidden) {
-			this.response.set('Cache-Control', `public, max-age=${Math.floor(ttl / 1000).toFixed(0)}`)
+		if (ttl !== undefined && Number.isFinite(ttl) && !forbidden && /\bmax-age=\d+/u.test(policy)) {
+			let left = `max-age=${Math.floor(ttl / 1000).toFixed(0)}`
+			this.response.set('Cache-Control', policy.replace(/\bmax-age=\d+/u, left))
 		}
 		if (this[CACHE_WAITED_KEY]) {
 			// it waited on another request's fetch, then took the copy that fetch stored
@@ -517,13 +533,7 @@ export function cachable(options: Options): Middleware {
 			return {kind: 'own'}
 		}
 
-		let headers: Record<string, string | string[]> = {}
-		for (let name of [...SHARED_HEADERS, ...storedHeaders]) {
-			let value = ctx.response.headers[name]
-			if (value !== undefined) {
-				headers[name] = typeof value === 'number' ? String(value) : value
-			}
-		}
+		let headers = pickHeaders(ctx, [...SHARED_HEADERS, ...storedHeaders])
 		return {kind: 'replay', status: ctx.response.status, headers, body}
 	}
 
@@ -583,11 +593,7 @@ export function cachable(options: Options): Middleware {
 			etag: ctx.response.get('etag') || null,
 		}
 
-		let headers: Record<string, string> = {}
-		for (let name of storedHeaders) {
-			let value = ctx.response.get(name)
-			if (value) headers[name] = value
-		}
+		let headers = pickHeaders(ctx, storedHeaders)
 		if (Object.keys(headers).length > 0) {
 			obj.headers = headers
 		}

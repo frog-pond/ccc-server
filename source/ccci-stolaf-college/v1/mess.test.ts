@@ -3,7 +3,8 @@ import type {AddressInfo} from 'node:net'
 import Router from '@koa/router'
 import Koa from 'koa'
 
-import {PAGING_HEADERS, makeWordpressRoute, paginationLinks, rulesFor, withPage} from './mess.ts'
+import {makeWordpressRoute, paginationLinks, rulesFor, withPage} from './mess.ts'
+import {STORED_HEADERS} from '../../ccc-lib/stored-headers.ts'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
@@ -184,6 +185,9 @@ function makeContext(path: string, params: {resource: string; id?: string}, quer
 		cached: mock.fn((_maxAge?: number) => false),
 		cacheControl: mock.fn((_maxAge: number) => undefined),
 		setCacheTTL: mock.fn((_maxAge: number) => undefined),
+		remove(name: string) {
+			headers.delete(name.toLowerCase())
+		},
 		set(name: string | Record<string, string>, value?: string) {
 			let entries = typeof name === 'string' ? [[name, value ?? '']] : Object.entries(name)
 			for (let [key = '', val = ''] of entries) headers.set(key.toLowerCase(), val)
@@ -270,13 +274,14 @@ void test('wordpress', async (t) => {
 			answerWith(t, () =>
 				Promise.resolve(json({code: 'rest_post_invalid_page_number'}, {status: 400})),
 			)
-			let {ctx, raw} = makeContext(POSTS, {resource: 'posts'}, 'per_page=50&page=9999')
+			let {ctx, raw, headers} = makeContext(POSTS, {resource: 'posts'}, 'per_page=50&page=9999')
 
 			await makeWordpressRoute()(ctx)
 
 			t.assert.equal(raw.status, 400)
 			t.assert.equal(String(raw.body), '{"code":"rest_post_invalid_page_number"}')
-			t.assert.equal(raw.cacheControl.mock.callCount(), 0)
+			// nothing tells a phone or a proxy to keep it
+			t.assert.equal(headers.has('cache-control'), false)
 		},
 	)
 
@@ -386,6 +391,80 @@ void test('wordpress', async (t) => {
 
 			t.assert.equal(headers.get('x-wp-totalpages'), '3')
 			t.assert.equal(headers.has('link'), false)
+		},
+	)
+
+	await t.test(
+		'keeps the last good copy of a story read often, however many others are fetched',
+		async (t: TestContext) => {
+			let route = makeWordpressRoute()
+			let story = (id: number, cached = false) => {
+				let made = makeContext(`${POSTS}/${String(id)}`, {resource: 'posts', id: String(id)})
+				made.raw.cached = mock.fn((_maxAge?: number) => cached)
+				return made
+			}
+			let up = answerWith(t, () => Promise.resolve(json({id: 1})))
+			await route(story(1).ctx)
+
+			for (let id = 2; id <= 401; id++) {
+				// eslint-disable-next-line no-await-in-loop
+				await route(story(id).ctx)
+				// story 1 is read again and again, from the response cache
+				// eslint-disable-next-line no-await-in-loop
+				if (id % 20 === 0) await route(story(1, true).ctx)
+			}
+			up.restore()
+
+			answerWith(t, () => Promise.resolve(new Response('down', {status: 503})))
+			let {ctx, raw} = story(1)
+			await route(ctx)
+
+			t.assert.equal(String(raw.body), '{"id":1}')
+		},
+	)
+
+	await t.test('lets go of the body of an answer it will not use', async (t: TestContext) => {
+		let cancelled = false
+		answerWith(t, () =>
+			Promise.resolve(
+				new Response(
+					new ReadableStream({
+						cancel() {
+							cancelled = true
+						},
+					}),
+					{status: 503, headers: {'content-type': 'application/json'}},
+				),
+			),
+		)
+		let {ctx} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2')
+
+		await t.assert.rejects(makeWordpressRoute()(ctx), {status: 502})
+		t.assert.equal(cancelled, true)
+	})
+
+	await t.test(
+		'declares its own Cache-Control before asking the cache, and drops it from a 4xx',
+		async (t: TestContext) => {
+			answerWith(t, () =>
+				Promise.resolve(json({code: 'rest_post_invalid_page_number'}, {status: 400})),
+			)
+			let {ctx, raw, headers} = makeContext(POSTS, {resource: 'posts'}, 'per_page=50&page=9999')
+			let order: string[] = []
+			raw.cacheControl = mock.fn((_maxAge: number) => {
+				order.push('cacheControl')
+				headers.set('cache-control', 'public, max-age=300')
+			})
+			raw.cached = mock.fn((_maxAge?: number) => {
+				order.push('cached')
+				return false
+			})
+
+			await makeWordpressRoute()(ctx)
+
+			t.assert.deepEqual(order.slice(0, 2), ['cacheControl', 'cached'])
+			t.assert.equal(raw.status, 400)
+			t.assert.equal(headers.has('cache-control'), false)
 		},
 	)
 
@@ -503,7 +582,7 @@ async function serveThroughCache(t: TestContext, upstream: {answer: () => Promis
 			set: (key, value, maxAge = 0) =>
 				value ? store.set(key, {value, maxAge}) : store.delete(key),
 			expiresIn: (key) => store.get(key)?.maxAge,
-			storedHeaders: PAGING_HEADERS,
+			storedHeaders: STORED_HEADERS,
 		}),
 	)
 	let router = new Router<RouterState, ContextState>({prefix: '/v1'})
