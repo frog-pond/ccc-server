@@ -34,45 +34,51 @@ const GetStreamsParamsSchema = z.object({
 	sort: z.enum(['ascending', 'descending']).default('ascending'),
 })
 
-// How far back search looks, unless asked for a range, and how far ahead it
-// looks for upcoming streams (as the `upcoming` route does).
+// How far back search looks, unless asked for a range.
 const SEARCH_YEARS = 30
-const SEARCH_AHEAD_MONTHS = 2
+
+// How far ahead the upcoming streams reach, for the `upcoming` route and for
+// search.
+const UPCOMING_MONTHS = 2
+
+const chicagoToday = () => moment().tz('America/Chicago')
 
 // A page is at most this many streams. Upstream has no limit of its own.
 const MAX_COUNT = 200
 
-// A whole number in a query string, in plain digits: `Number()` alone would
-// also read a blank as 0, and `1e2`, `0x32` and `50.0` as whole numbers, each
-// a different URL for the same page.
-const wholeNumber = (min: number, max?: number) =>
+// A whole number in a query string, in plain digits with no padding: `Number()`
+// alone would read a blank as 0, and `1e2`, `0x32`, `50.0` and `050` as whole
+// numbers, each a different URL for the same page.
+const wholeNumber = (min: number, max = Number.MAX_SAFE_INTEGER) =>
 	z
 		.string()
-		.trim()
-		.regex(/^\d+$/, 'must be a whole number')
+		.regex(/^(0|[1-9]\d*)$/, 'must be a whole number')
 		.transform(Number)
-		.pipe(
-			z
-				.number()
-				.int()
-				.min(min)
-				.max(max ?? Number.MAX_SAFE_INTEGER),
-		)
+		.pipe(z.number().int().min(min).max(max))
 
 // Search by `query` (required: upstream answers a blank one with everything).
 // `class` is which streams to look at; `dateFrom` and `dateTo` narrow or widen
 // the range it looks in, which otherwise depends on the class. Results come a
-// `count` at a time, starting at `offset`.
-const SearchStreamsParamsSchema = z.object({
-	query: z.string().trim().min(1),
-	sort: z.enum(['ascending', 'descending']).default('descending'),
-	class: z.enum(['archived', 'upcoming', 'all']).default('archived'),
-	category: z.string().trim().min(1).optional(),
-	dateFrom: z.iso.date().optional(),
-	dateTo: z.iso.date().optional(),
-	count: wholeNumber(1, MAX_COUNT).default(50),
-	offset: wholeNumber(0).default(0),
-})
+// `count` at a time, starting at `offset`. `sort` is newest first for what has
+// happened and soonest first for what is to come.
+const SearchStreamsParamsSchema = z
+	.object({
+		query: z.string().trim().min(1),
+		sort: z.enum(['ascending', 'descending']).optional(),
+		class: z.enum(['archived', 'upcoming', 'all']).default('archived'),
+		category: z.string().trim().min(1).optional(),
+		dateFrom: z.iso.date().optional(),
+		dateTo: z.iso.date().optional(),
+		count: wholeNumber(1, MAX_COUNT).default(50),
+		offset: wholeNumber(0).default(0),
+	})
+	// Only a range the client gave in full can be reversed: an end it left out
+	// is chosen to follow the one it gave. Checked here, before the cache is
+	// asked, like the rest.
+	.refine((p) => !p.dateFrom || !p.dateTo || p.dateFrom <= p.dateTo, {
+		message: 'dateFrom must not be after dateTo',
+		path: ['dateFrom'],
+	})
 
 const StOlafStreamsParamsSchema = z.object({
 	date_from: z.iso.date(),
@@ -108,8 +114,8 @@ export async function upcoming(ctx: Context) {
 	if (ctx.cached(ONE_HOUR)) return
 
 	const {
-		dateFrom = moment().tz('America/Chicago').format('YYYY-MM-DD'),
-		dateTo = moment().add(2, 'month').tz('America/Chicago').format('YYYY-MM-DD'),
+		dateFrom = chicagoToday().format('YYYY-MM-DD'),
+		dateTo = chicagoToday().add(UPCOMING_MONTHS, 'month').format('YYYY-MM-DD'),
 		sort,
 	} = GetStreamsParamsSchema.parse(Object.fromEntries(ctx.URL.searchParams.entries()))
 
@@ -144,33 +150,39 @@ export async function archived(ctx: Context) {
 
 /// The `Link` header (RFC 8288) for a page of results: `first` and `prev` when
 /// it isn't the first, `next` and `last` when more follow. Each keeps the
-/// request's own parameters and changes only the page, as a path-absolute URL
-/// so it holds behind a proxy. `available` is how many results there are in
-/// all. Pages step by `count` from the request's own `offset`, so `next`
-/// reaches `last` even from an offset that isn't a whole number of pages in.
+/// request's own parameters, as it sent them, and changes only the page, as a
+/// path-absolute URL so it holds behind a proxy. `available` is how many
+/// results there are in all. Pages step by `count` from the request's own
+/// `offset`, so `next` reaches `last` even from an offset that isn't a whole
+/// number of pages in; `prev` is the `count` before it, or all there is
+/// before it when that is fewer, so it never repeats the current page.
 function pageLinks(page: {
 	path: string
-	search: URLSearchParams
+	querystring: string
 	count: number
 	offset: number
 	available: number
 }): string | undefined {
 	const {count, offset, available} = page
-	const to = (rel: string, at: number) => {
-		const search = new URLSearchParams(page.search)
-		search.set('count', String(count))
-		search.set('offset', String(at))
-		return `<${page.path}?${search.toString()}>; rel="${rel}"`
-	}
+	const kept = page.querystring
+		.split('&')
+		.filter((pair) => pair && !/^(count|offset)(=|$)/.test(pair))
+		// a raw query string could hold what a header value or link can't
+		.map((pair) => pair.replace(/[^\x21-\x7e]|[<>"]/g, encodeURIComponent))
+	const to = (rel: string, at: number, size = count) =>
+		`<${page.path}?${[...kept, `count=${String(size)}`, `offset=${String(at)}`].join('&')}>; rel="${rel}"`
 
 	const links: string[] = []
 	if (offset > 0) {
-		// from past the end, back to the real last page and not another empty one
-		const prev =
-			offset >= available
-				? Math.max(0, Math.floor((available - 1) / count) * count)
-				: Math.max(0, offset - count)
-		links.push(to('first', 0), to('prev', prev))
+		links.push(to('first', 0))
+		if (offset >= available) {
+			// from past the end, back to the real last page and not another empty one
+			links.push(to('prev', Math.max(0, Math.floor((available - 1) / count) * count)))
+		} else if (offset < count) {
+			links.push(to('prev', 0, offset))
+		} else {
+			links.push(to('prev', offset - count))
+		}
 	}
 	if (offset + count < available) {
 		const last = offset + Math.floor((available - 1 - offset) / count) * count
@@ -188,7 +200,7 @@ function shiftDate(date: string, amount: number, unit: 'month' | 'year') {
 const earlier = (a: string, b: string) => (a < b ? a : b)
 const later = (a: string, b: string) => (a > b ? a : b)
 
-// Upstream answers a page at a time, so the default is newest-first: with
+// Upstream answers a page at a time, so what has happened is newest first: with
 // ascending order a broad query would only ever show the oldest matches.
 export async function search(ctx: Context) {
 	// Checked before the cache is asked, so a bad request isn't counted as a
@@ -197,13 +209,14 @@ export async function search(ctx: Context) {
 		Object.fromEntries(ctx.URL.searchParams.entries()),
 	)
 	if (!parsed.success) ctx.throw(400, z.prettifyError(parsed.error))
-	const {query, sort, category, count, offset, class: streamClass, dateFrom, dateTo} = parsed.data
+	const {query, category, count, offset, class: streamClass, dateFrom, dateTo} = parsed.data
+	const sort = parsed.data.sort ?? (streamClass === 'upcoming' ? 'ascending' : 'descending')
 
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	const today = moment().tz('America/Chicago')
-	const ahead = today.clone().add(SEARCH_AHEAD_MONTHS, 'month')
+	const today = chicagoToday()
+	const ahead = today.clone().add(UPCOMING_MONTHS, 'month')
 	const lookback = today.clone().subtract(SEARCH_YEARS, 'year')
 	const defaults = {
 		archived: {from: lookback, to: today},
@@ -221,8 +234,7 @@ export async function search(ctx: Context) {
 		(dateTo ? earlier(defaultFrom, shiftDate(dateTo, -SEARCH_YEARS, 'year')) : defaultFrom)
 	const to =
 		dateTo ??
-		(dateFrom ? later(defaultTo, shiftDate(dateFrom, SEARCH_AHEAD_MONTHS, 'month')) : defaultTo)
-	if (from > to) ctx.throw(400, 'dateFrom must not be after dateTo')
+		(dateFrom ? later(defaultTo, shiftDate(dateFrom, UPCOMING_MONTHS, 'month')) : defaultTo)
 
 	const params = StOlafStreamsParamsSchema.parse({
 		class: streamClass === 'upcoming' ? 'current' : streamClass,
@@ -240,7 +252,7 @@ export async function search(ctx: Context) {
 	const link =
 		available === undefined
 			? undefined
-			: pageLinks({path: ctx.path, search: ctx.URL.searchParams, count, offset, available})
+			: pageLinks({path: ctx.path, querystring: ctx.querystring, count, offset, available})
 	if (link) ctx.set('Link', link)
 	ctx.body = streams
 }

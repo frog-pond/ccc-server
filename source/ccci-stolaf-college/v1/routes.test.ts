@@ -347,8 +347,12 @@ void test('/streams/search refuses a bad request before asking the cache', async
 		},
 	})
 	let asked = fakeStreams(t)
-	let response = await fetch(`${base}/v1/streams/search?query=`)
-	assert.equal(response.status, 400)
+	let statuses = await Promise.all(
+		['?query=', '?query=choir&dateFrom=2021-01-01&dateTo=2020-01-01'].map(
+			async (search) => (await fetch(`${base}/v1/streams/search${search}`)).status,
+		),
+	)
+	assert.deepEqual(statuses, [400, 400])
 	assert.equal(lookups, 0)
 	assert.equal(asked.length, 0)
 
@@ -373,6 +377,9 @@ const REFUSED = [
 	'?query=choir&offset=',
 	'?query=choir&offset=%20',
 	'?query=choir&count=%20',
+	'?query=choir&count=050',
+	'?query=choir&offset=00',
+	'?query=choir&offset=%2010',
 	'?query=choir&count=1e2',
 	'?query=choir&count=0x32',
 	'?query=choir&count=50.0',
@@ -491,6 +498,42 @@ void test('/streams/search pages by count from its own offset, so next reaches l
 	// 30, 80, 130, 180, 230: stepping by `next` lands on `last`
 	assert.equal((230 - 30) % 50, 0)
 })
+
+void test('/streams/search sends the page before a short first page, not one that repeats it', async (t) => {
+	let links = await linksFor(t, '?query=choir&count=50&offset=10', 231)
+	assert.deepEqual(offsets(links), {first: '0', prev: '0', next: '60', last: '210'})
+	// the ten before it, so nothing is on two pages
+	assert.equal(links['prev']?.searchParams.get('count'), '10')
+	assert.equal(links['next']?.searchParams.get('count'), '50')
+})
+
+void test("/streams/search links keep the request's query string as it was sent", async (t) => {
+	let base = await serve(t)
+	fakeStreams(t, {available: 231})
+	let response = await fetch(
+		`${base}/v1/streams/search?query=choir%20mass&category=chapel&count=50&offset=50`,
+	)
+	let link = response.headers.get('link') ?? ''
+	assert.match(
+		link,
+		/<\/v1\/streams\/search\?query=choir%20mass&category=chapel&count=50&offset=100>; rel="next"/,
+	)
+	assert.doesNotMatch(link, /\+/)
+})
+
+for (let [search, expected] of [
+	['?query=choir', 'descending'],
+	['?query=choir&class=archived', 'descending'],
+	['?query=choir&class=all', 'descending'],
+	['?query=choir&class=upcoming', 'ascending'],
+	['?query=choir&class=upcoming&sort=descending', 'descending'],
+	['?query=choir&class=archived&sort=ascending', 'ascending'],
+] as const) {
+	void test(`/streams/search${search} sorts ${expected}`, async (t) => {
+		let params = await upstreamParams(t, search)
+		assert.equal(params.get('sort'), expected)
+	})
+}
 
 void test('/streams/search gives its Link header again when the page is served from the cache', async (t) => {
 	let base = await serve(t, {realCache: true})
