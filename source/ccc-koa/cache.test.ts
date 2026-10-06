@@ -19,6 +19,7 @@ async function serve(
 		onBurst?: (ctx: Koa.ExtendableContext, shared: boolean) => void
 		onLookup?: (ctx: Koa.ExtendableContext, hit: boolean) => void
 		onFillEnd?: (ctx: Koa.ExtendableContext, outcome: string, waiters: number) => void
+		onStore?: (ctx: Koa.ExtendableContext, body: unknown) => void
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -32,6 +33,7 @@ async function serve(
 			...(options.onBurst && {onBurst: options.onBurst}),
 			...(options.onLookup && {onLookup: options.onLookup}),
 			...(options.onFillEnd && {onFillEnd: options.onFillEnd}),
+			...(options.onStore && {onStore: options.onStore}),
 		}),
 	)
 	if (options.before) app.use(options.before)
@@ -450,4 +452,44 @@ void test('a fill hook that throws does not change how the fill ends', async (t)
 		(await burst).map((r) => r.status),
 		[404, 404],
 	)
+})
+
+void test('a stored response is told with its body, once per fetch rather than per request', async (t) => {
+	let {calls, release, fetchUpstream} = slowUpstream(t, () => [1, 2, 3])
+	let told: unknown[] = []
+	let get = await serve(t, fetchUpstream, {onStore: (_ctx, body) => told.push(body)})
+
+	let burst = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick()
+	release()
+	await burst
+	await get('/menu')
+
+	t.assert.equal(calls.length, 1)
+	t.assert.deepEqual(told, [[1, 2, 3]], 'the body as the route set it, before it is serialized')
+})
+
+void test('a response the cache does not hold is not told as stored', async (t) => {
+	let upstream = slowUpstream(t, () => undefined)
+	let told: unknown[] = []
+	let get = await serve(t, upstream.fetchUpstream, {onStore: (_ctx, body) => told.push(body)})
+	upstream.releaseFirst()
+
+	t.assert.equal((await get('/menu')).status, 404)
+	t.assert.deepEqual(told, [])
+})
+
+void test('a store hook that throws does not keep the response from being cached', async (t) => {
+	let {calls, release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {
+		onStore: () => {
+			throw new Error('hook broke')
+		},
+	})
+	t.mock.method(console, 'error', () => undefined)
+	release()
+
+	t.assert.equal((await get('/menu')).status, 200)
+	t.assert.deepEqual(await (await get('/menu')).json(), {path: '/menu'})
+	t.assert.equal(calls.length, 1, 'the second request was served from the cache')
 })

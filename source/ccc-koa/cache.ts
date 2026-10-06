@@ -211,6 +211,13 @@ interface Options {
 	onFillEnd?(ctx: ExtendableContext, outcome: FillOutcome['kind'], waiters: number): void
 
 	/**
+	 * Told, each time a response is stored, the body as the route set it,
+	 * before it is serialized: once per fetch from upstream, since requests
+	 * served from the cache, or by waiting on another's fill, store nothing.
+	 */
+	onStore?(ctx: ExtendableContext, body: unknown): void
+
+	/**
 	 * Get a value from a store.
 	 * @param key Cache key
 	 * @param maxAge Max age (in milliseconds) for the cache
@@ -240,6 +247,7 @@ export function cachable(options: Options): Middleware {
 		onBurst = () => undefined,
 		onLookup = () => undefined,
 		onFillEnd = () => undefined,
+		onStore = () => undefined,
 	} = options
 	/* eslint-enable @typescript-eslint/unbound-method */
 
@@ -491,6 +499,7 @@ export function cachable(options: Options): Middleware {
 		if (!body) {
 			return false
 		}
+		let setBody = body
 
 		let serializedBody: Buffer | string
 
@@ -538,6 +547,9 @@ export function cachable(options: Options): Middleware {
 		}
 
 		set(ctx[CACHE_KEY], obj, ctx[CACHE_INFO_KEY].maxAge ?? options.maxAge ?? 0)
+		report('onStore', () => {
+			onStore(ctx, setBody)
+		})
 		// Whoever is filling the key, its waiters can have this copy now.
 		filling.get(ctx[CACHE_KEY])?.settle({kind: 'stored'})
 		// and a burst that doesn't share is over: later requests hit the cache
