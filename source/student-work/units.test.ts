@@ -1,5 +1,5 @@
 import {test} from 'node:test'
-import {mostlyNull, postingUnits, type UnitCache} from './units.ts'
+import {mostlyUnknown, postingUnits, UNKNOWN_UNIT, type UnitCache} from './units.ts'
 
 function sources(board: string[], units: Record<string, string | null | Error>) {
 	let reads: string[] = []
@@ -16,9 +16,15 @@ function sources(board: string[], units: Record<string, string | null | Error>) 
 }
 
 void test('maps every board posting to its unit', async (t) => {
+	let result = await postingUnits(sources(['1', '2'], {'1': '11725', '2': '22005'}), new Map())
+
+	t.assert.deepEqual(result, {'1': '11725', '2': '22005'})
+})
+
+void test('reads a posting with no unit as unknown', async (t) => {
 	let result = await postingUnits(sources(['1', '2'], {'1': '11725', '2': null}), new Map())
 
-	t.assert.deepEqual(result, {'1': '11725', '2': null})
+	t.assert.deepEqual(result, {'1': '11725', '2': UNKNOWN_UNIT})
 })
 
 void test('reads only postings it has not read before', async (t) => {
@@ -101,14 +107,14 @@ void test('fails when the board itself cannot be read', async (t) => {
 
 /// Most postings losing their unit at once means the description template
 /// changed under the parser, not that most postings lack one.
-void test('mostlyNull flags a map where most units are null', (t) => {
-	t.assert.equal(mostlyNull({'1': null, '2': null, '3': '11725'}), true)
+void test('mostlyUnknown flags a map where most units are unknown', (t) => {
+	t.assert.equal(mostlyUnknown({'1': UNKNOWN_UNIT, '2': UNKNOWN_UNIT, '3': '11725'}), true)
 })
 
-void test('mostlyNull passes the few nulls a normal board has', (t) => {
-	t.assert.equal(mostlyNull({'1': null, '2': '22005', '3': '11725'}), false)
+void test('mostlyUnknown passes the few unknowns a normal board has', (t) => {
+	t.assert.equal(mostlyUnknown({'1': UNKNOWN_UNIT, '2': '22005', '3': '11725'}), false)
 })
 
-void test('mostlyNull passes an empty board', (t) => {
-	t.assert.equal(mostlyNull({}), false)
+void test('mostlyUnknown passes an empty board', (t) => {
+	t.assert.equal(mostlyUnknown({}), false)
 })

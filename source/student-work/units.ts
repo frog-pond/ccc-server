@@ -1,9 +1,13 @@
 import pMap from 'p-map'
 
-/// Each board posting's unit by posting ID: five digits, or null when its
-/// description names none. A posting whose detail could not be read is left
-/// out, so a client can read that one itself.
-export type PostingUnits = Record<string, string | null>
+/// What a posting's unit reads as when its description names none the parser
+/// can read, so a client groups those postings like any other unit's.
+export const UNKNOWN_UNIT = 'unknown'
+
+/// Each board posting's unit by posting ID: five digits, or UNKNOWN_UNIT when
+/// its description names none. A posting whose detail could not be read is
+/// left out, so a client can read that one itself.
+export type PostingUnits = Record<string, string>
 
 /// What has been learned of each posting's unit. A unit, once read, lasts as
 /// long as its posting stays on the board.
@@ -55,7 +59,7 @@ async function readUnits(sources: UnitSources, cache: UnitCache): Promise<Postin
 	let units: PostingUnits = {}
 	for (let id of ids) {
 		let unit = cache.get(id)
-		if (unit !== undefined) units[id] = unit
+		if (unit !== undefined) units[id] = unit ?? UNKNOWN_UNIT
 	}
 	return units
 }
@@ -63,8 +67,8 @@ async function readUnits(sources: UnitSources, cache: UnitCache): Promise<Postin
 /// Whether most of the board's postings came back with no unit. A normal
 /// board has a handful; most at once means the description template changed
 /// under the parser, and every area would read empty.
-export function mostlyNull(units: PostingUnits): boolean {
+export function mostlyUnknown(units: PostingUnits): boolean {
 	let values = Object.values(units)
-	let nulls = values.filter((unit) => unit === null).length
-	return nulls > values.length / 2
+	let unknown = values.filter((unit) => unit === UNKNOWN_UNIT).length
+	return unknown > values.length / 2
 }
