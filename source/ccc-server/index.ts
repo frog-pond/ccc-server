@@ -21,6 +21,9 @@ function setupSentry() {
 		integrations: [
 			nodeProfilingIntegration(),
 			captureConsoleIntegration({levels: ['warn', 'error']}),
+			// flags such as cache-fill-dedupe, recorded per request with
+			// recordFlagInSentry, show on that request's spans and errors
+			Sentry.featureFlagsIntegration(),
 			// not using logging console integration to avoid tracking koa access logs
 			// consoleLoggingIntegration({levels: ['log', 'warn', 'error']}),
 		],
