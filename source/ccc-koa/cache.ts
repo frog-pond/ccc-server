@@ -404,9 +404,12 @@ export function cachable(options: Options): Middleware {
 			this.response.set(obj.headers)
 		}
 		// The life the copy has left, rather than any Cache-Control stored with
-		// it, which would promise the whole of its life again on every hit.
+		// it, which would promise the whole of its life again on every hit. A
+		// route that has already forbidden shared caching keeps its policy.
 		const ttl = expiresIn(this[CACHE_KEY])
-		if (ttl !== undefined && Number.isFinite(ttl)) {
+		const policy = this.response.get('Cache-Control')
+		const forbidden = /\b(?:private|no-cache|no-store)\b/u.test(policy)
+		if (ttl !== undefined && Number.isFinite(ttl) && !forbidden) {
 			this.response.set('Cache-Control', `public, max-age=${Math.floor(ttl / 1000).toFixed(0)}`)
 		}
 		if (this[CACHE_WAITED_KEY]) {

@@ -688,3 +688,19 @@ void test('waiters on a fill the cache did not hold get its stored headers too',
 	t.assert.equal(waiter.status, 404)
 	t.assert.equal(waiter.headers.get('Link'), '</linked?page=2>; rel="next"')
 })
+
+void test('a hit keeps a Cache-Control the route set that forbids shared caching', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {
+		expiresIn: () => 42_900,
+		before: async (ctx, next) => {
+			ctx.set('Cache-Control', 'private, no-store')
+			await next()
+		},
+	})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Control'), 'private, no-store')
+})
