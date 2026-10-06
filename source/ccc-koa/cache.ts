@@ -76,6 +76,8 @@ type FillOutcome =
 interface Fill {
 	outcome: Promise<FillOutcome>
 	settle(outcome: FillOutcome): void
+	/** How many requests have waited on it */
+	waiters: number
 }
 
 /// The headers a waiter takes from the response it waited on: those that
@@ -206,6 +208,20 @@ interface Options {
 	onBurst?(ctx: ExtendableContext, shared: boolean): void
 
 	/**
+	 * Told, each time a route asks `ctx.cached()` (for a method the cache
+	 * holds), whether it found a copy to serve.
+	 */
+	onLookup?(ctx: ExtendableContext, hit: boolean): void
+
+	/**
+	 * Told, once for each fill, how it ended and how many requests waited on
+	 * it, with the request that started it. A fill that hangs is told so when
+	 * it hangs, not again when that request is done; its takeover is a fill
+	 * of its own.
+	 */
+	onFillEnd?(ctx: ExtendableContext, outcome: FillOutcome['kind'], waiters: number): void
+
+	/**
 	 * Get a value from a store.
 	 * @param key Cache key
 	 * @param maxAge Max age (in milliseconds) for the cache
@@ -234,10 +250,26 @@ export function cachable(options: Options): Middleware {
 		fillWaitTimeout = 10_000,
 		shareFetch = () => true,
 		onBurst = () => undefined,
+		onLookup = () => undefined,
+		onFillEnd = () => undefined,
 	} = options
 	/* eslint-enable @typescript-eslint/unbound-method */
 
 	const methods = {...defaultMethods, ...options.methods}
+
+	// The reporting hooks only watch: one that throws mustn't fail a request,
+	// change how a fill ends, or escape the hang timer. Each is logged the first
+	// time it throws, so a broken hook shows without flooding the log.
+	const brokenHooks = new Set<string>()
+	function report(name: string, hook: () => void): void {
+		try {
+			hook()
+		} catch (error) {
+			if (brokenHooks.has(name)) return
+			brokenHooks.add(name)
+			console.error(`cache ${name} hook threw (logged only the first time)`, error)
+		}
+	}
 
 	// Keys some request is fetching right now, to how that fetch ends. A
 	// request for one of these waits for that fetch instead of making its own,
@@ -260,18 +292,26 @@ export function cachable(options: Options): Middleware {
 	// the rest of its followers fetch for themselves.
 	const filling = new Map<string, Fill>()
 
-	function startFill(key: string): Fill {
+	function startFill(ctx: ExtendableContext): Fill {
+		let key = ctx[CACHE_KEY]
 		let {promise, resolve} = Promise.withResolvers<FillOutcome>()
+		let settled = false
 		let hang = setTimeout(() => {
 			fill.settle({kind: 'hung'})
 		}, fillWaitTimeout)
 		hang.unref()
 		let fill: Fill = {
 			outcome: promise,
+			waiters: 0,
 			settle(outcome) {
 				clearTimeout(hang)
 				if (filling.get(key) === fill) filling.delete(key)
 				resolve(outcome)
+				if (settled) return
+				settled = true
+				report('onFillEnd', () => {
+					onFillEnd(ctx, outcome.kind, fill.waiters)
+				})
 			},
 		}
 		filling.set(key, fill)
@@ -301,7 +341,7 @@ export function cachable(options: Options): Middleware {
 		let shared = shareFetch(ctx)
 		onBurst(ctx, shared)
 		if (shared) {
-			ctx[CACHE_FILL_KEY] = startFill(key)
+			ctx[CACHE_FILL_KEY] = startFill(ctx)
 		} else {
 			let marker = {}
 			bypassing.set(key, marker)
@@ -328,6 +368,9 @@ export function cachable(options: Options): Middleware {
 
 		const obj = get(this[CACHE_KEY], maxAge ?? options.maxAge ?? 0)
 		const body = obj?.body
+		report('onLookup', () => {
+			onLookup(this, Boolean(body))
+		})
 		if (!body) {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
@@ -426,6 +469,7 @@ export function cachable(options: Options): Middleware {
 			let outcome: WaitOutcome
 			let followed = false
 			for (;;) {
+				fill.waiters++
 				// each wait follows from the last: a fill is taken over only once it hangs
 				// eslint-disable-next-line no-await-in-loop
 				let ended = await fill.outcome
@@ -436,7 +480,7 @@ export function cachable(options: Options): Middleware {
 				let takeover = filling.get(ctx[CACHE_KEY])
 				if (!takeover) {
 					// the first waiter to hear of the hang takes the fill over
-					ctx[CACHE_FILL_KEY] = startFill(ctx[CACHE_KEY])
+					ctx[CACHE_FILL_KEY] = startFill(ctx)
 					outcome = {kind: 'took over'}
 					break
 				}

@@ -18,6 +18,8 @@ async function serve(
 		stream?: PassThrough
 		shareFetch?: (ctx: Koa.ExtendableContext) => boolean
 		onBurst?: (ctx: Koa.ExtendableContext, shared: boolean) => void
+		onLookup?: (ctx: Koa.ExtendableContext, hit: boolean) => void
+		onFillEnd?: (ctx: Koa.ExtendableContext, outcome: string, waiters: number) => void
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -30,6 +32,8 @@ async function serve(
 			...(options.fillWaitTimeout && {fillWaitTimeout: options.fillWaitTimeout}),
 			...(options.shareFetch && {shareFetch: options.shareFetch}),
 			...(options.onBurst && {onBurst: options.onBurst}),
+			...(options.onLookup && {onLookup: options.onLookup}),
+			...(options.onFillEnd && {onFillEnd: options.onFillEnd}),
 		}),
 	)
 	if (options.before) app.use(options.before)
@@ -105,6 +109,17 @@ function slowUpstream(t: test.TestContext, first: (path: string) => unknown = (p
 }
 
 const tick = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/// Waits until `condition` holds, or fails once `ms` have passed, so a test
+/// waiting on something that never happens fails rather than hangs.
+async function until(condition: () => boolean, what: string, ms = 5_000) {
+	let deadline = Date.now() + ms
+	while (!condition()) {
+		if (Date.now() > deadline) throw new Error(`gave up waiting for ${what}`)
+		// eslint-disable-next-line no-await-in-loop
+		await tick(10)
+	}
+}
 
 void test('concurrent misses for one key share one upstream fetch', async (t) => {
 	let {calls, release, fetchUpstream} = slowUpstream(t)
@@ -254,14 +269,15 @@ void test('when a fill hangs, one waiter takes it over and the rest wait on that
 
 void test('a copy stored by the hung request lets its takeover’s waiters go', async (t) => {
 	let upstream = slowUpstream(t)
-	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
+	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 300})
 
 	let first = get('/menu')
 	await tick()
 	let taker = get('/menu')
 	let follower = get('/menu')
-	await tick(100)
-	t.assert.equal(upstream.calls.length, 2)
+	// until the takeover is fetching: it hangs in turn a whole timeout later,
+	// and then the follower would fetch for itself
+	await until(() => upstream.calls.length === 2, 'the takeover to fetch')
 
 	// The hung request finishes after all, while the takeover is still out.
 	upstream.releaseFirst()
@@ -469,4 +485,149 @@ void test('the key is hashed once, before later middleware can change it', async
 	await responses
 
 	t.assert.deepEqual(calls, ['/menu'])
+})
+
+void test('every lookup is told whether it hit the cache', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let told: boolean[] = []
+	let get = await serve(t, fetchUpstream, {onLookup: (_ctx, hit) => told.push(hit)})
+	release()
+
+	await get('/menu')
+	await get('/menu')
+	await get('/uncached')
+	t.assert.deepEqual(told, [false, true], 'a route that does not cache does not look up')
+})
+
+void test('a fill is told how it ended, and how many waited on it', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let told: [string, number][] = []
+	let get = await serve(t, fetchUpstream, {
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+
+	let burst = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick()
+	release()
+	await burst
+	t.assert.deepEqual(told, [['stored', 2]])
+})
+
+void test('a fill that answers without caching is told it was replayed', async (t) => {
+	let upstream = slowUpstream(t, () => undefined)
+	let told: [string, number][] = []
+	let get = await serve(t, upstream.fetchUpstream, {
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+	await burst
+	t.assert.deepEqual(told, [['replay', 1]])
+})
+
+void test('a fill that fails is told so', async (t) => {
+	let upstream = slowUpstream(t, () => {
+		throw new Error('upstream down')
+	})
+	let told: [string, number][] = []
+	let get = await serve(t, upstream.fetchUpstream, {
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+	t.mock.method(console, 'error', () => undefined)
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+	await burst
+	t.assert.deepEqual(told, [['error', 1]])
+})
+
+void test('a fill that hangs is told once, when it hangs, and its takeover is told too', async (t) => {
+	let upstream = slowUpstream(t)
+	let told: [string, number][] = []
+	let get = await serve(t, upstream.fetchUpstream, {
+		fillWaitTimeout: 300,
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+
+	let first = get('/menu')
+	await tick()
+	let second = get('/menu')
+	// until the first fill hangs: its takeover hangs a whole timeout later
+	await until(() => told.length > 0, 'the first fill to hang')
+	t.assert.deepEqual(told, [['hung', 1]])
+
+	upstream.releaseLater()
+	await second
+	upstream.releaseFirst()
+	await first
+	t.assert.deepEqual(told, [
+		['hung', 1],
+		['stored', 0],
+	])
+})
+
+void test('a lookup hook that throws does not fail the request', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {
+		onLookup: () => {
+			throw new Error('hook broke')
+		},
+	})
+	let logged = t.mock.method(console, 'error', () => undefined)
+	release()
+
+	let first = await get('/menu')
+	t.assert.equal(first.status, 200)
+	let second = await get('/menu')
+	t.assert.equal(second.status, 200)
+	t.assert.equal(second.headers.get('X-Cached-Response'), null)
+	t.assert.deepEqual(await second.json(), {path: '/menu'})
+	t.assert.equal(logged.mock.callCount(), 1, 'a broken hook is logged once, not every time')
+})
+
+void test('a fill hook that throws does not change how the fill ends', async (t) => {
+	let upstream = slowUpstream(t, () => undefined)
+	let get = await serve(t, upstream.fetchUpstream, {
+		onFillEnd: () => {
+			throw new Error('hook broke')
+		},
+	})
+	t.mock.method(console, 'error', () => undefined)
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+	t.assert.deepEqual(
+		(await burst).map((r) => r.status),
+		[404, 404],
+	)
+})
+
+void test('a fill hook that throws when its fill hangs does not escape the timer', async (t) => {
+	let upstream = slowUpstream(t)
+	let uncaught: unknown[] = []
+	let onUncaught = (error: unknown) => uncaught.push(error)
+	process.on('uncaughtException', onUncaught)
+	t.after(() => process.off('uncaughtException', onUncaught))
+	let get = await serve(t, upstream.fetchUpstream, {
+		fillWaitTimeout: 100,
+		onFillEnd: () => {
+			throw new Error('hook broke')
+		},
+	})
+	t.mock.method(console, 'error', () => undefined)
+
+	let first = get('/menu')
+	await tick()
+	let second = get('/menu')
+	await tick(150)
+	upstream.release()
+	t.assert.deepEqual(
+		(await Promise.all([first, second])).map((r) => r.status),
+		[200, 200],
+	)
+	t.assert.deepEqual(uncaught, [])
 })
