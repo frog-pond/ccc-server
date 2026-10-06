@@ -91,6 +91,21 @@ const SHARED_HEADERS = [
 	'retry-after',
 ]
 
+/// The headers among `names` that `ctx`'s response carries.
+function pickHeaders(
+	ctx: ExtendableContext,
+	names: readonly string[],
+): Record<string, string | string[]> {
+	let headers: Record<string, string | string[]> = {}
+	for (let name of names) {
+		let value = ctx.response.headers[name]
+		if (value !== undefined && value !== '') {
+			headers[name] = typeof value === 'number' ? String(value) : value
+		}
+	}
+	return headers
+}
+
 declare module 'koa' {
 	interface ExtendableContext {
 		/**
@@ -150,6 +165,8 @@ export interface CacheObject {
 	lastModified: Date | null
 	etag: string | null
 	gzip?: Buffer
+	/** The response headers named in `storedHeaders`, given back with this copy */
+	headers?: Record<string, string | string[]>
 }
 
 interface Options {
@@ -175,6 +192,13 @@ interface Options {
 	 * `Infinity`, the header leaves `ttl` out.
 	 */
 	expiresIn?(key: string): number | undefined
+
+	/**
+	 * Response headers kept with a cached copy and given back with it on every
+	 * hit, such as `link`. Any other header is about the one response that was
+	 * cached, and is not given back.
+	 */
+	storedHeaders?: readonly string[] | undefined
 
 	/**
 	 * A hashing function. By default, it caches based on the URL. It runs once,
@@ -258,6 +282,7 @@ export function cachable(options: Options): Middleware {
 	/* eslint-enable @typescript-eslint/unbound-method */
 
 	const methods = {...defaultMethods, ...options.methods}
+	const storedHeaders = options.storedHeaders ?? []
 
 	/// Says how the cache handled this request, in a `Cache-Status` header
 	/// (RFC 9211) made of `params`.
@@ -390,11 +415,23 @@ export function cachable(options: Options): Middleware {
 		if (obj.etag) {
 			this.response.etag = obj.etag
 		}
+		if (obj.headers) {
+			this.response.set(obj.headers)
+		}
+		// A max-age the route declared counts down to the life its copy has left,
+		// rather than promising the whole of that life again on every hit. A
+		// route that declared none, or forbade shared caching, keeps its policy.
+		const ttl = expiresIn(this[CACHE_KEY])
+		const policy = this.response.get('Cache-Control')
+		const forbidden = /\b(?:private|no-cache|no-store)\b/u.test(policy)
+		if (ttl !== undefined && Number.isFinite(ttl) && !forbidden && /\bmax-age=\d+/u.test(policy)) {
+			let left = `max-age=${Math.floor(ttl / 1000).toFixed(0)}`
+			this.response.set('Cache-Control', policy.replace(/\bmax-age=\d+/u, left))
+		}
 		if (this[CACHE_WAITED_KEY]) {
 			// it waited on another request's fetch, then took the copy that fetch stored
 			setCacheStatus(this, ['fwd=uri-miss', 'collapsed', 'stored'])
 		} else {
-			let ttl = expiresIn(this[CACHE_KEY])
 			let params = ['hit']
 			// an entry that never expires has no ttl to give
 			if (ttl !== undefined && Number.isFinite(ttl)) {
@@ -496,13 +533,7 @@ export function cachable(options: Options): Middleware {
 			return {kind: 'own'}
 		}
 
-		let headers: Record<string, string | string[]> = {}
-		for (let name of SHARED_HEADERS) {
-			let value = ctx.response.headers[name]
-			if (value !== undefined) {
-				headers[name] = typeof value === 'number' ? String(value) : value
-			}
-		}
+		let headers = pickHeaders(ctx, [...SHARED_HEADERS, ...storedHeaders])
 		return {kind: 'replay', status: ctx.response.status, headers, body}
 	}
 
@@ -560,6 +591,11 @@ export function cachable(options: Options): Middleware {
 			type: ctx.response.get('Content-Type') || null,
 			lastModified: ctx.response.lastModified,
 			etag: ctx.response.get('etag') || null,
+		}
+
+		let headers = pickHeaders(ctx, storedHeaders)
+		if (Object.keys(headers).length > 0) {
+			obj.headers = headers
 		}
 
 		// if the content-type was `text` or `text/plain` then don't cache
