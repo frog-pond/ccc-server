@@ -1,5 +1,5 @@
 import {Buffer} from 'node:buffer'
-import {http} from './http.ts'
+import {TOTAL_TIMEOUT, http} from './http.ts'
 import {ONE_DAY} from './constants.ts'
 import type {Context} from '../ccc-server/context.ts'
 
@@ -40,7 +40,11 @@ export async function image(ctx: Context) {
 
 	let response
 	try {
-		response = await http.get(imageUrl(group, name), {throwHttpErrors: false})
+		// the signal bounds the body read below too, which ky's totalTimeout doesn't reach
+		response = await http.get(imageUrl(group, name), {
+			throwHttpErrors: false,
+			signal: AbortSignal.timeout(TOTAL_TIMEOUT),
+		})
 	} catch (error) {
 		// a timeout, or a connection that never got an answer
 		ctx.throw(502, `GitHub Pages could not be reached for ${group}/${name}`, {cause: error})
