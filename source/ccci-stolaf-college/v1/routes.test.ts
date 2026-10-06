@@ -142,3 +142,57 @@ void test('/orgs/uri/:uri is a 404 for an org Presence does not list', async (t)
 
 	assert.equal((await fetch(`${base}/v1/orgs/uri/no-such-club`)).status, 404)
 })
+
+void test('/streams/search is registered', () => {
+	assert.ok(api.match('/v1/streams/search', 'GET').route)
+})
+
+/// Calls `/streams/search`, with stolaf.edu's collection API faked; returns the
+/// response and the query strings the server sent it.
+async function searchStreams(t: test.TestContext, search: string) {
+	let base = await serve(t)
+	let real = globalThis.fetch.bind(globalThis)
+	let asked: URLSearchParams[] = []
+	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+		let url = input instanceof Request ? input.url : String(input)
+		if (!url.startsWith('https://www.stolaf.edu/multimedia/api/collection')) {
+			return real(input, init)
+		}
+		asked.push(new URL(url).searchParams)
+		return Promise.resolve(Response.json({results: []}))
+	})
+	let response = await real(`${base}/v1/streams/search${search}`)
+	return {response, asked}
+}
+
+/// The year of an upstream `YYYY-MM-DD` date param.
+function yearOf(params: URLSearchParams | undefined, name: string) {
+	return Number(params?.get(name)?.slice(0, 4))
+}
+
+void test('/streams/search passes its query upstream as squery, newest first', async (t) => {
+	let {response, asked} = await searchStreams(t, '?query=choir')
+	assert.equal(response.status, 200)
+	assert.equal(asked.length, 1)
+	let params = asked.at(0)
+	assert.ok(params)
+	assert.equal(params.get('squery'), 'choir')
+	assert.equal(params.get('class'), 'archived')
+	assert.equal(params.get('sort'), 'descending')
+	assert.equal(yearOf(params, 'date_to') - yearOf(params, 'date_from'), 30)
+})
+
+void test('/streams/search ignores a date range from the client', async (t) => {
+	let {asked} = await searchStreams(t, '?query=choir&dateFrom=1900-01-01&sort=ascending')
+	let params = asked.at(0)
+	assert.notEqual(params?.get('date_from'), '1900-01-01')
+	assert.equal(params?.get('sort'), 'ascending')
+})
+
+for (const search of ['', '?query=', '?query=%20%20']) {
+	void test(`/streams/search${search} is refused without asking upstream`, async (t) => {
+		let {response, asked} = await searchStreams(t, search)
+		assert.equal(response.status, 400)
+		assert.equal(asked.length, 0)
+	})
+}

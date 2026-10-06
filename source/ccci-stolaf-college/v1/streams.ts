@@ -30,8 +30,17 @@ const GetStreamsParamsSchema = z.object({
 	dateFrom: z.iso.date().optional(),
 	dateTo: z.iso.date().optional(),
 	sort: z.enum(['ascending', 'descending']).default('ascending'),
-	query: z.string().optional(),
 })
+
+// Search takes only a query and a sort; its date range is fixed. A blank query
+// is refused, since upstream would answer it with every archived stream.
+const SearchStreamsParamsSchema = z.object({
+	query: z.string().trim().min(1),
+	sort: z.enum(['ascending', 'descending']).default('descending'),
+})
+
+// How far back search looks.
+const SEARCH_YEARS = 30
 
 const StOlafStreamsParamsSchema = z.object({
 	date_from: z.iso.date(),
@@ -96,21 +105,23 @@ export async function archived(ctx: Context) {
 	ctx.body = await getStreams(params)
 }
 
+// Upstream answers with one page of 50, so the default is newest-first: with
+// ascending order a broad query would only ever show the oldest matches.
 export async function search(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
+	if (ctx.cached(ONE_HOUR)) return
 
-	const {
-		dateFrom = moment().subtract(30, 'year').tz('America/Chicago').format('YYYY-MM-DD'),
-		dateTo = moment().tz('America/Chicago').format('YYYY-MM-DD'),
-		sort,
-		query,
-	} = GetStreamsParamsSchema.parse(Object.fromEntries(ctx.URL.searchParams.entries()))
+	const parsed = SearchStreamsParamsSchema.safeParse(
+		Object.fromEntries(ctx.URL.searchParams.entries()),
+	)
+	if (!parsed.success) ctx.throw(400, 'query is required')
+	const {query, sort} = parsed.data
 
 	ctx.body = await getStreams({
 		class: 'archived',
-		date_from: dateFrom,
-		date_to: dateTo,
+		date_from: moment().subtract(SEARCH_YEARS, 'year').tz('America/Chicago').format('YYYY-MM-DD'),
+		date_to: moment().tz('America/Chicago').format('YYYY-MM-DD'),
 		sort,
-		...(query ? {squery: query} : {}),
+		squery: query,
 	})
 }
