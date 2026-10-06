@@ -164,11 +164,17 @@ interface Options {
 	methods?: Record<string, boolean> | undefined
 
 	/**
-	 * If a truthy value is passed, then X-Cached-Response header will be set as HIT when response
-	 * is served from the cache.
-	 * @default false
+	 * The name this cache gives itself in the `Cache-Status` header (RFC 9211).
+	 * If it isn't set, responses don't carry the header.
 	 */
-	setCachedHeader?: boolean | undefined
+	statusName?: string | undefined
+
+	/**
+	 * How long (in milliseconds) a key has left before it expires, for the
+	 * `ttl` in `Cache-Status`. If it isn't set, or says `undefined` or
+	 * `Infinity`, the header leaves `ttl` out.
+	 */
+	expiresIn?(key: string): number | undefined
 
 	/**
 	 * A hashing function. By default, it caches based on the URL. It runs once,
@@ -236,12 +242,12 @@ interface Options {
 }
 
 export function cachable(options: Options): Middleware {
-	options.setCachedHeader ??= false
-
 	/* eslint-disable @typescript-eslint/unbound-method */
 	const {
 		get,
 		set,
+		statusName,
+		expiresIn = () => undefined,
 		hash = (ctx) => ctx.request.url,
 		shareFetch = () => true,
 		onBurst = () => undefined,
@@ -252,6 +258,13 @@ export function cachable(options: Options): Middleware {
 	/* eslint-enable @typescript-eslint/unbound-method */
 
 	const methods = {...defaultMethods, ...options.methods}
+
+	/// Says how the cache handled this request, in a `Cache-Status` header
+	/// (RFC 9211) made of `params`.
+	function setCacheStatus(ctx: ExtendableContext, params: string[]): void {
+		if (statusName === undefined) return
+		ctx.response.set('Cache-Status', [statusName, ...params].join('; '))
+	}
 
 	// The reporting hooks only watch: one that throws mustn't fail a request or
 	// change how a fill ends. Each is logged the first
@@ -377,8 +390,17 @@ export function cachable(options: Options): Middleware {
 		if (obj.etag) {
 			this.response.etag = obj.etag
 		}
-		if (options.setCachedHeader) {
-			this.response.set('X-Cached-Response', 'HIT')
+		if (this[CACHE_WAITED_KEY]) {
+			// it waited on another request's fetch, then took the copy that fetch stored
+			setCacheStatus(this, ['fwd=uri-miss', 'collapsed', 'stored'])
+		} else {
+			let ttl = expiresIn(this[CACHE_KEY])
+			let params = ['hit']
+			// an entry that never expires has no ttl to give
+			if (ttl !== undefined && Number.isFinite(ttl)) {
+				params.push(`ttl=${Math.floor(ttl / 1000).toFixed(0)}`)
+			}
+			setCacheStatus(this, params)
 		}
 
 		if (this.request.fresh) {
@@ -414,6 +436,7 @@ export function cachable(options: Options): Middleware {
 				}
 				if (outcome.kind === 'replay') {
 					ctx.set(outcome.headers)
+					setCacheStatus(ctx, ['fwd=uri-miss', 'collapsed'])
 					ctx.status = outcome.status
 					if (outcome.body !== null && outcome.body !== undefined) ctx.body = outcome.body
 					return
@@ -427,7 +450,15 @@ export function cachable(options: Options): Middleware {
 		let outcome: FillOutcome = {kind: 'own'}
 		try {
 			await next()
-			if (await store(ctx)) {
+			let stored = await store(ctx)
+			if (ctx[CACHE_INFO_KEY]) {
+				let params = ['fwd=uri-miss']
+				if (stored) params.push('stored')
+				// a stored response is a 200; store() answers a fresh request with a 304
+				if (stored && ctx.status === 304) params.push('fwd-status=200')
+				setCacheStatus(ctx, params)
+			}
+			if (stored) {
 				outcome = {kind: 'stored'}
 			} else if (ctx[CACHE_FILL_KEY]) {
 				outcome = await shareable(ctx)
