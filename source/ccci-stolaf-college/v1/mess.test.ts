@@ -2,9 +2,8 @@ import {test, mock, type TestContext} from 'node:test'
 import type {AddressInfo} from 'node:net'
 import Router from '@koa/router'
 import Koa from 'koa'
-import QuickLRU from 'quick-lru'
 
-import {makeWordpressRoute, paginationLinks, rulesFor, withPage, type Answer} from './mess.ts'
+import {makeWordpressRoute, paginationLinks, rulesFor, withPage} from './mess.ts'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
@@ -207,7 +206,6 @@ const json = (
 		headers: {'content-type': 'application/json; charset=UTF-8', ...headers},
 	})
 
-const newStore = () => new QuickLRU<string, Answer>({maxSize: 10})
 const POSTS = '/v1/news/mess/wp/v2/posts'
 
 void test('wordpress', async (t) => {
@@ -219,7 +217,7 @@ void test('wordpress', async (t) => {
 			)
 			let {ctx, raw, headers} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2&page=2')
 
-			await makeWordpressRoute(newStore())(ctx)
+			await makeWordpressRoute()(ctx)
 
 			t.assert.deepEqual(urls(), [
 				'https://olafmessenger.com/wp-json/wp/v2/posts?per_page=2&page=2',
@@ -243,7 +241,7 @@ void test('wordpress', async (t) => {
 			'_embed=true',
 		)
 
-		await makeWordpressRoute(newStore())(ctx)
+		await makeWordpressRoute()(ctx)
 
 		t.assert.deepEqual(urls(), ['https://olafmessenger.com/wp-json/wp/v2/posts/36238?_embed=true'])
 		t.assert.equal(String(raw.body), '{"id":36238}')
@@ -260,10 +258,11 @@ void test('wordpress', async (t) => {
 		)
 		raw.cached = mock.fn((_maxAge?: number) => true)
 
-		await makeWordpressRoute(newStore())(ctx)
+		await makeWordpressRoute()(ctx)
 
 		t.assert.deepEqual(urls(), [])
-		t.assert.deepEqual(raw.cacheControl.mock.calls[0]?.arguments, [ONE_DAY])
+		// the cache gives back the Cache-Control stored with the copy
+		t.assert.equal(raw.cacheControl.mock.callCount(), 0)
 	})
 
 	await t.test(
@@ -274,7 +273,7 @@ void test('wordpress', async (t) => {
 			)
 			let {ctx, raw} = makeContext(POSTS, {resource: 'posts'}, 'per_page=50&page=9999')
 
-			await makeWordpressRoute(newStore())(ctx)
+			await makeWordpressRoute()(ctx)
 
 			t.assert.equal(raw.status, 400)
 			t.assert.equal(String(raw.body), '{"code":"rest_post_invalid_page_number"}')
@@ -288,8 +287,58 @@ void test('wordpress', async (t) => {
 			let {urls} = answerWith(t, () => Promise.resolve(json([])))
 			let {ctx} = makeContext('/v1/news/mess/wp/v2/users', {resource: 'users'})
 
-			await t.assert.rejects(makeWordpressRoute(newStore())(ctx), {status: 404})
+			await t.assert.rejects(makeWordpressRoute()(ctx), {status: 404})
 			t.assert.deepEqual(urls(), [])
+		},
+	)
+
+	await t.test(
+		'serves the last good copy when the paper is slower than its timeout',
+		{timeout: 5_000},
+		async (t: TestContext) => {
+			let route = makeWordpressRoute({timeout: 50})
+
+			let good = answerWith(t, () => Promise.resolve(json([{id: 1}])))
+			await route(makeContext(POSTS, {resource: 'posts'}, 'per_page=2').ctx)
+			good.restore()
+
+			// a paper that never answers, until the request is given up
+			answerWith(
+				t,
+				((request: Request) =>
+					new Promise<Response>((_resolve, reject) => {
+						request.signal.addEventListener('abort', () => {
+							reject(new DOMException('The operation was aborted', 'AbortError'))
+						})
+					})) as unknown as () => Promise<Response>,
+			)
+			let {ctx, raw} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2')
+			await route(ctx)
+
+			t.assert.equal(String(raw.body), '[{"id":1}]')
+		},
+	)
+
+	await t.test(
+		'keeps the category tree’s last good copy however many stories are read',
+		async (t: TestContext) => {
+			let route = makeWordpressRoute()
+			let up = answerWith(t, () => Promise.resolve(json([{id: 1, name: 'News'}])))
+			let categories = () =>
+				makeContext('/v1/news/mess/wp/v2/categories', {resource: 'categories'}, 'per_page=100')
+			await route(categories().ctx)
+
+			for (let id = 1; id <= 700; id++) {
+				// eslint-disable-next-line no-await-in-loop
+				await route(makeContext(`${POSTS}/${String(id)}`, {resource: 'posts', id: String(id)}).ctx)
+			}
+			up.restore()
+
+			answerWith(t, () => Promise.resolve(new Response('down', {status: 503})))
+			let {ctx, raw} = categories()
+			await route(ctx)
+
+			t.assert.equal(String(raw.body), '[{"id":1,"name":"News"}]')
 		},
 	)
 
@@ -303,12 +352,25 @@ void test('wordpress', async (t) => {
 					new Response('<html>wait</html>', {headers: {'content-type': 'text/html'}}),
 				),
 		],
+		// every phone now reaches the paper from this server's one address, which a rate
+		// limit or a firewall may answer for
+		['a rate limit', () => Promise.resolve(json({code: 'too_many_requests'}, {status: 429}))],
+		[
+			'a firewall block',
+			() =>
+				Promise.resolve(
+					new Response('<html>blocked</html>', {
+						status: 403,
+						headers: {'content-type': 'text/html'},
+					}),
+				),
+		],
 	]
 	for (let [failure, response] of failures) {
 		// each failure's subtests share no state, but node:test runs them one at a time anyway
 		// eslint-disable-next-line no-await-in-loop
 		await t.test(`serves the last good copy on ${failure}, briefly`, async (t: TestContext) => {
-			let route = makeWordpressRoute(newStore())
+			let route = makeWordpressRoute()
 
 			let good = answerWith(t, () =>
 				Promise.resolve(json([{id: 1}], {headers: {'x-wp-totalpages': '3'}})),
@@ -333,18 +395,18 @@ void test('wordpress', async (t) => {
 			answerWith(t, response)
 			let {ctx} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2')
 
-			await t.assert.rejects(makeWordpressRoute(newStore())(ctx), {status: 502})
+			await t.assert.rejects(makeWordpressRoute()(ctx), {status: 502})
 		})
 	}
 })
 
 /// The route behind the server's own response cache, as the app reaches it, with the paper
 /// answering `upstream()`. Requests to the test server itself go through the real fetch.
-async function serveThroughCache(t: TestContext, upstream: () => Promise<Response>) {
+async function serveThroughCache(t: TestContext, upstream: {answer: () => Promise<Response>}) {
 	let realFetch = globalThis.fetch
 	let fetch = mock.method(globalThis, 'fetch', (input: Request | string, init?: RequestInit) => {
 		let url = input instanceof Request ? input.url : input
-		return url.startsWith('http://localhost') ? realFetch(input, init) : upstream()
+		return url.startsWith('http://localhost') ? realFetch(input, init) : upstream.answer()
 	})
 
 	let store = new Map<string, CacheObject>()
@@ -353,11 +415,12 @@ async function serveThroughCache(t: TestContext, upstream: () => Promise<Respons
 		cachable({
 			get: (key) => store.get(key),
 			set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
-			storedHeaders: ['link', 'x-wp-total', 'x-wp-totalpages'],
+			// as server.ts configures it
+			storedHeaders: ['cache-control', 'link', 'x-wp-total', 'x-wp-totalpages'],
 		}),
 	)
 	let router = new Router<RouterState, ContextState>({prefix: '/v1'})
-	let route = makeWordpressRoute(newStore())
+	let route = makeWordpressRoute()
 	router.get('/news/mess/wp/v2/:resource', route)
 	router.get('/news/mess/wp/v2/:resource/:id', route)
 	app.use(router.routes())
@@ -370,16 +433,22 @@ async function serveThroughCache(t: TestContext, upstream: () => Promise<Respons
 	})
 	await new Promise((resolve) => server.once('listening', resolve))
 	let {port} = server.address() as AddressInfo
-	return (path: string) => realFetch(`http://localhost:${String(port)}${path}`)
+	return {
+		get: (path: string) => realFetch(`http://localhost:${String(port)}${path}`),
+		/** Forgets every cached response, as if each had expired. */
+		expireAll: () => {
+			store.clear()
+		},
+	}
 }
 
 void test('wordpress, behind the response cache', async (t) => {
 	await t.test(
 		'answers the paper’s JSON as it came, fetched and cached',
 		async (t: TestContext) => {
-			let get = await serveThroughCache(t, () =>
-				Promise.resolve(json([{id: 1}], {headers: {'x-wp-totalpages': '2'}})),
-			)
+			let {get} = await serveThroughCache(t, {
+				answer: () => Promise.resolve(json([{id: 1}], {headers: {'x-wp-totalpages': '2'}})),
+			})
 
 			for (let attempt of ['fetched', 'cached']) {
 				// eslint-disable-next-line no-await-in-loop
@@ -388,6 +457,26 @@ void test('wordpress, behind the response cache', async (t) => {
 				// eslint-disable-next-line no-await-in-loop
 				t.assert.deepEqual(await response.json(), [{id: 1}], attempt)
 				t.assert.ok(response.headers.get('link')?.includes('rel="next"'), attempt)
+			}
+		},
+	)
+
+	await t.test(
+		'tells phones to keep a last good copy only briefly, on every hit too',
+		async (t: TestContext) => {
+			let upstream = {answer: () => Promise.resolve(json([{id: 1, name: 'News'}]))}
+			let {get, expireAll} = await serveThroughCache(t, upstream)
+			let path = '/v1/news/mess/wp/v2/categories?per_page=100'
+			await get(path)
+			expireAll()
+
+			upstream.answer = () => Promise.resolve(new Response('down', {status: 503}))
+			for (let attempt of ['the stale copy', 'a hit on it']) {
+				// eslint-disable-next-line no-await-in-loop
+				let response = await get(path)
+				// eslint-disable-next-line no-await-in-loop
+				t.assert.deepEqual(await response.json(), [{id: 1, name: 'News'}], attempt)
+				t.assert.equal(response.headers.get('cache-control'), 'public, max-age=60', attempt)
 			}
 		},
 	)

@@ -1,7 +1,7 @@
 import {Buffer} from 'node:buffer'
 import QuickLRU from 'quick-lru'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
-import {TOTAL_TIMEOUT, http} from '../../ccc-lib/http.ts'
+import {http} from '../../ccc-lib/http.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
 /// The Olaf Messenger's WordPress REST API, which this module serves the app
@@ -15,10 +15,14 @@ const EMBED = /^(?:true|wp:[a-z]+(?:,wp:[a-z]+)*)$/u
 const BOOLEAN = /^(?:true|false)$/u
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u
 
-/// The query parameters a request may carry, and how long its answer is cached.
+/// The query parameters a request may carry, how long its answer is cached,
+/// and how many last good copies of its answers are kept for an outage. Each
+/// kind of request keeps its own, so stories read by the hundred cannot push
+/// out the one category tree every screen needs.
 export interface Rules {
 	params: Record<string, RegExp>
 	ttl: number
+	keep: number
 }
 
 /// What the app asks the paper for, and nothing else: anything more would make
@@ -36,11 +40,18 @@ const RESOURCES: Record<string, {list: Rules; item?: Rules}> = {
 				staff_name: INTEGER,
 			},
 			ttl: 5 * ONE_MINUTE,
+			keep: 100,
 		},
-		item: {params: {_embed: EMBED, _fields: FIELDS}, ttl: ONE_HOUR},
+		item: {params: {_embed: EMBED, _fields: FIELDS}, ttl: ONE_HOUR, keep: 200},
 	},
-	categories: {list: {params: {per_page: INTEGER, _fields: FIELDS}, ttl: ONE_DAY}},
-	media: {list: {params: {include: INTEGERS, per_page: INTEGER, _fields: FIELDS}, ttl: ONE_DAY}},
+	categories: {list: {params: {per_page: INTEGER, _fields: FIELDS}, ttl: ONE_DAY, keep: 4}},
+	media: {
+		list: {
+			params: {include: INTEGERS, per_page: INTEGER, _fields: FIELDS},
+			ttl: ONE_DAY,
+			keep: 100,
+		},
+	},
 	staff_profile: {
 		list: {
 			params: {
@@ -52,12 +63,17 @@ const RESOURCES: Record<string, {list: Rules; item?: Rules}> = {
 				_fields: FIELDS,
 			},
 			ttl: ONE_DAY,
+			keep: 50,
 		},
 	},
 	staff_year: {
-		list: {params: {hide_empty: BOOLEAN, per_page: INTEGER, _fields: FIELDS}, ttl: ONE_DAY},
+		list: {
+			params: {hide_empty: BOOLEAN, per_page: INTEGER, _fields: FIELDS},
+			ttl: ONE_DAY,
+			keep: 4,
+		},
 	},
-	pages: {list: {params: {slug: SLUG, _fields: FIELDS}, ttl: ONE_DAY}},
+	pages: {list: {params: {slug: SLUG, _fields: FIELDS}, ttl: ONE_DAY, keep: 4}},
 }
 
 export type Verdict = {rules: Rules} | {refusal: {status: 400 | 404; message: string}}
@@ -131,20 +147,32 @@ export interface Answer {
 /// WordPress's paging headers, which the app may read in either mode.
 const PASSED_HEADERS = ['x-wp-total', 'x-wp-totalpages']
 
+/// How long the paper has to answer: well inside the app's own 10 seconds, so
+/// that while the paper hangs, the last good copy reaches the reader in time.
+const UPSTREAM_TIMEOUT = 7_000
+
+/// Refusals that say nothing about the request, only about this server's
+/// standing with the paper's host -- a rate limit, a firewall, a timeout --
+/// which every phone shares, since they all reach the paper from here.
+const OUTAGE_STATUSES = new Set([403, 408, 429])
+
 /// The paper's answer, or nothing when it could not give one: a timeout, a
-/// connection that never answered, or a page other than JSON in a 2xx, such
-/// as a maintenance page or a bot check, which must not be cached as the
-/// Messenger's data.
-async function fetchUpstream(url: string): Promise<Answer | undefined> {
+/// connection that never answered, a 5xx, a refusal in `OUTAGE_STATUSES`, or
+/// a page other than JSON, such as a maintenance page or a bot check, which
+/// must not be cached as the Messenger's data.
+async function fetchUpstream(url: string, timeout: number): Promise<Answer | undefined> {
 	try {
 		// no retries: a failure is answered from the last good copy, and the app retries on its own
 		let response = await http.get(url, {
 			throwHttpErrors: false,
 			retry: 0,
-			signal: AbortSignal.timeout(TOTAL_TIMEOUT),
+			timeout,
+			// the signal bounds the body read too, which ky's timeout doesn't reach
+			signal: AbortSignal.timeout(timeout),
 		})
 		let type = response.headers.get('content-type') ?? 'application/json'
-		if (response.ok && !type.includes('json')) return undefined
+		if (!type.includes('json')) return undefined
+		if (response.status >= 500 || OUTAGE_STATUSES.has(response.status)) return undefined
 		let headers: Record<string, string> = {}
 		for (let name of PASSED_HEADERS) {
 			let value = response.headers.get(name)
@@ -172,9 +200,17 @@ function send(ctx: Context, answer: Answer): void {
 
 /// The Messenger's WordPress API, answered from the response cache, then the
 /// paper, then -- while the paper is failing -- the last good copy of each URL.
-export function makeWordpressRoute(
-	lastGood = new QuickLRU<string, Answer>({maxSize: 300, maxAge: 7 * ONE_DAY}),
-) {
+export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: number} = {}) {
+	let copies = new Map<Rules, QuickLRU<string, Answer>>()
+	let lastGoodFor = (rules: Rules) => {
+		let store = copies.get(rules)
+		if (!store) {
+			store = new QuickLRU<string, Answer>({maxSize: rules.keep, maxAge: 7 * ONE_DAY})
+			copies.set(rules, store)
+		}
+		return store
+	}
+
 	return async function wordpress(ctx: Context): Promise<void> {
 		let {resource = '', id} = ctx.params
 		let verdict = rulesFor(resource, id, new URLSearchParams(ctx.querystring))
@@ -183,17 +219,17 @@ export function makeWordpressRoute(
 			return
 		}
 		let {ttl} = verdict.rules
+		let lastGood = lastGoodFor(verdict.rules)
 
-		if (ctx.cached(ttl)) {
-			ctx.cacheControl(ttl)
-			return
-		}
+		// A hit's Cache-Control is the one stored with it, which for a last good
+		// copy is a minute, not the whole ttl.
+		if (ctx.cached(ttl)) return
 
 		let path = id === undefined ? resource : `${resource}/${id}`
 		let url = `${UPSTREAM}/${path}${ctx.querystring ? `?${ctx.querystring}` : ''}`
-		let answer = await fetchUpstream(url)
+		let answer = await fetchUpstream(url, timeout)
 
-		if (answer && answer.status < 500) {
+		if (answer) {
 			// a 4xx is passed on but not cached: the cache holds only 200s, and
 			// Cache-Control goes only on an answer worth keeping
 			if (answer.status === 200) {

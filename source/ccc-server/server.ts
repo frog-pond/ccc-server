@@ -101,8 +101,9 @@ async function main() {
 	app.use(
 		cachable({
 			statusName: 'ccc-server',
-			// the Messenger's pagination headers, which a cached copy must keep
-			storedHeaders: ['link', 'x-wp-total', 'x-wp-totalpages'],
+			// Cache-Control, so a copy kept briefly says so on every hit, and the
+			// Messenger's pagination headers
+			storedHeaders: ['cache-control', 'link', 'x-wp-total', 'x-wp-totalpages'],
 			expiresIn: (key) => cache.expiresIn(key),
 			// for this percentage of bursts of concurrent misses for a key, share
 			// one upstream fetch among the burst
