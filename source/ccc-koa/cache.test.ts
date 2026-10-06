@@ -20,6 +20,7 @@ async function serve(
 		onLookup?: (ctx: Koa.ExtendableContext, hit: boolean) => void
 		onFillEnd?: (ctx: Koa.ExtendableContext, outcome: string, waiters: number) => void
 		onStore?: (ctx: Koa.ExtendableContext, body: unknown) => void
+		expiresIn?: (key: string) => number | undefined
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -28,6 +29,8 @@ async function serve(
 		cachable({
 			get: (key) => store.get(key),
 			set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
+			statusName: 'test-cache',
+			...(options.expiresIn && {expiresIn: options.expiresIn}),
 			...(options.hash && {hash: options.hash}),
 			...(options.shareFetch && {shareFetch: options.shareFetch}),
 			...(options.onBurst && {onBurst: options.onBurst}),
@@ -492,4 +495,23 @@ void test('a store hook that throws does not keep the response from being cached
 	t.assert.equal((await get('/menu')).status, 200)
 	t.assert.deepEqual(await (await get('/menu')).json(), {path: '/menu'})
 	t.assert.equal(calls.length, 1, 'the second request was served from the cache')
+})
+
+void test('a response fetched and stored says so in Cache-Status', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream)
+	release()
+
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; fwd=uri-miss; stored')
+})
+
+void test('a response served from the cache says so in Cache-Status, with its ttl', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {expiresIn: () => 42_900})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; hit; ttl=42')
 })

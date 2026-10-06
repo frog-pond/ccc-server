@@ -164,11 +164,17 @@ interface Options {
 	methods?: Record<string, boolean> | undefined
 
 	/**
-	 * If a truthy value is passed, then X-Cached-Response header will be set as HIT when response
-	 * is served from the cache.
-	 * @default false
+	 * The name this cache gives itself in the `Cache-Status` header (RFC 9211).
+	 * If it isn't set, responses don't carry the header.
 	 */
-	setCachedHeader?: boolean | undefined
+	statusName?: string | undefined
+
+	/**
+	 * How long (in milliseconds) a key has left before it expires, for the
+	 * `ttl` in `Cache-Status`. If it isn't set, or says `undefined`, the header
+	 * leaves `ttl` out.
+	 */
+	expiresIn?(key: string): number | undefined
 
 	/**
 	 * A hashing function. By default, it caches based on the URL. It runs once,
@@ -236,12 +242,12 @@ interface Options {
 }
 
 export function cachable(options: Options): Middleware {
-	options.setCachedHeader ??= false
-
 	/* eslint-disable @typescript-eslint/unbound-method */
 	const {
 		get,
 		set,
+		statusName,
+		expiresIn = () => undefined,
 		hash = (ctx) => ctx.request.url,
 		shareFetch = () => true,
 		onBurst = () => undefined,
@@ -252,6 +258,13 @@ export function cachable(options: Options): Middleware {
 	/* eslint-enable @typescript-eslint/unbound-method */
 
 	const methods = {...defaultMethods, ...options.methods}
+
+	/// Says how the cache handled this request, in a `Cache-Status` header
+	/// (RFC 9211) made of `params`.
+	function setCacheStatus(ctx: ExtendableContext, params: string[]): void {
+		if (statusName === undefined) return
+		ctx.response.set('Cache-Status', [statusName, ...params].join('; '))
+	}
 
 	// The reporting hooks only watch: one that throws mustn't fail a request or
 	// change how a fill ends. Each is logged the first
@@ -377,9 +390,8 @@ export function cachable(options: Options): Middleware {
 		if (obj.etag) {
 			this.response.etag = obj.etag
 		}
-		if (options.setCachedHeader) {
-			this.response.set('X-Cached-Response', 'HIT')
-		}
+		let ttl = expiresIn(this[CACHE_KEY])
+		setCacheStatus(this, ttl === undefined ? ['hit'] : ['hit', `ttl=${Math.floor(ttl / 1000)}`])
 
 		if (this.request.fresh) {
 			this.response.status = 304
@@ -427,7 +439,11 @@ export function cachable(options: Options): Middleware {
 		let outcome: FillOutcome = {kind: 'own'}
 		try {
 			await next()
-			if (await store(ctx)) {
+			let stored = await store(ctx)
+			if (ctx[CACHE_INFO_KEY]) {
+				setCacheStatus(ctx, stored ? ['fwd=uri-miss', 'stored'] : ['fwd=uri-miss'])
+			}
+			if (stored) {
 				outcome = {kind: 'stored'}
 			} else if (ctx[CACHE_FILL_KEY]) {
 				outcome = await shareable(ctx)
