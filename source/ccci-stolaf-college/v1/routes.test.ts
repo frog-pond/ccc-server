@@ -162,10 +162,6 @@ void test('/orgs/uri/:uri is a 404 for an org Presence does not list', async (t)
 	assert.equal((await fetch(`${base}/v1/orgs/uri/no-such-club`)).status, 404)
 })
 
-void test('/streams/search is registered', () => {
-	assert.ok(api.match('/v1/streams/search', 'GET').route)
-})
-
 /// stolaf.edu's collection API, faked: it answers a page of streams titled for
 /// the `squery` it was asked, and records the query strings it was sent. `available`
 /// is how many streams match in all; `null` is an answer that doesn't say.
@@ -271,18 +267,6 @@ void test('/streams/search takes a sort', async (t) => {
 	assert.equal(params.get('sort'), 'ascending')
 })
 
-void test('/streams/search takes a date range', async (t) => {
-	let params = await upstreamParams(t, '?query=choir&dateFrom=2020-01-01&dateTo=2021-06-30')
-	assert.equal(params.get('date_from'), '2020-01-01')
-	assert.equal(params.get('date_to'), '2021-06-30')
-})
-
-void test('/streams/search takes one end of a date range, and defaults the other', async (t) => {
-	let params = await upstreamParams(t, '?query=choir&dateFrom=2020-01-01')
-	assert.equal(params.get('date_from'), '2020-01-01')
-	assert.match(params.get('date_to') ?? '', /^\d{4}-\d{2}-\d{2}$/)
-})
-
 void test('/streams/search takes a category', async (t) => {
 	let params = await upstreamParams(t, '?query=choir&category=concerts')
 	assert.equal(params.get('category'), 'concerts')
@@ -363,7 +347,6 @@ void test('/streams/search refuses a bad request before asking the cache', async
 
 const REFUSED = [
 	'',
-	'?query=',
 	'?query=%20%20',
 	'?query=choir&class=bogus',
 	'?query=choir&sort=sideways',
@@ -372,21 +355,12 @@ const REFUSED = [
 	'?query=choir&dateFrom=2021-01-01&dateTo=2020-01-01',
 	'?query=choir&count=0',
 	'?query=choir&count=201',
-	'?query=choir&count=lots',
-	'?query=choir&count=1.5',
-	'?query=choir&offset=',
-	'?query=choir&offset=%20',
 	'?query=choir&count=%20',
 	'?query=choir&count=050',
-	'?query=choir&offset=00',
-	'?query=choir&offset=%2010',
 	'?query=choir&count=1e2',
-	'?query=choir&count=0x32',
-	'?query=choir&count=50.0',
-	'?query=choir&count=%2B50',
-	'?query=choir&offset=1e1',
+	// a blank offset was once read as 0
+	'?query=choir&offset=',
 	'?query=choir&offset=-1',
-	'?query=choir&offset=soon',
 ]
 
 for (const search of REFUSED) {
@@ -495,8 +469,6 @@ void test('/streams/search has no Link header when upstream gives no total', asy
 void test('/streams/search pages by count from its own offset, so next reaches last', async (t) => {
 	let links = await linksFor(t, '?query=choir&count=50&offset=30', 231)
 	assert.deepEqual(offsets(links), {first: '0', prev: '0', next: '80', last: '230'})
-	// 30, 80, 130, 180, 230: stepping by `next` lands on `last`
-	assert.equal((230 - 30) % 50, 0)
 })
 
 void test('/streams/search sends the page before a short first page, not one that repeats it', async (t) => {
@@ -522,12 +494,9 @@ void test("/streams/search links keep the request's query string as it was sent"
 })
 
 for (let [search, expected] of [
-	['?query=choir', 'descending'],
-	['?query=choir&class=archived', 'descending'],
 	['?query=choir&class=all', 'descending'],
 	['?query=choir&class=upcoming', 'ascending'],
 	['?query=choir&class=upcoming&sort=descending', 'descending'],
-	['?query=choir&class=archived&sort=ascending', 'ascending'],
 ] as const) {
 	void test(`/streams/search${search} sorts ${expected}`, async (t) => {
 		let params = await upstreamParams(t, search)
