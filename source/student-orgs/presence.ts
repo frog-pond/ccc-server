@@ -1,4 +1,4 @@
-import {getJson, http} from '../ccc-lib/http.ts'
+import {getJson} from '../ccc-lib/http.ts'
 import {
 	advisorsOf,
 	contactsOf,
@@ -186,7 +186,7 @@ export async function presenceOrg(
 	let [list, campus, portal] = await Promise.all([
 		getJson(`${base}/organizations`),
 		fetchCampus(base),
-		http.get(`${base}/grid/portal-view/Organization/${uri}/`),
+		getJson(`${base}/grid/portal-view/Organization/${uri}/`),
 	])
 
 	let listed = BasicPresenceOrgSchema.array()
@@ -196,7 +196,7 @@ export async function presenceOrg(
 		return undefined
 	}
 
-	return orgDetail(cleanOrg(listed, SORTABLE_PREFIXES, campus), portalFields(await portal.json()))
+	return orgDetail(cleanOrg(listed, SORTABLE_PREFIXES, campus), portalFields(portal))
 }
 
 /// An org from the list, with what its portal view adds. The description is
