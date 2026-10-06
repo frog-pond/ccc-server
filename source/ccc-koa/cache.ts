@@ -257,6 +257,20 @@ export function cachable(options: Options): Middleware {
 
 	const methods = {...defaultMethods, ...options.methods}
 
+	// The reporting hooks only watch: one that throws mustn't fail a request,
+	// change how a fill ends, or escape the hang timer. Each is logged the first
+	// time it throws, so a broken hook shows without flooding the log.
+	const brokenHooks = new Set<string>()
+	function report(name: string, hook: () => void): void {
+		try {
+			hook()
+		} catch (error) {
+			if (brokenHooks.has(name)) return
+			brokenHooks.add(name)
+			console.error(`cache ${name} hook threw (logged only the first time)`, error)
+		}
+	}
+
 	// Keys some request is fetching right now, to how that fetch ends. A
 	// request for one of these waits for that fetch instead of making its own,
 	// so a burst of misses for one route costs one upstream fetch, not one each.
@@ -295,7 +309,9 @@ export function cachable(options: Options): Middleware {
 				resolve(outcome)
 				if (settled) return
 				settled = true
-				onFillEnd(ctx, outcome.kind, fill.waiters)
+				report('onFillEnd', () => {
+					onFillEnd(ctx, outcome.kind, fill.waiters)
+				})
 			},
 		}
 		filling.set(key, fill)
@@ -352,7 +368,9 @@ export function cachable(options: Options): Middleware {
 
 		const obj = get(this[CACHE_KEY], maxAge ?? options.maxAge ?? 0)
 		const body = obj?.body
-		onLookup(this, Boolean(body))
+		report('onLookup', () => {
+			onLookup(this, Boolean(body))
+		})
 		if (!body) {
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}

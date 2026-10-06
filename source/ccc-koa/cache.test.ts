@@ -557,3 +557,66 @@ void test('a fill that hangs is told once, when it hangs, and its takeover is to
 		['stored', 0],
 	])
 })
+
+void test('a lookup hook that throws does not fail the request', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {
+		onLookup: () => {
+			throw new Error('hook broke')
+		},
+	})
+	let logged = t.mock.method(console, 'error', () => undefined)
+	release()
+
+	let first = await get('/menu')
+	t.assert.equal(first.status, 200)
+	let second = await get('/menu')
+	t.assert.equal(second.status, 200)
+	t.assert.equal(second.headers.get('X-Cached-Response'), null)
+	t.assert.deepEqual(await second.json(), {path: '/menu'})
+	t.assert.equal(logged.mock.callCount(), 1, 'a broken hook is logged once, not every time')
+})
+
+void test('a fill hook that throws does not change how the fill ends', async (t) => {
+	let upstream = slowUpstream(t, () => undefined)
+	let get = await serve(t, upstream.fetchUpstream, {
+		onFillEnd: () => {
+			throw new Error('hook broke')
+		},
+	})
+	t.mock.method(console, 'error', () => undefined)
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+	t.assert.deepEqual(
+		(await burst).map((r) => r.status),
+		[404, 404],
+	)
+})
+
+void test('a fill hook that throws when its fill hangs does not escape the timer', async (t) => {
+	let upstream = slowUpstream(t)
+	let uncaught: unknown[] = []
+	let onUncaught = (error: unknown) => uncaught.push(error)
+	process.on('uncaughtException', onUncaught)
+	t.after(() => process.off('uncaughtException', onUncaught))
+	let get = await serve(t, upstream.fetchUpstream, {
+		fillWaitTimeout: 100,
+		onFillEnd: () => {
+			throw new Error('hook broke')
+		},
+	})
+	t.mock.method(console, 'error', () => undefined)
+
+	let first = get('/menu')
+	await tick()
+	let second = get('/menu')
+	await tick(150)
+	upstream.release()
+	t.assert.deepEqual(
+		(await Promise.all([first, second])).map((r) => r.status),
+		[200, 200],
+	)
+	t.assert.deepEqual(uncaught, [])
+})
