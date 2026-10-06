@@ -54,6 +54,7 @@ async function serve(
 		if (ctx.cached(60_000)) return
 		let body = await fetchUpstream(ctx.path)
 		if (body === undefined) {
+			if (ctx.path.startsWith('/linked')) ctx.set('Link', `<${ctx.path}?page=2>; rel="next"`)
 			ctx.set('Cache-Control', 'max-age=60')
 			ctx.set('Set-Cookie', 'session=first')
 			ctx.status = 404
@@ -661,4 +662,29 @@ void test('without storedHeaders, a hit gives back none of the headers it was fe
 	await get('/linked')
 	let response = await get('/linked')
 	t.assert.equal(response.headers.get('Link'), null)
+})
+
+void test('a hit says in Cache-Control how long its copy has left, not how long it was stored for', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {expiresIn: () => 42_900})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Control'), 'public, max-age=42')
+})
+
+void test('waiters on a fill the cache did not hold get its stored headers too', async (t) => {
+	let {releaseFirst, fetchUpstream} = slowUpstream(t, () => undefined)
+	let get = await serve(t, fetchUpstream, {storedHeaders: ['link']})
+
+	let first = get('/linked')
+	await tick()
+	let second = get('/linked')
+	await tick()
+	releaseFirst()
+
+	let [, waiter] = await Promise.all([first, second])
+	t.assert.equal(waiter.status, 404)
+	t.assert.equal(waiter.headers.get('Link'), '</linked?page=2>; rel="next"')
 })

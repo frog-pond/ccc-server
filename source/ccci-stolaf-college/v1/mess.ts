@@ -8,10 +8,37 @@ import type {Context} from '../../ccc-server/context.ts'
 /// a cached copy of, in WordPress's own shape.
 export const UPSTREAM = 'https://olafmessenger.com/wp-json/wp/v2'
 
-const INTEGER = /^\d+$/u
-const INTEGERS = /^\d+(?:,\d+)*$/u
-const FIELDS = /^[a-z_:]+(?:,[a-z_:]+)*$/u
-const EMBED = /^(?:true|wp:[a-z]+(?:,wp:[a-z]+)*)$/u
+// Each value has one spelling, and each list a size WordPress serves, so the
+// cache holds at most one copy of an answer the app asks for, and anyone asking
+// for something else is refused before it costs a fetch from the paper.
+const ID = '[1-9][0-9]{0,9}'
+/// `items` comma-separated, from one to `max` of them.
+const listOf = (items: string, max: number) =>
+	new RegExp(`^(?:${items})(?:,(?:${items})){0,${(max - 1).toFixed(0)}}$`, 'u')
+
+const INTEGER = new RegExp(`^${ID}$`, 'u')
+const PER_PAGE = /^(?:[1-9][0-9]?|100)$/u
+/// WordPress answers at most 100 ids at once.
+const IDS = listOf(ID, 100)
+/// The fields the app reads, in any order.
+const FIELD_NAMES = [
+	'id',
+	'name',
+	'parent',
+	'date',
+	'title',
+	'categories',
+	'featured_media',
+	'content',
+	'excerpt',
+	'source_url',
+	'media_details',
+	'caption',
+	'_links',
+	'_embedded',
+]
+const FIELDS = listOf(FIELD_NAMES.join('|'), FIELD_NAMES.length)
+const EMBED = /^(?:true|wp:featuredmedia(?:,wp:term)?|wp:term)$/u
 const BOOLEAN = /^(?:true|false)$/u
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u
 
@@ -31,25 +58,25 @@ const RESOURCES: Record<string, {list: Rules; item?: Rules}> = {
 	posts: {
 		list: {
 			params: {
-				per_page: INTEGER,
+				per_page: PER_PAGE,
 				page: INTEGER,
 				_embed: EMBED,
 				_fields: FIELDS,
-				categories: INTEGERS,
-				include: INTEGERS,
+				categories: IDS,
+				include: IDS,
 				staff_name: INTEGER,
 			},
 			ttl: 5 * ONE_MINUTE,
-			keep: 100,
+			keep: 20,
 		},
-		item: {params: {_embed: EMBED, _fields: FIELDS}, ttl: ONE_HOUR, keep: 200},
+		item: {params: {_embed: EMBED, _fields: FIELDS}, ttl: ONE_HOUR, keep: 100},
 	},
-	categories: {list: {params: {per_page: INTEGER, _fields: FIELDS}, ttl: ONE_DAY, keep: 4}},
+	categories: {list: {params: {per_page: PER_PAGE, _fields: FIELDS}, ttl: ONE_DAY, keep: 4}},
 	media: {
 		list: {
-			params: {include: INTEGERS, per_page: INTEGER, _fields: FIELDS},
+			params: {include: IDS, per_page: PER_PAGE, _fields: FIELDS},
 			ttl: ONE_DAY,
-			keep: 100,
+			keep: 50,
 		},
 	},
 	staff_profile: {
@@ -57,18 +84,18 @@ const RESOURCES: Record<string, {list: Rules; item?: Rules}> = {
 			params: {
 				staff_name: INTEGER,
 				staff_year: INTEGER,
-				per_page: INTEGER,
+				per_page: PER_PAGE,
 				page: INTEGER,
 				_embed: EMBED,
 				_fields: FIELDS,
 			},
 			ttl: ONE_DAY,
-			keep: 50,
+			keep: 20,
 		},
 	},
 	staff_year: {
 		list: {
-			params: {hide_empty: BOOLEAN, per_page: INTEGER, _fields: FIELDS},
+			params: {hide_empty: BOOLEAN, per_page: PER_PAGE, _fields: FIELDS},
 			ttl: ONE_DAY,
 			keep: 4,
 		},
@@ -110,7 +137,10 @@ export function rulesFor(
 /// followed link and the app's own request share a cached copy. The rest stays
 /// as it came, since re-encoding it would turn `_fields`' commas into %2C.
 export function withPage(querystring: string, page: number): string {
-	let parts = querystring.split('&').filter((part) => part !== '' && !part.startsWith('page='))
+	// a name is compared decoded, as `rulesFor` reads it, so `%70age` is `page` too
+	let parts = querystring
+		.split('&')
+		.filter((part) => part !== '' && new URLSearchParams(part).keys().next().value !== 'page')
 	if (page > 1) parts.push(`page=${page.toFixed(0)}`)
 	return parts.join('&')
 }
@@ -140,12 +170,19 @@ export function paginationLinks(
 export interface Answer {
 	status: number
 	type: string
-	body: string
+	/// Bytes, not a string: the response cache would store a string as a JSON
+	/// value, quoting it. It is the same Buffer the response cache keeps, so a
+	/// last good copy costs no memory while the cached copy lives.
+	body: Buffer
 	headers: Record<string, string>
 }
 
 /// WordPress's paging headers, which the app may read in either mode.
 const PASSED_HEADERS = ['x-wp-total', 'x-wp-totalpages']
+
+/// The headers a cached copy of this route's answers must keep, for the
+/// response cache's `storedHeaders`.
+export const PAGING_HEADERS = ['link', ...PASSED_HEADERS]
 
 /// How long the paper has to answer: well inside the app's own 10 seconds, so
 /// that while the paper hangs, the last good copy reaches the reader in time.
@@ -158,8 +195,8 @@ const OUTAGE_STATUSES = new Set([403, 408, 429])
 
 /// The paper's answer, or nothing when it could not give one: a timeout, a
 /// connection that never answered, a 5xx, a refusal in `OUTAGE_STATUSES`, or
-/// a page other than JSON, such as a maintenance page or a bot check, which
-/// must not be cached as the Messenger's data.
+/// anything but JSON that parses -- a maintenance page, a bot check, or a PHP
+/// warning ahead of the JSON -- which must not be cached as the Messenger's data.
 async function fetchUpstream(url: string, timeout: number): Promise<Answer | undefined> {
 	try {
 		// no retries: a failure is answered from the last good copy, and the app retries on its own
@@ -170,15 +207,18 @@ async function fetchUpstream(url: string, timeout: number): Promise<Answer | und
 			// the signal bounds the body read too, which ky's timeout doesn't reach
 			signal: AbortSignal.timeout(timeout),
 		})
-		let type = response.headers.get('content-type') ?? 'application/json'
-		if (!type.includes('json')) return undefined
+		let type = response.headers.get('content-type')
+		if (!type?.includes('json')) return undefined
 		if (response.status >= 500 || OUTAGE_STATUSES.has(response.status)) return undefined
+		let body = Buffer.from(await response.arrayBuffer())
+		// throws, and so fails, for anything but JSON
+		JSON.parse(body.toString('utf8'))
 		let headers: Record<string, string> = {}
 		for (let name of PASSED_HEADERS) {
 			let value = response.headers.get(name)
 			if (value !== null) headers[name] = value
 		}
-		return {status: response.status, type, body: await response.text(), headers}
+		return {status: response.status, type, body, headers}
 	} catch {
 		return undefined
 	}
@@ -194,8 +234,7 @@ function send(ctx: Context, answer: Answer): void {
 		let link = paginationLinks(ctx.path, ctx.querystring, totalPages)
 		if (link) ctx.set('Link', link)
 	}
-	// bytes, not a string: the response cache would store a string as a JSON value, quoting it
-	ctx.body = Buffer.from(answer.body)
+	ctx.body = answer.body
 }
 
 /// The Messenger's WordPress API, answered from the response cache, then the
@@ -221,8 +260,8 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 		let {ttl} = verdict.rules
 		let lastGood = lastGoodFor(verdict.rules)
 
-		// A hit's Cache-Control is the one stored with it, which for a last good
-		// copy is a minute, not the whole ttl.
+		// A hit's Cache-Control is the life its copy has left, which for a last
+		// good copy is at most a minute, not the whole ttl.
 		if (ctx.cached(ttl)) return
 
 		let path = id === undefined ? resource : `${resource}/${id}`

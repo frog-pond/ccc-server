@@ -14,6 +14,7 @@ import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
 import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
 import QuickLRU from 'quick-lru'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
+import {PAGING_HEADERS} from '../ccci-stolaf-college/v1/mess.ts'
 import {parsePercent, percentChance, recordFlagInSentry} from '../ccc-lib/feature-flags.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
@@ -101,9 +102,7 @@ async function main() {
 	app.use(
 		cachable({
 			statusName: 'ccc-server',
-			// Cache-Control, so a copy kept briefly says so on every hit, and the
-			// Messenger's pagination headers
-			storedHeaders: ['cache-control', 'link', 'x-wp-total', 'x-wp-totalpages'],
+			storedHeaders: PAGING_HEADERS,
 			expiresIn: (key) => cache.expiresIn(key),
 			// for this percentage of bursts of concurrent misses for a key, share
 			// one upstream fetch among the burst

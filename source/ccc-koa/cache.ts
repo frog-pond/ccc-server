@@ -403,11 +403,16 @@ export function cachable(options: Options): Middleware {
 		if (obj.headers) {
 			this.response.set(obj.headers)
 		}
+		// The life the copy has left, rather than any Cache-Control stored with
+		// it, which would promise the whole of its life again on every hit.
+		const ttl = expiresIn(this[CACHE_KEY])
+		if (ttl !== undefined && Number.isFinite(ttl)) {
+			this.response.set('Cache-Control', `public, max-age=${Math.floor(ttl / 1000).toFixed(0)}`)
+		}
 		if (this[CACHE_WAITED_KEY]) {
 			// it waited on another request's fetch, then took the copy that fetch stored
 			setCacheStatus(this, ['fwd=uri-miss', 'collapsed', 'stored'])
 		} else {
-			let ttl = expiresIn(this[CACHE_KEY])
 			let params = ['hit']
 			// an entry that never expires has no ttl to give
 			if (ttl !== undefined && Number.isFinite(ttl)) {
@@ -510,7 +515,7 @@ export function cachable(options: Options): Middleware {
 		}
 
 		let headers: Record<string, string | string[]> = {}
-		for (let name of SHARED_HEADERS) {
+		for (let name of [...SHARED_HEADERS, ...storedHeaders]) {
 			let value = ctx.response.headers[name]
 			if (value !== undefined) {
 				headers[name] = typeof value === 'number' ? String(value) : value

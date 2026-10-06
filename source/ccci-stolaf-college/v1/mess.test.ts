@@ -3,7 +3,7 @@ import type {AddressInfo} from 'node:net'
 import Router from '@koa/router'
 import Koa from 'koa'
 
-import {makeWordpressRoute, paginationLinks, rulesFor, withPage} from './mess.ts'
+import {PAGING_HEADERS, makeWordpressRoute, paginationLinks, rulesFor, withPage} from './mess.ts'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
@@ -82,6 +82,12 @@ void test('rulesFor', async (t) => {
 				'_embed=yes',
 				'_fields=id,<script>',
 				'cachebust=1',
+				// each a fresh cache key and a fresh fetch from the paper, for no answer the app needs
+				'page=01',
+				'per_page=101',
+				`include=${Array.from({length: 101}, (_, i) => String(i + 1)).join(',')}`,
+				'_fields=id,secret',
+				'_embed=wp:author',
 			]) {
 				let verdict = rulesFor('posts', undefined, query(querystring))
 				t.assert.ok('refusal' in verdict && verdict.refusal.status === 400, querystring)
@@ -90,6 +96,11 @@ void test('rulesFor', async (t) => {
 			t.assert.ok('refusal' in slug && slug.refusal.status === 400)
 		},
 	)
+
+	await t.test('refuses an id written with leading zeros', (t: TestContext) => {
+		let verdict = rulesFor('posts', '0036238', query(''))
+		t.assert.ok('refusal' in verdict && verdict.refusal.status === 404)
+	})
 
 	await t.test('checks the decoded values of an encoded query string', (t: TestContext) => {
 		t.assert.ok('rules' in rulesFor('posts', undefined, query('_fields=id%2Cdate&per_page=2')))
@@ -109,6 +120,10 @@ void test('withPage', async (t) => {
 			t.assert.equal(withPage('page=4', 1), '')
 		},
 	)
+
+	await t.test('replaces a page whose name came percent-encoded', (t: TestContext) => {
+		t.assert.equal(withPage('per_page=2&%70age=2', 3), 'per_page=2&page=3')
+	})
 
 	await t.test(
 		'leaves the rest of the query as it came, encoded commas and all',
@@ -249,22 +264,6 @@ void test('wordpress', async (t) => {
 		t.assert.deepEqual(raw.cached.mock.calls[0]?.arguments, [ONE_HOUR])
 	})
 
-	await t.test('serves a cached copy without asking the paper', async (t: TestContext) => {
-		let {urls} = answerWith(t, () => Promise.resolve(json([])))
-		let {ctx, raw} = makeContext(
-			'/v1/news/mess/wp/v2/categories',
-			{resource: 'categories'},
-			'per_page=100',
-		)
-		raw.cached = mock.fn((_maxAge?: number) => true)
-
-		await makeWordpressRoute()(ctx)
-
-		t.assert.deepEqual(urls(), [])
-		// the cache gives back the Cache-Control stored with the copy
-		t.assert.equal(raw.cacheControl.mock.callCount(), 0)
-	})
-
 	await t.test(
 		"passes WordPress's 400 for a page past the last through, uncached",
 		async (t: TestContext) => {
@@ -352,8 +351,22 @@ void test('wordpress', async (t) => {
 					new Response('<html>wait</html>', {headers: {'content-type': 'text/html'}}),
 				),
 		],
-		// every phone now reaches the paper from this server's one address, which a rate
-		// limit or a firewall may answer for
+		// WordPress with display_errors on puts a PHP warning ahead of its JSON
+		[
+			'a PHP warning in a JSON answer',
+			() =>
+				Promise.resolve(
+					new Response('<br /><b>Warning</b>: oops<br />[{"id":2}]', {
+						headers: {'content-type': 'application/json; charset=UTF-8'},
+					}),
+				),
+		],
+		[
+			'an answer with no Content-Type',
+			() => Promise.resolve(new Response(new TextEncoder().encode('[{"id":2}]'))),
+		],
+		// every phone reaches the paper from this server's one address, which a rate limit or a
+		// firewall may answer for
 		['a rate limit', () => Promise.resolve(json({code: 'too_many_requests'}, {status: 429}))],
 		[
 			'a firewall block',
@@ -386,8 +399,6 @@ void test('wordpress', async (t) => {
 			t.assert.equal(String(raw.body), '[{"id":1}]')
 			t.assert.equal(headers.get('x-wp-totalpages'), '3')
 			t.assert.ok(headers.get('link')?.includes('rel="next"'))
-			t.assert.deepEqual(raw.setCacheTTL.mock.calls[0]?.arguments, [ONE_MINUTE])
-			t.assert.deepEqual(raw.cacheControl.mock.calls.at(-1)?.arguments, [ONE_MINUTE])
 		})
 
 		// eslint-disable-next-line no-await-in-loop
@@ -404,19 +415,24 @@ void test('wordpress', async (t) => {
 /// answering `upstream()`. Requests to the test server itself go through the real fetch.
 async function serveThroughCache(t: TestContext, upstream: {answer: () => Promise<Response>}) {
 	let realFetch = globalThis.fetch
+	let upstreamCalls = 0
 	let fetch = mock.method(globalThis, 'fetch', (input: Request | string, init?: RequestInit) => {
 		let url = input instanceof Request ? input.url : input
-		return url.startsWith('http://localhost') ? realFetch(input, init) : upstream.answer()
+		if (url.startsWith('http://localhost')) return realFetch(input, init)
+		upstreamCalls++
+		return upstream.answer()
 	})
 
-	let store = new Map<string, CacheObject>()
+	// each entry with the life it was stored for, which the cache reports as all of it left
+	let store = new Map<string, {value: CacheObject; maxAge: number}>()
 	let app = ctxCacheControl(new Koa())
 	app.use(
 		cachable({
-			get: (key) => store.get(key),
-			set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
-			// as server.ts configures it
-			storedHeaders: ['cache-control', 'link', 'x-wp-total', 'x-wp-totalpages'],
+			get: (key) => store.get(key)?.value,
+			set: (key, value, maxAge = 0) =>
+				value ? store.set(key, {value, maxAge}) : store.delete(key),
+			expiresIn: (key) => store.get(key)?.maxAge,
+			storedHeaders: PAGING_HEADERS,
 		}),
 	)
 	let router = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -435,6 +451,8 @@ async function serveThroughCache(t: TestContext, upstream: {answer: () => Promis
 	let {port} = server.address() as AddressInfo
 	return {
 		get: (path: string) => realFetch(`http://localhost:${String(port)}${path}`),
+		/** How many times the paper was asked. */
+		upstreamCalls: () => upstreamCalls,
 		/** Forgets every cached response, as if each had expired. */
 		expireAll: () => {
 			store.clear()
@@ -478,6 +496,23 @@ void test('wordpress, behind the response cache', async (t) => {
 				t.assert.deepEqual(await response.json(), [{id: 1, name: 'News'}], attempt)
 				t.assert.equal(response.headers.get('cache-control'), 'public, max-age=60', attempt)
 			}
+		},
+	)
+
+	await t.test(
+		'serves a cached copy without asking the paper, saying how long it has left',
+		async (t: TestContext) => {
+			let {get, upstreamCalls} = await serveThroughCache(t, {
+				answer: () => Promise.resolve(json([{id: 1, name: 'News'}])),
+			})
+			let path = '/v1/news/mess/wp/v2/categories?per_page=100'
+
+			await get(path)
+			let hit = await get(path)
+
+			t.assert.equal(upstreamCalls(), 1)
+			t.assert.deepEqual(await hit.json(), [{id: 1, name: 'News'}])
+			t.assert.equal(hit.headers.get('cache-control'), 'public, max-age=86400')
 		},
 	)
 })
