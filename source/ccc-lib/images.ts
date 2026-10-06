@@ -22,7 +22,7 @@ export function isPublishedImage(group: string, name: string): boolean {
  * own `gh-pages.ts` site, so the address is here rather than there.
  */
 export const imageUrl = (group: string, name: string): URL =>
-	new URL(`https://stodevx.github.io/AAO-React-Native/img/${group}/${name}`)
+	new URL(`https://stolaf.dev/AAO-React-Native/img/${group}/${name}`)
 
 export async function image(ctx: Context) {
 	const {group = '', name = ''} = ctx.params

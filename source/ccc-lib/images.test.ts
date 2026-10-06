@@ -22,7 +22,7 @@ void test('isPublishedImage', (t: TestContext) => {
 void test('imageUrl points at the Pages site under img/', (t: TestContext) => {
 	t.assert.equal(
 		imageUrl('contacts', 'sarn.webp').href,
-		'https://stodevx.github.io/AAO-React-Native/img/contacts/sarn.webp',
+		'https://stolaf.dev/AAO-React-Native/img/contacts/sarn.webp',
 	)
 })
 
@@ -57,7 +57,7 @@ void test('image', async (t) => {
 		const [request] = fetch.mock.calls[0]?.arguments as [Request]
 		t.assert.equal(
 			request.url,
-			'https://stodevx.github.io/AAO-React-Native/img/webcams/madson.webp',
+			'https://stolaf.dev/AAO-React-Native/img/webcams/madson.webp',
 		)
 	})
 
