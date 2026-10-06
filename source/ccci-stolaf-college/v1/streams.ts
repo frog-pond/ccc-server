@@ -42,13 +42,14 @@ const SEARCH_AHEAD_MONTHS = 2
 // A page is at most this many streams. Upstream has no limit of its own.
 const MAX_COUNT = 200
 
-// A whole number in a query string. A blank one is refused, where `Number()`
-// would read it as 0.
+// A whole number in a query string, in plain digits: `Number()` alone would
+// also read a blank as 0, and `1e2`, `0x32` and `50.0` as whole numbers, each
+// a different URL for the same page.
 const wholeNumber = (min: number, max?: number) =>
 	z
 		.string()
 		.trim()
-		.min(1, 'must be a number')
+		.regex(/^\d+$/, 'must be a whole number')
 		.transform(Number)
 		.pipe(
 			z
@@ -145,18 +146,16 @@ export async function archived(ctx: Context) {
 /// it isn't the first, `next` and `last` when more follow. Each keeps the
 /// request's own parameters and changes only the page, as a path-absolute URL
 /// so it holds behind a proxy. `available` is how many results there are in
-/// all, if known; without it, `next` is offered after a full page and `last`
-/// not at all.
+/// all. Pages step by `count` from the request's own `offset`, so `next`
+/// reaches `last` even from an offset that isn't a whole number of pages in.
 function pageLinks(page: {
 	path: string
 	search: URLSearchParams
 	count: number
 	offset: number
-	available: number | undefined
+	available: number
 }): string | undefined {
 	const {count, offset, available} = page
-	const lastAt =
-		available === undefined ? undefined : Math.max(0, Math.floor((available - 1) / count) * count)
 	const to = (rel: string, at: number) => {
 		const search = new URLSearchParams(page.search)
 		search.set('count', String(count))
@@ -166,29 +165,42 @@ function pageLinks(page: {
 
 	const links: string[] = []
 	if (offset > 0) {
-		links.push(
-			to('first', 0),
-			to('prev', Math.max(0, Math.min(offset - count, lastAt ?? Infinity))),
-		)
+		// from past the end, back to the real last page and not another empty one
+		const prev =
+			offset >= available
+				? Math.max(0, Math.floor((available - 1) / count) * count)
+				: Math.max(0, offset - count)
+		links.push(to('first', 0), to('prev', prev))
 	}
-	if (available === undefined ? true : offset + count < available) {
-		links.push(to('next', offset + count))
-		if (lastAt !== undefined) links.push(to('last', lastAt))
+	if (offset + count < available) {
+		const last = offset + Math.floor((available - 1 - offset) / count) * count
+		links.push(to('next', offset + count), to('last', last))
 	}
 	return links.length ? links.join(', ') : undefined
 }
 
+/// An ISO date moved by `amount` of `unit`, as the St. Olaf calendar day.
+function shiftDate(date: string, amount: number, unit: 'month' | 'year') {
+	return moment.tz(date, 'YYYY-MM-DD', 'America/Chicago').add(amount, unit).format('YYYY-MM-DD')
+}
+
+// ISO dates sort as text.
+const earlier = (a: string, b: string) => (a < b ? a : b)
+const later = (a: string, b: string) => (a > b ? a : b)
+
 // Upstream answers a page at a time, so the default is newest-first: with
 // ascending order a broad query would only ever show the oldest matches.
 export async function search(ctx: Context) {
-	ctx.cacheControl(ONE_HOUR)
-	if (ctx.cached(ONE_HOUR)) return
-
+	// Checked before the cache is asked, so a bad request isn't counted as a
+	// miss or made to fill an entry.
 	const parsed = SearchStreamsParamsSchema.safeParse(
 		Object.fromEntries(ctx.URL.searchParams.entries()),
 	)
 	if (!parsed.success) ctx.throw(400, z.prettifyError(parsed.error))
-	const {query, sort, category, count, offset, ...rest} = parsed.data
+	const {query, sort, category, count, offset, class: streamClass, dateFrom, dateTo} = parsed.data
+
+	ctx.cacheControl(ONE_HOUR)
+	if (ctx.cached(ONE_HOUR)) return
 
 	const today = moment().tz('America/Chicago')
 	const ahead = today.clone().add(SEARCH_AHEAD_MONTHS, 'month')
@@ -197,33 +209,38 @@ export async function search(ctx: Context) {
 		archived: {from: lookback, to: today},
 		upcoming: {from: today, to: ahead},
 		all: {from: lookback, to: ahead},
-	}[rest.class]
+	}[streamClass]
+	const defaultFrom = defaults.from.format('YYYY-MM-DD')
+	const defaultTo = defaults.to.format('YYYY-MM-DD')
 
-	// compared once each has its default, as one alone can be out of order
-	// with the other's
-	const dateFrom = rest.dateFrom ?? defaults.from.format('YYYY-MM-DD')
-	const dateTo = rest.dateTo ?? defaults.to.format('YYYY-MM-DD')
-	if (dateFrom > dateTo) ctx.throw(400, 'dateFrom must not be after dateTo')
+	// An end the client left out is the class's default, moved out if it would
+	// otherwise cut off the end they gave: someone looking from a date past
+	// the default end means to look on from there.
+	const from =
+		dateFrom ??
+		(dateTo ? earlier(defaultFrom, shiftDate(dateTo, -SEARCH_YEARS, 'year')) : defaultFrom)
+	const to =
+		dateTo ??
+		(dateFrom ? later(defaultTo, shiftDate(dateFrom, SEARCH_AHEAD_MONTHS, 'month')) : defaultTo)
+	if (from > to) ctx.throw(400, 'dateFrom must not be after dateTo')
 
-	const {streams, available} = await getStreams({
-		class: rest.class === 'upcoming' ? 'current' : rest.class,
-		date_from: dateFrom,
-		date_to: dateTo,
+	const params = StOlafStreamsParamsSchema.parse({
+		class: streamClass === 'upcoming' ? 'current' : streamClass,
+		date_from: from,
+		date_to: to,
 		sort,
 		squery: query,
 		...(category && {category}),
 		count,
 		offset,
 	})
+	const {streams, available} = await getStreams(params)
 
-	const link = pageLinks({
-		path: ctx.path,
-		search: ctx.URL.searchParams,
-		count,
-		offset,
-		// without a total, a full page is the only sign there is more
-		available: available ?? (streams.length < count ? offset + streams.length : undefined),
-	})
+	// Without a total from upstream there is nothing to say about other pages.
+	const link =
+		available === undefined
+			? undefined
+			: pageLinks({path: ctx.path, search: ctx.URL.searchParams, count, offset, available})
 	if (link) ctx.set('Link', link)
 	ctx.body = streams
 }

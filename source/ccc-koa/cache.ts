@@ -78,24 +78,25 @@ interface Fill {
 	waiters: number
 }
 
+/// The headers a cached response keeps besides its type, etag and date, to
+/// give again on a hit. A route that fills the cache sets them; one that
+/// serves a hit returns before it could.
+const KEPT_HEADERS = ['link']
+
 /// The headers a waiter takes from the response it waited on: those that
-/// describe the content. Anything about the other request -- a cookie, an
-/// etag the server computes per response, a tracing id -- stays with it.
+/// describe the content, and those a hit would give. Anything about the other
+/// request -- a cookie, an etag the server computes per response, a tracing id
+/// -- stays with it.
 const SHARED_HEADERS = [
 	'cache-control',
 	'content-language',
 	'content-type',
 	'expires',
 	'last-modified',
-	'link',
 	'location',
 	'retry-after',
+	...KEPT_HEADERS,
 ]
-
-/// The headers a cached response keeps besides its type, etag and date, to
-/// give again on a hit. A route that fills the cache sets them; one that
-/// serves a hit returns before it could.
-const KEPT_HEADERS = ['link']
 
 declare module 'koa' {
 	interface ExtendableContext {

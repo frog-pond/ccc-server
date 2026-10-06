@@ -29,7 +29,10 @@ for (const route of ROUTES) {
 
 /// The v1 routes behind a bare app. The server's caching is stubbed out, unless
 /// `realCache` asks for the real middleware, keyed as the server keys it.
-async function serve(t: test.TestContext, {realCache = false} = {}) {
+async function serve(
+	t: test.TestContext,
+	{realCache = false, onLookup}: {realCache?: boolean; onLookup?: () => void} = {},
+) {
 	let app = new Koa()
 	if (realCache) {
 		ctxCacheControl(app)
@@ -39,6 +42,7 @@ async function serve(t: test.TestContext, {realCache = false} = {}) {
 				get: (key) => store.get(key),
 				set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
 				statusName: 'test-cache',
+				...(onLookup && {onLookup}),
 			}),
 		)
 	} else {
@@ -313,6 +317,46 @@ void test("/streams/search keeps a client's own range over a class's default", a
 	assert.equal(params.get('date_to'), '2030-02-01')
 })
 
+void test('/streams/search from a date past the default end looks on from there', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&class=upcoming&dateFrom=2999-01-01')
+	assert.equal(params.get('date_from'), '2999-01-01')
+	assert.equal(params.get('date_to'), '2999-03-01')
+})
+
+void test('/streams/search to a date before the default start looks back from there', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&dateTo=1900-01-01')
+	assert.equal(params.get('date_to'), '1900-01-01')
+	assert.equal(params.get('date_from'), '1870-01-01')
+})
+
+void test('/streams/search keeps a default end that already suits the date given', async (t) => {
+	let from = await upstreamParams(t, '?query=choir&class=upcoming&dateFrom=2020-01-01')
+	assert.equal(from.get('date_from'), '2020-01-01')
+	assert.ok((from.get('date_to') ?? '') > new Date().toISOString().slice(0, 10))
+	let to = await upstreamParams(t, '?query=choir&dateTo=2020-01-01')
+	assert.equal(to.get('date_to'), '2020-01-01')
+	assert.ok((to.get('date_from') ?? '9') < '1999')
+})
+
+void test('/streams/search refuses a bad request before asking the cache', async (t) => {
+	let lookups = 0
+	let base = await serve(t, {
+		realCache: true,
+		onLookup: () => {
+			lookups += 1
+		},
+	})
+	let asked = fakeStreams(t)
+	let response = await fetch(`${base}/v1/streams/search?query=`)
+	assert.equal(response.status, 400)
+	assert.equal(lookups, 0)
+	assert.equal(asked.length, 0)
+
+	// and a good one does ask it
+	await fetch(`${base}/v1/streams/search?query=choir`)
+	assert.equal(lookups, 1)
+})
+
 const REFUSED = [
 	'',
 	'?query=',
@@ -329,9 +373,11 @@ const REFUSED = [
 	'?query=choir&offset=',
 	'?query=choir&offset=%20',
 	'?query=choir&count=%20',
-	'?query=choir&dateFrom=2999-01-01',
-	'?query=choir&dateTo=1900-01-01',
-	'?query=choir&class=upcoming&dateTo=2000-01-01',
+	'?query=choir&count=1e2',
+	'?query=choir&count=0x32',
+	'?query=choir&count=50.0',
+	'?query=choir&count=%2B50',
+	'?query=choir&offset=1e1',
 	'?query=choir&offset=-1',
 	'?query=choir&offset=soon',
 ]
@@ -431,12 +477,19 @@ void test('/streams/search links carry the count a default page was served with'
 	assert.equal(links['next']?.searchParams.get('count'), '50')
 })
 
-void test('/streams/search without a total offers a next page after a full page only', async (t) => {
-	assert.deepEqual(offsets(await linksFor(t, '?query=choir&count=5', null)), {next: '5'})
-	assert.deepEqual(offsets(await linksFor(t, '?query=choir&count=5&offset=5', 7)), {
-		first: '0',
-		prev: '0',
-	})
+void test('/streams/search has no Link header when upstream gives no total', async (t) => {
+	let base = await serve(t)
+	fakeStreams(t, {available: null})
+	let response = await fetch(`${base}/v1/streams/search?query=choir&count=5`)
+	assert.equal(response.status, 200)
+	assert.equal(response.headers.has('link'), false)
+})
+
+void test('/streams/search pages by count from its own offset, so next reaches last', async (t) => {
+	let links = await linksFor(t, '?query=choir&count=50&offset=30', 231)
+	assert.deepEqual(offsets(links), {first: '0', prev: '0', next: '80', last: '230'})
+	// 30, 80, 130, 180, 230: stepping by `next` lands on `last`
+	assert.equal((230 - 30) % 50, 0)
 })
 
 void test('/streams/search gives its Link header again when the page is served from the cache', async (t) => {
