@@ -258,14 +258,16 @@ void test('when a fill hangs, one waiter takes it over and the rest wait on that
 
 void test('a copy stored by the hung request lets its takeover’s waiters go', async (t) => {
 	let upstream = slowUpstream(t)
-	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
+	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 300})
 
 	let first = get('/menu')
 	await tick()
 	let taker = get('/menu')
 	let follower = get('/menu')
-	await tick(100)
-	t.assert.equal(upstream.calls.length, 2)
+	// until the takeover is fetching: it hangs in turn a whole timeout later,
+	// and then the follower would fetch for itself
+	// eslint-disable-next-line no-await-in-loop
+	while (upstream.calls.length < 2) await tick(10)
 
 	// The hung request finishes after all, while the takeover is still out.
 	upstream.releaseFirst()
