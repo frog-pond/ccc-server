@@ -1,3 +1,4 @@
+import {Buffer} from 'node:buffer'
 import QuickLRU from 'quick-lru'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {TOTAL_TIMEOUT, http} from '../../ccc-lib/http.ts'
@@ -165,7 +166,8 @@ function send(ctx: Context, answer: Answer): void {
 		let link = paginationLinks(ctx.path, ctx.querystring, totalPages)
 		if (link) ctx.set('Link', link)
 	}
-	ctx.body = answer.body
+	// bytes, not a string: the response cache would store a string as a JSON value, quoting it
+	ctx.body = Buffer.from(answer.body)
 }
 
 /// The Messenger's WordPress API, answered from the response cache, then the
