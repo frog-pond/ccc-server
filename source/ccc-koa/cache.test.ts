@@ -112,6 +112,17 @@ function slowUpstream(t: test.TestContext, first: (path: string) => unknown = (p
 
 const tick = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms))
 
+/// Waits until `condition` holds, or fails once `ms` have passed, so a test
+/// waiting on something that never happens fails rather than hangs.
+async function until(condition: () => boolean, what: string, ms = 5_000) {
+	let deadline = Date.now() + ms
+	while (!condition()) {
+		if (Date.now() > deadline) throw new Error(`gave up waiting for ${what}`)
+		// eslint-disable-next-line no-await-in-loop
+		await tick(10)
+	}
+}
+
 void test('concurrent misses for one key share one upstream fetch', async (t) => {
 	let {calls, release, fetchUpstream} = slowUpstream(t)
 	let get = await serve(t, fetchUpstream)
@@ -268,8 +279,7 @@ void test('a copy stored by the hung request lets its takeover’s waiters go', 
 	let follower = get('/menu')
 	// until the takeover is fetching: it hangs in turn a whole timeout later,
 	// and then the follower would fetch for itself
-	// eslint-disable-next-line no-await-in-loop
-	while (upstream.calls.length < 2) await tick(10)
+	await until(() => upstream.calls.length === 2, 'the takeover to fetch')
 
 	// The hung request finishes after all, while the takeover is still out.
 	upstream.releaseFirst()
@@ -548,8 +558,7 @@ void test('a fill that hangs is told once, when it hangs, and its takeover is to
 	await tick()
 	let second = get('/menu')
 	// until the first fill hangs: its takeover hangs a whole timeout later
-	// eslint-disable-next-line no-await-in-loop
-	while (told.length === 0) await tick(10)
+	await until(() => told.length > 0, 'the first fill to hang')
 	t.assert.deepEqual(told, [['hung', 1]])
 
 	upstream.releaseLater()
