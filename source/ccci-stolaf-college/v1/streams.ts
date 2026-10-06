@@ -24,6 +24,8 @@ const StreamEntry = z.object({
 
 const StreamEntryCollection = z.object({
 	results: StreamEntry.array(),
+	// how many streams match in all, not only on this page
+	meta: z.object({available: z.number()}).optional(),
 })
 
 const GetStreamsParamsSchema = z.object({
@@ -79,13 +81,14 @@ const getStreams = async (params: StOlafStreamsParamsType) => {
 	const json = (await response) as Promise<(z.infer<typeof StreamEntry> & {starttime: string})[]>
 	const data = StreamEntryCollection.parse(json)
 
-	return data.results.map((stream) => {
+	const streams = data.results.map((stream) => {
 		let {starttime} = stream
 		return {
 			...stream,
 			starttime: moment.tz(starttime, 'YYYY-MM-DD HH:mm', 'America/Chicago').toISOString(),
 		}
 	})
+	return {streams, available: data.meta?.available}
 }
 
 export async function upcoming(ctx: Context) {
@@ -104,7 +107,7 @@ export async function upcoming(ctx: Context) {
 		date_to: dateTo,
 		sort,
 	})
-	ctx.body = await getStreams(params)
+	ctx.body = (await getStreams(params)).streams
 }
 
 export async function archived(ctx: Context) {
@@ -124,7 +127,44 @@ export async function archived(ctx: Context) {
 		sort,
 	})
 
-	ctx.body = await getStreams(params)
+	ctx.body = (await getStreams(params)).streams
+}
+
+/// The `Link` header (RFC 8288) for a page of results: `first` and `prev` when
+/// it isn't the first, `next` and `last` when more follow. Each keeps the
+/// request's own parameters and changes only the page, as a path-absolute URL
+/// so it holds behind a proxy. `available` is how many results there are in
+/// all, if known; without it, `next` is offered after a full page and `last`
+/// not at all.
+function pageLinks(page: {
+	path: string
+	search: URLSearchParams
+	count: number
+	offset: number
+	available: number | undefined
+}): string | undefined {
+	const {count, offset, available} = page
+	const lastAt =
+		available === undefined ? undefined : Math.max(0, Math.floor((available - 1) / count) * count)
+	const to = (rel: string, at: number) => {
+		const search = new URLSearchParams(page.search)
+		search.set('count', String(count))
+		search.set('offset', String(at))
+		return `<${page.path}?${search.toString()}>; rel="${rel}"`
+	}
+
+	const links: string[] = []
+	if (offset > 0) {
+		links.push(
+			to('first', 0),
+			to('prev', Math.max(0, Math.min(offset - count, lastAt ?? Infinity))),
+		)
+	}
+	if (available === undefined ? true : offset + count < available) {
+		links.push(to('next', offset + count))
+		if (lastAt !== undefined) links.push(to('last', lastAt))
+	}
+	return links.length ? links.join(', ') : undefined
 }
 
 // Upstream answers a page at a time, so the default is newest-first: with
@@ -148,7 +188,7 @@ export async function search(ctx: Context) {
 		all: {from: lookback, to: ahead},
 	}[rest.class]
 
-	ctx.body = await getStreams({
+	const {streams, available} = await getStreams({
 		class: rest.class === 'upcoming' ? 'current' : rest.class,
 		date_from: rest.dateFrom ?? defaults.from.format('YYYY-MM-DD'),
 		date_to: rest.dateTo ?? defaults.to.format('YYYY-MM-DD'),
@@ -158,4 +198,15 @@ export async function search(ctx: Context) {
 		count,
 		offset,
 	})
+
+	const link = pageLinks({
+		path: ctx.path,
+		search: ctx.URL.searchParams,
+		count,
+		offset,
+		// without a total, a full page is the only sign there is more
+		available: available ?? (streams.length < count ? offset + streams.length : undefined),
+	})
+	if (link) ctx.set('Link', link)
+	ctx.body = streams
 }

@@ -13,6 +13,8 @@ async function serve(
 	fetchUpstream: Upstream,
 	options: {
 		hash?: (ctx: Koa.ExtendableContext) => string
+		/** a Link header for the route to set when it fetches, not when it serves a hit */
+		link?: (path: string) => string
 		before?: Koa.Middleware
 		stream?: PassThrough
 		shareFetch?: (ctx: Koa.ExtendableContext) => boolean
@@ -51,6 +53,7 @@ async function serve(
 		}
 		if (ctx.cached(60_000)) return
 		let body = await fetchUpstream(ctx.path)
+		if (options.link) ctx.set('Link', options.link(ctx.path))
 		if (body === undefined) {
 			ctx.set('Cache-Control', 'max-age=60')
 			ctx.set('Set-Cookie', 'session=first')
@@ -618,4 +621,38 @@ void test('a route that does not cache has no Cache-Status', async (t) => {
 
 	let response = await get('/uncached')
 	t.assert.equal(response.headers.get('Cache-Status'), null)
+})
+
+void test('a hit gives the Link header the fill had, though its route returned before setting one', async (t) => {
+	let calls: string[] = []
+	let get = await serve(
+		t,
+		(path) => {
+			calls.push(path)
+			return Promise.resolve({path})
+		},
+		{link: (path) => `<${path}?offset=50>; rel="next"`},
+	)
+
+	let miss = await get('/page')
+	t.assert.equal(miss.headers.get('link'), '</page?offset=50>; rel="next"')
+	let hit = await get('/page')
+	t.assert.match(hit.headers.get('cache-status') ?? '', /hit/)
+	t.assert.equal(hit.headers.get('link'), '</page?offset=50>; rel="next"')
+	t.assert.equal(calls.length, 1)
+})
+
+void test("a waiter on a fill is given the fill's Link header", async (t) => {
+	let upstream = slowUpstream(t)
+	let get = await serve(t, upstream.fetchUpstream, {
+		link: (path) => `<${path}?offset=50>; rel="next"`,
+	})
+
+	let first = get('/page')
+	let second = get('/page')
+	await tick()
+	upstream.release()
+	let [a, b] = await Promise.all([first, second])
+	t.assert.equal(a.headers.get('link'), '</page?offset=50>; rel="next"')
+	t.assert.equal(b.headers.get('link'), '</page?offset=50>; rel="next"')
 })

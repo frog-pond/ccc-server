@@ -87,9 +87,15 @@ const SHARED_HEADERS = [
 	'content-type',
 	'expires',
 	'last-modified',
+	'link',
 	'location',
 	'retry-after',
 ]
+
+/// The headers a cached response keeps besides its type, etag and date, to
+/// give again on a hit. A route that fills the cache sets them; one that
+/// serves a hit returns before it could.
+const KEPT_HEADERS = ['link']
 
 declare module 'koa' {
 	interface ExtendableContext {
@@ -149,6 +155,8 @@ export interface CacheObject {
 	type: string | null
 	lastModified: Date | null
 	etag: string | null
+	/** KEPT_HEADERS the response had, by lowercase name */
+	headers?: Record<string, string>
 	gzip?: Buffer
 }
 
@@ -390,6 +398,9 @@ export function cachable(options: Options): Middleware {
 		if (obj.etag) {
 			this.response.etag = obj.etag
 		}
+		for (const [name, value] of Object.entries(obj.headers ?? {})) {
+			this.response.set(name, value)
+		}
 		if (this[CACHE_WAITED_KEY]) {
 			// it waited on another request's fetch, then took the copy that fetch stored
 			setCacheStatus(this, ['fwd=uri-miss', 'collapsed', 'stored'])
@@ -560,6 +571,10 @@ export function cachable(options: Options): Middleware {
 			type: ctx.response.get('Content-Type') || null,
 			lastModified: ctx.response.lastModified,
 			etag: ctx.response.get('etag') || null,
+		}
+		for (const name of KEPT_HEADERS) {
+			const value = ctx.response.get(name)
+			if (value) (obj.headers ??= {})[name] = value
 		}
 
 		// if the content-type was `text` or `text/plain` then don't cache

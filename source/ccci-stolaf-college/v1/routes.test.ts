@@ -162,9 +162,10 @@ void test('/streams/search is registered', () => {
 	assert.ok(api.match('/v1/streams/search', 'GET').route)
 })
 
-/// stolaf.edu's collection API, faked: it answers with one stream, titled for
-/// the `squery` it was asked, and records the query strings it was sent.
-function fakeStreams(t: test.TestContext) {
+/// stolaf.edu's collection API, faked: it answers a page of streams titled for
+/// the `squery` it was asked, and records the query strings it was sent. `available`
+/// is how many streams match in all; `null` is an answer that doesn't say.
+function fakeStreams(t: test.TestContext, {available = 1}: {available?: number | null} = {}) {
 	let real = globalThis.fetch.bind(globalThis)
 	let asked: URLSearchParams[] = []
 	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL, init?: RequestInit) => {
@@ -174,27 +175,31 @@ function fakeStreams(t: test.TestContext) {
 		}
 		let params = new URL(url).searchParams
 		asked.push(params)
+
+		let count = Number(params.get('count') ?? 50)
+		let offset = Number(params.get('offset') ?? 0)
+		let onPage = available === null ? count : Math.max(0, Math.min(count, available - offset))
+		let stream = (n: number) => ({
+			starttime: '2020-01-02 03:04',
+			location: '',
+			eid: `e${String(n)}`,
+			performer: '',
+			subtitle: '',
+			poster: 'https://example.com/poster',
+			player: 'https://example.com/player',
+			status: 'archived',
+			category: 'concerts',
+			hptitle: '',
+			category_textcolor: '',
+			category_color: '',
+			thumb: 'https://example.com/thumb',
+			title: `result for ${params.get('squery') ?? ''}`,
+			iframesrc: 'https://example.com/embed',
+		})
 		return Promise.resolve(
 			Response.json({
-				results: [
-					{
-						starttime: '2020-01-02 03:04',
-						location: '',
-						eid: 'e1',
-						performer: '',
-						subtitle: '',
-						poster: 'https://example.com/poster',
-						player: 'https://example.com/player',
-						status: 'archived',
-						category: 'concerts',
-						hptitle: '',
-						category_textcolor: '',
-						category_color: '',
-						thumb: 'https://example.com/thumb',
-						title: `result for ${params.get('squery') ?? ''}`,
-						iframesrc: 'https://example.com/embed',
-					},
-				],
+				results: Array.from({length: onPage}, (_, n) => stream(offset + n)),
+				...(available !== null && {meta: {available}}),
 			}),
 		)
 	})
@@ -332,3 +337,113 @@ for (const search of REFUSED) {
 		assert.equal(asked.length, 0)
 	})
 }
+
+/// A `Link` header as {rel: URL}, and the query parameters of each URL.
+function parseLink(header: string | null) {
+	let links: Record<string, URL> = {}
+	for (let part of header?.split(', ') ?? []) {
+		let match = /^<([^>]+)>; rel="(\w+)"$/.exec(part)
+		assert.ok(match, `not a link: ${part}`)
+		links[match[2] ?? ''] = new URL(match[1] ?? '', 'http://example.com')
+	}
+	return links
+}
+
+/// Searches with upstream saying `available` match, and returns the page's Link header.
+async function linksFor(t: test.TestContext, search: string, available: number | null) {
+	let base = await serve(t)
+	fakeStreams(t, {available})
+	let response = await fetch(`${base}/v1/streams/search${search}`)
+	assert.equal(response.status, 200)
+	return parseLink(response.headers.get('link'))
+}
+
+/// Which pages a set of links point at: {rel: offset}.
+function offsets(links: Record<string, URL>) {
+	return Object.fromEntries(
+		Object.entries(links).map(([rel, url]) => [rel, url.searchParams.get('offset')]),
+	)
+}
+
+void test('/streams/search links to the next and last pages from the first', async (t) => {
+	let links = await linksFor(t, '?query=choir&count=50', 231)
+	assert.deepEqual(offsets(links), {next: '50', last: '200'})
+})
+
+void test('/streams/search links to every other page from the middle', async (t) => {
+	let links = await linksFor(t, '?query=choir&count=50&offset=100', 231)
+	assert.deepEqual(offsets(links), {first: '0', prev: '50', next: '150', last: '200'})
+})
+
+void test('/streams/search links back, and not on, from the last page', async (t) => {
+	let links = await linksFor(t, '?query=choir&count=50&offset=200', 231)
+	assert.deepEqual(offsets(links), {first: '0', prev: '150'})
+})
+
+void test('/streams/search has no Link header when everything fits on one page', async (t) => {
+	let base = await serve(t)
+	fakeStreams(t, {available: 12})
+	let response = await fetch(`${base}/v1/streams/search?query=choir`)
+	assert.equal(response.headers.has('link'), false)
+})
+
+void test('/streams/search has no next page when the last one is exactly full', async (t) => {
+	let links = await linksFor(t, '?query=choir&count=50&offset=50', 100)
+	assert.deepEqual(offsets(links), {first: '0', prev: '0'})
+})
+
+void test('/streams/search from past the end links back to the last page, not past it', async (t) => {
+	let links = await linksFor(t, '?query=choir&count=50&offset=1000', 231)
+	assert.deepEqual(offsets(links), {first: '0', prev: '200'})
+})
+
+void test('/streams/search with no matches has no Link header', async (t) => {
+	let links = await linksFor(t, '?query=zzzz', 0)
+	assert.deepEqual(links, {})
+})
+
+void test('/streams/search links keep the request, changing only the page', async (t) => {
+	let links = await linksFor(
+		t,
+		'?query=choir%20mass&category=chapel&class=all&sort=ascending&dateFrom=2020-01-01&count=10&offset=10',
+		100,
+	)
+	for (let url of Object.values(links)) {
+		assert.equal(url.pathname, '/v1/streams/search')
+		assert.equal(url.searchParams.get('query'), 'choir mass')
+		assert.equal(url.searchParams.get('category'), 'chapel')
+		assert.equal(url.searchParams.get('class'), 'all')
+		assert.equal(url.searchParams.get('sort'), 'ascending')
+		assert.equal(url.searchParams.get('dateFrom'), '2020-01-01')
+		assert.equal(url.searchParams.get('count'), '10')
+	}
+	assert.deepEqual(offsets(links), {first: '0', prev: '0', next: '20', last: '90'})
+})
+
+void test('/streams/search links carry the count a default page was served with', async (t) => {
+	let links = await linksFor(t, '?query=choir', 231)
+	assert.equal(links['next']?.searchParams.get('count'), '50')
+})
+
+void test('/streams/search without a total offers a next page after a full page only', async (t) => {
+	assert.deepEqual(offsets(await linksFor(t, '?query=choir&count=5', null)), {next: '5'})
+	assert.deepEqual(offsets(await linksFor(t, '?query=choir&count=5&offset=5', 7)), {
+		first: '0',
+		prev: '0',
+	})
+})
+
+void test('/streams/search gives its Link header again when the page is served from the cache', async (t) => {
+	let base = await serve(t, {realCache: true})
+	let asked = fakeStreams(t, {available: 231})
+	let get = async () => {
+		let response = await fetch(`${base}/v1/streams/search?query=choir&count=50&offset=50`)
+		assert.equal(response.status, 200)
+		return offsets(parseLink(response.headers.get('link')))
+	}
+
+	let expected = {first: '0', prev: '0', next: '100', last: '200'}
+	assert.deepEqual(await get(), expected)
+	assert.deepEqual(await get(), expected)
+	assert.equal(asked.length, 1)
+})
