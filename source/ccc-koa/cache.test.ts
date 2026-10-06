@@ -536,14 +536,16 @@ void test('a fill that hangs is told once, when it hangs, and its takeover is to
 	let upstream = slowUpstream(t)
 	let told: [string, number][] = []
 	let get = await serve(t, upstream.fetchUpstream, {
-		fillWaitTimeout: 100,
+		fillWaitTimeout: 300,
 		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
 	})
 
 	let first = get('/menu')
 	await tick()
 	let second = get('/menu')
-	await tick(150)
+	// until the first fill hangs: its takeover hangs a whole timeout later
+	// eslint-disable-next-line no-await-in-loop
+	while (told.length === 0) await tick(10)
 	t.assert.deepEqual(told, [['hung', 1]])
 
 	upstream.releaseLater()
