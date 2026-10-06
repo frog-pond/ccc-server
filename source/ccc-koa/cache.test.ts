@@ -13,7 +13,6 @@ async function serve(
 	fetchUpstream: Upstream,
 	options: {
 		hash?: (ctx: Koa.ExtendableContext) => string
-		fillWaitTimeout?: number
 		before?: Koa.Middleware
 		stream?: PassThrough
 		shareFetch?: (ctx: Koa.ExtendableContext) => boolean
@@ -30,7 +29,6 @@ async function serve(
 			get: (key) => store.get(key),
 			set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
 			...(options.hash && {hash: options.hash}),
-			...(options.fillWaitTimeout && {fillWaitTimeout: options.fillWaitTimeout}),
 			...(options.shareFetch && {shareFetch: options.shareFetch}),
 			...(options.onBurst && {onBurst: options.onBurst}),
 			...(options.onLookup && {onLookup: options.onLookup}),
@@ -111,17 +109,6 @@ function slowUpstream(t: test.TestContext, first: (path: string) => unknown = (p
 }
 
 const tick = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms))
-
-/// Waits until `condition` holds, or fails once `ms` have passed, so a test
-/// waiting on something that never happens fails rather than hangs.
-async function until(condition: () => boolean, what: string, ms = 5_000) {
-	let deadline = Date.now() + ms
-	while (!condition()) {
-		if (Date.now() > deadline) throw new Error(`gave up waiting for ${what}`)
-		// eslint-disable-next-line no-await-in-loop
-		await tick(10)
-	}
-}
 
 void test('concurrent misses for one key share one upstream fetch', async (t) => {
 	let {calls, release, fetchUpstream} = slowUpstream(t)
@@ -231,90 +218,6 @@ void test('after a fill ends, the next request starts a fill of its own', async 
 	t.assert.equal(upstream.calls.length, 2)
 })
 
-void test('a waiter takes over a fill that hangs', async (t) => {
-	let upstream = slowUpstream(t)
-	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
-
-	let first = get('/menu')
-	await tick()
-	let second = get('/menu')
-	await tick(20)
-	t.assert.equal(upstream.calls.length, 1, 'still waiting before the fill hangs')
-	await tick(150)
-	t.assert.equal(upstream.calls.length, 2, 'fetching once the fill has hung')
-
-	upstream.releaseLater()
-	t.assert.equal((await second).status, 200)
-	upstream.releaseFirst()
-	t.assert.equal((await first).status, 200)
-})
-
-void test('when a fill hangs, one waiter takes it over and the rest wait on that', async (t) => {
-	let upstream = slowUpstream(t)
-	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
-
-	let first = get('/menu')
-	await tick()
-	let waiters = Promise.all([get('/menu'), get('/menu'), get('/menu')])
-	// between the first fill hanging (100 ms) and the takeover hanging (200 ms)
-	await tick(100)
-	t.assert.equal(upstream.calls.length, 2, 'one takeover, not one fetch per waiter')
-
-	upstream.releaseLater()
-	t.assert.deepEqual(
-		(await waiters).map((r) => r.status),
-		[200, 200, 200],
-	)
-	upstream.releaseFirst()
-	await first
-})
-
-void test('a copy stored by the hung request lets its takeover’s waiters go', async (t) => {
-	let upstream = slowUpstream(t)
-	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 300})
-
-	let first = get('/menu')
-	await tick()
-	let taker = get('/menu')
-	let follower = get('/menu')
-	// until the takeover is fetching: it hangs in turn a whole timeout later,
-	// and then the follower would fetch for itself
-	await until(() => upstream.calls.length === 2, 'the takeover to fetch')
-
-	// The hung request finishes after all, while the takeover is still out.
-	upstream.releaseFirst()
-	t.assert.equal((await first).status, 200)
-	t.assert.equal((await follower).status, 200)
-
-	upstream.releaseLater()
-	t.assert.equal((await taker).status, 200)
-})
-
-void test('once a takeover stores a copy, later requests do not wait on the hung fill', async (t) => {
-	let upstream = slowUpstream(t)
-	let get = await serve(t, upstream.fetchUpstream, {fillWaitTimeout: 100})
-
-	let first = get('/menu')
-	await tick()
-	let taker = get('/menu')
-	await tick(100)
-	upstream.releaseLater()
-	t.assert.equal((await taker).status, 200)
-
-	let started = Date.now()
-	t.assert.equal((await get('/menu')).status, 200)
-	let elapsed = Date.now() - started
-	t.assert.equal(
-		elapsed < 50,
-		true,
-		`served from the cache, without waiting (took ${String(elapsed)} ms)`,
-	)
-	t.assert.equal(upstream.calls.length, 2)
-
-	upstream.releaseFirst()
-	await first
-})
-
 void test('a route that does not cache streams its body without buffering', async (t) => {
 	let stream = new PassThrough()
 	let get = await serve(t, () => Promise.resolve(undefined), {stream})
@@ -323,38 +226,6 @@ void test('a route that does not cache streams its body without buffering', asyn
 	let response = await Promise.race([get('/stream'), tick(200).then(() => 'still buffering')])
 	t.assert.notEqual(response, 'still buffering')
 	stream.end()
-})
-
-void test('when a takeover hangs too, one follower takes over and the rest fetch for themselves', async (t) => {
-	let calls = 0
-	let gate = Promise.withResolvers<undefined>()
-	t.after(() => {
-		gate.resolve(undefined)
-	})
-	let get = await serve(
-		t,
-		async (path) => {
-			calls += 1
-			await gate.promise
-			return {path}
-		},
-		{fillWaitTimeout: 100},
-	)
-
-	let first = get('/menu')
-	await tick()
-	// arrive before the first fill hangs, at 100 ms
-	let followers = [get('/menu'), get('/menu'), get('/menu')]
-	await tick(100)
-	t.assert.equal(calls, 2, 'one takeover when the first fill hangs')
-	await tick(100)
-	// the takeover hung at about 200 ms: one follower took over in turn, and
-	// the other fetched for itself
-	t.assert.equal(calls, 4)
-
-	gate.resolve(undefined)
-	let statuses = (await Promise.all([first, ...followers])).map((r) => r.status)
-	t.assert.deepEqual(statuses, [200, 200, 200, 200])
 })
 
 void test('a stream of string chunks is cached and shared', async (t) => {
@@ -546,31 +417,6 @@ void test('a fill that fails is told so', async (t) => {
 	t.assert.deepEqual(told, [['error', 1]])
 })
 
-void test('a fill that hangs is told once, when it hangs, and its takeover is told too', async (t) => {
-	let upstream = slowUpstream(t)
-	let told: [string, number][] = []
-	let get = await serve(t, upstream.fetchUpstream, {
-		fillWaitTimeout: 300,
-		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
-	})
-
-	let first = get('/menu')
-	await tick()
-	let second = get('/menu')
-	// until the first fill hangs: its takeover hangs a whole timeout later
-	await until(() => told.length > 0, 'the first fill to hang')
-	t.assert.deepEqual(told, [['hung', 1]])
-
-	upstream.releaseLater()
-	await second
-	upstream.releaseFirst()
-	await first
-	t.assert.deepEqual(told, [
-		['hung', 1],
-		['stored', 0],
-	])
-})
-
 void test('a lookup hook that throws does not fail the request', async (t) => {
 	let {release, fetchUpstream} = slowUpstream(t)
 	let get = await serve(t, fetchUpstream, {
@@ -606,32 +452,6 @@ void test('a fill hook that throws does not change how the fill ends', async (t)
 		(await burst).map((r) => r.status),
 		[404, 404],
 	)
-})
-
-void test('a fill hook that throws when its fill hangs does not escape the timer', async (t) => {
-	let upstream = slowUpstream(t)
-	let uncaught: unknown[] = []
-	let onUncaught = (error: unknown) => uncaught.push(error)
-	process.on('uncaughtException', onUncaught)
-	t.after(() => process.off('uncaughtException', onUncaught))
-	let get = await serve(t, upstream.fetchUpstream, {
-		fillWaitTimeout: 100,
-		onFillEnd: () => {
-			throw new Error('hook broke')
-		},
-	})
-	t.mock.method(console, 'error', () => undefined)
-
-	let first = get('/menu')
-	await tick()
-	let second = get('/menu')
-	await tick(150)
-	upstream.release()
-	t.assert.deepEqual(
-		(await Promise.all([first, second])).map((r) => r.status),
-		[200, 200],
-	)
-	t.assert.deepEqual(uncaught, [])
 })
 
 void test('a stored response is told with its body, once per fetch rather than per request', async (t) => {
