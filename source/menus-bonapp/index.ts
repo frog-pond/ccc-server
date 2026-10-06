@@ -11,6 +11,7 @@ import {
 
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
 import {extractBamco} from './extract-bamco.ts'
+import {feedName, recordFeedFailure, recordFeedItems} from '../ccc-lib/feed-metrics.ts'
 
 /// Each stage of turning a café page into our data, as a span, so a slow
 /// request's trace shows which one took the time.
@@ -66,6 +67,8 @@ export function nutrition(itemId: string) {
 export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
 	let bamco = await getBamco(cafeUrl)
 	if (typeof bamco === 'undefined') {
+		// also what a page BonApp has reshaped past reading looks like
+		recordFeedItems('bonapp', feedName(cafeUrl), 0, {closed: true})
 		return CafeMenuIsClosed()
 	}
 
@@ -75,6 +78,7 @@ export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType
 		),
 		dayparts: Object.values(bamco.dayparts).map(cleanDayPart),
 	}))
+	recordFeedItems('bonapp', feedName(cafeUrl), Object.keys(items).length, {closed: false})
 
 	return CafeMenuResponseSchema.parse({
 		cor_icons: Array.isArray(bamco.cor_icons) ? {} : bamco.cor_icons,
@@ -98,6 +102,7 @@ export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType>
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
 		Sentry.captureException(err)
+		recordFeedFailure('bonapp', feedName(cafeUrl))
 		return CafeMenuWithError(
 			err && typeof err === 'object' && 'message' in err && err.message,
 			'Could not load the BonApp menu data',

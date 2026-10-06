@@ -5,6 +5,7 @@ import {textFromHtml} from '../ccc-lib/dom.ts'
 import InternetCalendar from 'ical.js'
 import {EventSchema} from './types.ts'
 import {sortBy} from 'lodash-es'
+import {countedLoad} from '../ccc-lib/feed-metrics.ts'
 
 function convertEvent(event: InternetCalendar.Event, now = moment()) {
 	const startTime = moment(event.startDate.toString())
@@ -45,10 +46,21 @@ export function parseCalendar(body: string, source: string | URL) {
 	return InternetCalendar.Component.fromString(text)
 }
 
-export async function ical(
+interface IcalOptions {
+	onlyFuture?: boolean
+	maxEndDate?: moment.Moment
+}
+
+export function ical(url: string | URL, options: IcalOptions = {}, now = moment()) {
+	// by host alone: a private feed's path carries its token
+	let feed = URL.parse(String(url))?.host ?? 'unknown'
+	return countedLoad('ical', feed, () => loadIcal(url, options, now))
+}
+
+async function loadIcal(
 	url: string | URL,
-	{onlyFuture = true, maxEndDate}: {onlyFuture?: boolean; maxEndDate?: moment.Moment} = {},
-	now = moment(),
+	{onlyFuture = true, maxEndDate}: IcalOptions,
+	now: moment.Moment,
 ) {
 	let body = await getText(url, {headers: {accept: 'text/calendar'}})
 

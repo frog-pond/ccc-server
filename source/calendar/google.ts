@@ -4,6 +4,7 @@ import getUrls from 'get-urls'
 import {textFromHtml} from '../ccc-lib/dom.ts'
 import {EventSchema} from './types.ts'
 import {z} from 'zod'
+import {countedLoad} from '../ccc-lib/feed-metrics.ts'
 
 type GoogleCalendarEventType = z.infer<typeof GoogleCalendarEventSchema>
 const GoogleCalendarEventSchema = z.object({
@@ -49,7 +50,12 @@ export function convertGoogleEvents(data: GoogleCalendarEventType[], now = momen
 	})
 }
 
-export async function googleCalendar(calendarId: string, now = moment()) {
+export function googleCalendar(calendarId: string, now = moment()) {
+	// by its id: the request's URL carries our API key
+	return countedLoad('google-calendar', calendarId, () => loadGoogleCalendar(calendarId, now))
+}
+
+async function loadGoogleCalendar(calendarId: string, now: moment.Moment) {
 	let calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`
 
 	let params = {
