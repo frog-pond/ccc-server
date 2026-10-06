@@ -18,6 +18,8 @@ async function serve(
 		stream?: PassThrough
 		shareFetch?: (ctx: Koa.ExtendableContext) => boolean
 		onBurst?: (ctx: Koa.ExtendableContext, shared: boolean) => void
+		onLookup?: (ctx: Koa.ExtendableContext, hit: boolean) => void
+		onFillEnd?: (ctx: Koa.ExtendableContext, outcome: string, waiters: number) => void
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -30,6 +32,8 @@ async function serve(
 			...(options.fillWaitTimeout && {fillWaitTimeout: options.fillWaitTimeout}),
 			...(options.shareFetch && {shareFetch: options.shareFetch}),
 			...(options.onBurst && {onBurst: options.onBurst}),
+			...(options.onLookup && {onLookup: options.onLookup}),
+			...(options.onFillEnd && {onFillEnd: options.onFillEnd}),
 		}),
 	)
 	if (options.before) app.use(options.before)
@@ -469,4 +473,85 @@ void test('the key is hashed once, before later middleware can change it', async
 	await responses
 
 	t.assert.deepEqual(calls, ['/menu'])
+})
+
+void test('every lookup is told whether it hit the cache', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let told: boolean[] = []
+	let get = await serve(t, fetchUpstream, {onLookup: (_ctx, hit) => told.push(hit)})
+	release()
+
+	await get('/menu')
+	await get('/menu')
+	await get('/uncached')
+	t.assert.deepEqual(told, [false, true], 'a route that does not cache does not look up')
+})
+
+void test('a fill is told how it ended, and how many waited on it', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let told: [string, number][] = []
+	let get = await serve(t, fetchUpstream, {
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+
+	let burst = Promise.all([get('/menu'), get('/menu'), get('/menu')])
+	await tick()
+	release()
+	await burst
+	t.assert.deepEqual(told, [['stored', 2]])
+})
+
+void test('a fill that answers without caching is told it was replayed', async (t) => {
+	let upstream = slowUpstream(t, () => undefined)
+	let told: [string, number][] = []
+	let get = await serve(t, upstream.fetchUpstream, {
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+	await burst
+	t.assert.deepEqual(told, [['replay', 1]])
+})
+
+void test('a fill that fails is told so', async (t) => {
+	let upstream = slowUpstream(t, () => {
+		throw new Error('upstream down')
+	})
+	let told: [string, number][] = []
+	let get = await serve(t, upstream.fetchUpstream, {
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+	t.mock.method(console, 'error', () => undefined)
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+	await burst
+	t.assert.deepEqual(told, [['error', 1]])
+})
+
+void test('a fill that hangs is told once, when it hangs, and its takeover is told too', async (t) => {
+	let upstream = slowUpstream(t)
+	let told: [string, number][] = []
+	let get = await serve(t, upstream.fetchUpstream, {
+		fillWaitTimeout: 100,
+		onFillEnd: (_ctx, outcome, waiters) => told.push([outcome, waiters]),
+	})
+
+	let first = get('/menu')
+	await tick()
+	let second = get('/menu')
+	await tick(150)
+	t.assert.deepEqual(told, [['hung', 1]])
+
+	upstream.releaseLater()
+	await second
+	upstream.releaseFirst()
+	await first
+	t.assert.deepEqual(told, [
+		['hung', 1],
+		['stored', 0],
+	])
 })

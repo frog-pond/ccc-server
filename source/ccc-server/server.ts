@@ -18,6 +18,13 @@ import {parsePercent, percentChance, recordFlagInSentry} from '../ccc-lib/featur
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
 
+/// The route a request matched, as the router's template (`/v1/food/named/:name`),
+/// so a metric gets one series per route rather than one per URL.
+function routeOf(ctx: Koa.ExtendableContext): string {
+	let route: unknown = (ctx as {_matchedRoute?: unknown})._matchedRoute
+	return typeof route === 'string' ? route : 'unknown'
+}
+
 async function main() {
 	const smokeTesting = Boolean(process.env['SMOKE_TEST'])
 
@@ -35,6 +42,8 @@ async function main() {
 		process.exit(1)
 	}
 	const institution = institutionResult.data
+	// on every metric this process sends
+	Sentry.getGlobalScope().setAttribute('institution', institution)
 
 	let v1: Router<RouterState, ContextState>
 	switch (institution) {
@@ -86,6 +95,9 @@ async function main() {
 	// add cached response support at the Koa level
 	// (individual route handlers can use ctx.cache to set caching parameters)
 	let cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
+	setInterval(() => {
+		Sentry.metrics.gauge('cache.entries', cache.size)
+	}, 60_000).unref()
 	app.use(
 		cachable({
 			setCachedHeader: true,
@@ -96,6 +108,17 @@ async function main() {
 			),
 			onBurst: (_ctx, shared) => {
 				recordFlagInSentry('cache-fill-dedupe', shared)
+				Sentry.metrics.count('cache.burst', 1, {attributes: {shared}})
+			},
+			onLookup: (ctx, hit) => {
+				Sentry.metrics.count('cache.lookup', 1, {
+					attributes: {result: hit ? 'hit' : 'miss', route: routeOf(ctx)},
+				})
+			},
+			onFillEnd: (ctx, outcome, waiters) => {
+				let attributes = {outcome, route: routeOf(ctx)}
+				Sentry.metrics.count('cache.fill', 1, {attributes})
+				Sentry.metrics.distribution('cache.fill.waiters', waiters, {attributes})
 			},
 			get(key) {
 				return cache.get(key)
@@ -128,10 +151,12 @@ async function main() {
 				if (didDelete) found++
 			}
 			ctx.response.set('X-Cache-Deleted', found.toFixed(0))
+			Sentry.metrics.count('cache.evicted', found, {attributes: {scope: 'keys'}})
 		} else {
 			let size = cache.size
 			cache.clear()
 			ctx.response.set('X-Cache-Deleted', size.toFixed(0))
+			Sentry.metrics.count('cache.evicted', size, {attributes: {scope: 'all'}})
 		}
 		ctx.status = 204
 	})
