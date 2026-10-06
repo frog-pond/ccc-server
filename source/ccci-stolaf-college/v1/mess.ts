@@ -1,4 +1,7 @@
+import QuickLRU from 'quick-lru'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
+import {TOTAL_TIMEOUT, http} from '../../ccc-lib/http.ts'
+import type {Context} from '../../ccc-server/context.ts'
 
 /// The Olaf Messenger's WordPress REST API, which this module serves the app
 /// a cached copy of, in WordPress's own shape.
@@ -115,3 +118,100 @@ export function paginationLinks(
 	links.push(link(totalPages, 'last'))
 	return links.join(', ')
 }
+
+/// A WordPress answer as this route passes it on.
+export interface Answer {
+	status: number
+	type: string
+	body: string
+	headers: Record<string, string>
+}
+
+/// WordPress's paging headers, which the app may read in either mode.
+const PASSED_HEADERS = ['x-wp-total', 'x-wp-totalpages']
+
+/// The paper's answer, or nothing when it could not give one: a timeout, a
+/// connection that never answered, or a page other than JSON in a 2xx, such
+/// as a maintenance page or a bot check, which must not be cached as the
+/// Messenger's data.
+async function fetchUpstream(url: string): Promise<Answer | undefined> {
+	try {
+		// no retries: a failure is answered from the last good copy, and the app retries on its own
+		let response = await http.get(url, {
+			throwHttpErrors: false,
+			retry: 0,
+			signal: AbortSignal.timeout(TOTAL_TIMEOUT),
+		})
+		let type = response.headers.get('content-type') ?? 'application/json'
+		if (response.ok && !type.includes('json')) return undefined
+		let headers: Record<string, string> = {}
+		for (let name of PASSED_HEADERS) {
+			let value = response.headers.get(name)
+			if (value !== null) headers[name] = value
+		}
+		return {status: response.status, type, body: await response.text(), headers}
+	} catch {
+		return undefined
+	}
+}
+
+function send(ctx: Context, answer: Answer): void {
+	ctx.status = answer.status
+	// the type goes first, or Koa guesses one from the string body
+	ctx.type = answer.type
+	ctx.set(answer.headers)
+	let totalPages = Number(answer.headers['x-wp-totalpages'])
+	if (answer.status === 200 && Number.isInteger(totalPages)) {
+		let link = paginationLinks(ctx.path, ctx.querystring, totalPages)
+		if (link) ctx.set('Link', link)
+	}
+	ctx.body = answer.body
+}
+
+/// The Messenger's WordPress API, answered from the response cache, then the
+/// paper, then -- while the paper is failing -- the last good copy of each URL.
+export function makeWordpressRoute(
+	lastGood = new QuickLRU<string, Answer>({maxSize: 300, maxAge: 7 * ONE_DAY}),
+) {
+	return async function wordpress(ctx: Context): Promise<void> {
+		let {resource = '', id} = ctx.params
+		let verdict = rulesFor(resource, id, new URLSearchParams(ctx.querystring))
+		if ('refusal' in verdict) {
+			ctx.throw(verdict.refusal.status, verdict.refusal.message)
+			return
+		}
+		let {ttl} = verdict.rules
+
+		if (ctx.cached(ttl)) {
+			ctx.cacheControl(ttl)
+			return
+		}
+
+		let path = id === undefined ? resource : `${resource}/${id}`
+		let url = `${UPSTREAM}/${path}${ctx.querystring ? `?${ctx.querystring}` : ''}`
+		let answer = await fetchUpstream(url)
+
+		if (answer && answer.status < 500) {
+			// a 4xx is passed on but not cached: the cache holds only 200s, and
+			// Cache-Control goes only on an answer worth keeping
+			if (answer.status === 200) {
+				lastGood.set(url, answer)
+				ctx.cacheControl(ttl)
+			}
+			send(ctx, answer)
+			return
+		}
+
+		let copy = lastGood.get(url)
+		if (!copy) {
+			ctx.throw(502, `the Olaf Messenger could not be reached for ${path}`)
+			return
+		}
+		// ask the paper again soon, rather than holding the old copy for the whole ttl
+		ctx.setCacheTTL(ONE_MINUTE)
+		ctx.cacheControl(ONE_MINUTE)
+		send(ctx, copy)
+	}
+}
+
+export const wordpress = makeWordpressRoute()

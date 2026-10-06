@@ -13,6 +13,7 @@ import * as hours from './hours.ts'
 import * as majors from './majors.ts'
 import * as map from './map.ts'
 import * as menus from './menu.ts'
+import * as mess from './mess.ts'
 import * as news from './news.ts'
 import * as orgs from './orgs.ts'
 import * as printing from './printing.ts'
@@ -132,6 +133,10 @@ api.get('/news/named/politicole', news.politicole)
 api.get('/news/named/mess', news.mess)
 api.get('/news/named/ksto', news.ksto)
 api.get('/news/named/krlx', news.krlx)
+
+// the Olaf Messenger's WordPress API, cached, for the app's Messenger reader
+api.get('/news/mess/wp/v2/:resource', mess.wordpress)
+api.get('/news/mess/wp/v2/:resource/:id', mess.wordpress)
 
 // hours
 api.get('/spaces/hours', hours.buildingHours)
