@@ -326,6 +326,12 @@ const REFUSED = [
 	'?query=choir&count=201',
 	'?query=choir&count=lots',
 	'?query=choir&count=1.5',
+	'?query=choir&offset=',
+	'?query=choir&offset=%20',
+	'?query=choir&count=%20',
+	'?query=choir&dateFrom=2999-01-01',
+	'?query=choir&dateTo=1900-01-01',
+	'?query=choir&class=upcoming&dateTo=2000-01-01',
 	'?query=choir&offset=-1',
 	'?query=choir&offset=soon',
 ]

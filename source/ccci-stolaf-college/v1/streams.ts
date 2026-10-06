@@ -42,25 +42,36 @@ const SEARCH_AHEAD_MONTHS = 2
 // A page is at most this many streams. Upstream has no limit of its own.
 const MAX_COUNT = 200
 
+// A whole number in a query string. A blank one is refused, where `Number()`
+// would read it as 0.
+const wholeNumber = (min: number, max?: number) =>
+	z
+		.string()
+		.trim()
+		.min(1, 'must be a number')
+		.transform(Number)
+		.pipe(
+			z
+				.number()
+				.int()
+				.min(min)
+				.max(max ?? Number.MAX_SAFE_INTEGER),
+		)
+
 // Search by `query` (required: upstream answers a blank one with everything).
 // `class` is which streams to look at; `dateFrom` and `dateTo` narrow or widen
 // the range it looks in, which otherwise depends on the class. Results come a
 // `count` at a time, starting at `offset`.
-const SearchStreamsParamsSchema = z
-	.object({
-		query: z.string().trim().min(1),
-		sort: z.enum(['ascending', 'descending']).default('descending'),
-		class: z.enum(['archived', 'upcoming', 'all']).default('archived'),
-		category: z.string().trim().min(1).optional(),
-		dateFrom: z.iso.date().optional(),
-		dateTo: z.iso.date().optional(),
-		count: z.coerce.number().int().min(1).max(MAX_COUNT).default(50),
-		offset: z.coerce.number().int().min(0).default(0),
-	})
-	.refine((p) => !p.dateFrom || !p.dateTo || p.dateFrom <= p.dateTo, {
-		message: 'dateFrom must not be after dateTo',
-		path: ['dateFrom'],
-	})
+const SearchStreamsParamsSchema = z.object({
+	query: z.string().trim().min(1),
+	sort: z.enum(['ascending', 'descending']).default('descending'),
+	class: z.enum(['archived', 'upcoming', 'all']).default('archived'),
+	category: z.string().trim().min(1).optional(),
+	dateFrom: z.iso.date().optional(),
+	dateTo: z.iso.date().optional(),
+	count: wholeNumber(1, MAX_COUNT).default(50),
+	offset: wholeNumber(0).default(0),
+})
 
 const StOlafStreamsParamsSchema = z.object({
 	date_from: z.iso.date(),
@@ -188,10 +199,16 @@ export async function search(ctx: Context) {
 		all: {from: lookback, to: ahead},
 	}[rest.class]
 
+	// compared once each has its default, as one alone can be out of order
+	// with the other's
+	const dateFrom = rest.dateFrom ?? defaults.from.format('YYYY-MM-DD')
+	const dateTo = rest.dateTo ?? defaults.to.format('YYYY-MM-DD')
+	if (dateFrom > dateTo) ctx.throw(400, 'dateFrom must not be after dateTo')
+
 	const {streams, available} = await getStreams({
 		class: rest.class === 'upcoming' ? 'current' : rest.class,
-		date_from: rest.dateFrom ?? defaults.from.format('YYYY-MM-DD'),
-		date_to: rest.dateTo ?? defaults.to.format('YYYY-MM-DD'),
+		date_from: dateFrom,
+		date_to: dateTo,
 		sort,
 		squery: query,
 		...(category && {category}),
