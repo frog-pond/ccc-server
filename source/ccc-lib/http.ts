@@ -48,8 +48,42 @@ export function countingFetch(
 	}
 }
 
+/// The colleges' own domains, any host in which is named in a metric.
+const KNOWN_DOMAINS = [
+	'stolaf.edu',
+	'carleton.edu',
+	'cafebonappetit.com',
+	'presence.io',
+	'olafmessenger.com',
+	'thecarletonian.com',
+	'krlx.org',
+	'northfieldmn.gov',
+]
+
+/// Hosts on shared platforms, where anyone can have a subdomain, that the
+/// server fetches by name.
+const KNOWN_HOSTS = new Set([
+	'stodevx.github.io',
+	'carls-app.github.io',
+	'www.googleapis.com',
+	'feed.podbean.com',
+	'fa-ewur-saasfaprod1.fa.ocs.oraclecloud.com',
+])
+
+/// A host as a metric names it: itself, without a port, if the server fetches
+/// it or it's in a college's domains, and otherwise "other". Some routes fetch
+/// whatever URL a client sends, so naming every host would let a client mint
+/// a new series per request.
+export function metricHost(host: string): string {
+	let hostname = host.replace(/:\d+$/u, '')
+	let known =
+		KNOWN_HOSTS.has(hostname) ||
+		KNOWN_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))
+	return known ? hostname : 'other'
+}
+
 const recordUpstream = (host: string, outcome: UpstreamOutcome) => {
-	Sentry.metrics.count('upstream.request', 1, {attributes: {host, outcome}})
+	Sentry.metrics.count('upstream.request', 1, {attributes: {host: metricHost(host), outcome}})
 }
 
 /// The longest any one call may take, retries and the waits between them

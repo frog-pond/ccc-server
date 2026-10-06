@@ -1,6 +1,6 @@
 import {test} from 'node:test'
 import ky from 'ky'
-import {countingFetch, type UpstreamOutcome} from './http.ts'
+import {countingFetch, metricHost, type UpstreamOutcome} from './http.ts'
 
 function recorder() {
 	let told: [string, UpstreamOutcome][] = []
@@ -74,4 +74,22 @@ void test('every attempt ky makes is told, retries included', async (t) => {
 		['example.com', '5xx'],
 		['example.com', '2xx'],
 	])
+})
+
+void test('a metric names a known upstream by its host, and any other as "other"', (t) => {
+	// hosts the server fetches by name
+	t.assert.equal(metricHost('stodevx.github.io'), 'stodevx.github.io')
+	t.assert.equal(metricHost('www.googleapis.com'), 'www.googleapis.com')
+	// any host in a college's own domains
+	t.assert.equal(metricHost('athletics.stolaf.edu'), 'athletics.stolaf.edu')
+	t.assert.equal(metricHost('carleton.edu'), 'carleton.edu')
+	t.assert.equal(metricHost('stolaf.cafebonappetit.com'), 'stolaf.cafebonappetit.com')
+	// the port is dropped, so it can't mint a series either
+	t.assert.equal(metricHost('www.stolaf.edu:8443'), 'www.stolaf.edu')
+	// anything else, including lookalikes and other pages on a shared host
+	t.assert.equal(metricHost('example.com'), 'other')
+	t.assert.equal(metricHost('evilstolaf.edu'), 'other')
+	t.assert.equal(metricHost('stolaf.edu.example.com'), 'other')
+	t.assert.equal(metricHost('someone-else.github.io'), 'other')
+	t.assert.equal(metricHost('unknown'), 'other')
 })
