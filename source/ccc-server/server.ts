@@ -120,6 +120,13 @@ async function main() {
 				Sentry.metrics.count('cache.fill', 1, {attributes})
 				Sentry.metrics.distribution('cache.fill.waiters', waiters, {attributes})
 			},
+			// A list a route fetched, counted once per fetch: a scraper whose upstream
+			// changes shape tends not to throw but to read nothing, so it shows here
+			// as a route whose count drops to zero and stays there.
+			onStore: (ctx, body) => {
+				if (!Array.isArray(body)) return
+				Sentry.metrics.gauge('route.items', body.length, {attributes: {route: routeOf(ctx)}})
+			},
 			get(key) {
 				return cache.get(key)
 			},
