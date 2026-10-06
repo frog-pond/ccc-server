@@ -1,8 +1,5 @@
 import {test} from 'node:test'
-import {feedName, recordFeedFailure, recordFeedItems} from './feed-metrics.ts'
-import {captureMetrics, takeMetrics} from './metrics-testing.ts'
-
-const seen = captureMetrics()
+import {countedLoad, feedName} from './feed-metrics.ts'
 
 void test('a feed is named by its host and path, never its query', (t) => {
 	t.assert.equal(
@@ -13,18 +10,11 @@ void test('a feed is named by its host and path, never its query', (t) => {
 	t.assert.equal(feedName('not a url'), 'unknown')
 })
 
-void test('a load of a feed is told with its item count, source and feed', (t) => {
-	recordFeedItems('bonapp', 'example.com/cafe/', 12)
-	recordFeedItems('bonapp', 'example.com/cafe/', 0, {closed: true})
-	t.assert.deepEqual(takeMetrics(seen, 'feed.items'), [
-		[12, {source: 'bonapp', feed: 'example.com/cafe/'}],
-		[0, {closed: true, source: 'bonapp', feed: 'example.com/cafe/'}],
-	])
-})
-
-void test('a failed load of a feed is counted', (t) => {
-	recordFeedFailure('ical', 'example.com')
-	t.assert.deepEqual(takeMetrics(seen, 'feed.failure'), [
-		[1, {source: 'ical', feed: 'example.com'}],
-	])
+void test('a counted load hands back what it loaded, and rethrows what it failed with', async (t) => {
+	t.assert.deepEqual(await countedLoad('test', 'feed', () => Promise.resolve([1, 2])), [1, 2])
+	let failure = new Error('upstream down')
+	await t.assert.rejects(
+		countedLoad('test', 'feed', () => Promise.reject(failure)),
+		(error) => error === failure,
+	)
 })
