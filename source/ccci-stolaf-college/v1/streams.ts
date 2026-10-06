@@ -32,22 +32,44 @@ const GetStreamsParamsSchema = z.object({
 	sort: z.enum(['ascending', 'descending']).default('ascending'),
 })
 
-// Search takes only a query and a sort; its date range is fixed. A blank query
-// is refused, since upstream would answer it with every archived stream.
-const SearchStreamsParamsSchema = z.object({
-	query: z.string().trim().min(1),
-	sort: z.enum(['ascending', 'descending']).default('descending'),
-})
-
-// How far back search looks.
+// How far back search looks, unless asked for a range, and how far ahead it
+// looks for upcoming streams (as the `upcoming` route does).
 const SEARCH_YEARS = 30
+const SEARCH_AHEAD_MONTHS = 2
+
+// A page is at most this many streams. Upstream has no limit of its own.
+const MAX_COUNT = 200
+
+// Search by `query` (required: upstream answers a blank one with everything).
+// `class` is which streams to look at; `dateFrom` and `dateTo` narrow or widen
+// the range it looks in, which otherwise depends on the class. Results come a
+// `count` at a time, starting at `offset`.
+const SearchStreamsParamsSchema = z
+	.object({
+		query: z.string().trim().min(1),
+		sort: z.enum(['ascending', 'descending']).default('descending'),
+		class: z.enum(['archived', 'upcoming', 'all']).default('archived'),
+		category: z.string().trim().min(1).optional(),
+		dateFrom: z.iso.date().optional(),
+		dateTo: z.iso.date().optional(),
+		count: z.coerce.number().int().min(1).max(MAX_COUNT).default(50),
+		offset: z.coerce.number().int().min(0).default(0),
+	})
+	.refine((p) => !p.dateFrom || !p.dateTo || p.dateFrom <= p.dateTo, {
+		message: 'dateFrom must not be after dateTo',
+		path: ['dateFrom'],
+	})
 
 const StOlafStreamsParamsSchema = z.object({
 	date_from: z.iso.date(),
 	date_to: z.iso.date(),
 	sort: z.enum(['ascending', 'descending']),
-	class: z.enum(['current', 'archived']),
+	// `current` is upstream's word for upcoming
+	class: z.enum(['current', 'archived', 'all']),
 	squery: z.string().optional(),
+	category: z.string().optional(),
+	count: z.number().optional(),
+	offset: z.number().optional(),
 })
 type StOlafStreamsParamsType = z.infer<typeof StOlafStreamsParamsSchema>
 
@@ -105,7 +127,7 @@ export async function archived(ctx: Context) {
 	ctx.body = await getStreams(params)
 }
 
-// Upstream answers with one page of 50, so the default is newest-first: with
+// Upstream answers a page at a time, so the default is newest-first: with
 // ascending order a broad query would only ever show the oldest matches.
 export async function search(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
@@ -114,14 +136,26 @@ export async function search(ctx: Context) {
 	const parsed = SearchStreamsParamsSchema.safeParse(
 		Object.fromEntries(ctx.URL.searchParams.entries()),
 	)
-	if (!parsed.success) ctx.throw(400, 'query is required')
-	const {query, sort} = parsed.data
+	if (!parsed.success) ctx.throw(400, z.prettifyError(parsed.error))
+	const {query, sort, category, count, offset, ...rest} = parsed.data
+
+	const today = moment().tz('America/Chicago')
+	const ahead = today.clone().add(SEARCH_AHEAD_MONTHS, 'month')
+	const lookback = today.clone().subtract(SEARCH_YEARS, 'year')
+	const defaults = {
+		archived: {from: lookback, to: today},
+		upcoming: {from: today, to: ahead},
+		all: {from: lookback, to: ahead},
+	}[rest.class]
 
 	ctx.body = await getStreams({
-		class: 'archived',
-		date_from: moment().subtract(SEARCH_YEARS, 'year').tz('America/Chicago').format('YYYY-MM-DD'),
-		date_to: moment().tz('America/Chicago').format('YYYY-MM-DD'),
+		class: rest.class === 'upcoming' ? 'current' : rest.class,
+		date_from: rest.dateFrom ?? defaults.from.format('YYYY-MM-DD'),
+		date_to: rest.dateTo ?? defaults.to.format('YYYY-MM-DD'),
 		sort,
 		squery: query,
+		...(category && {category}),
+		count,
+		offset,
 	})
 }

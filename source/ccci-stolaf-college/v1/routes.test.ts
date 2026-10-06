@@ -4,6 +4,8 @@ import Koa from 'koa'
 import {noop} from 'lodash-es'
 import {withBodyParsers} from '@koa/body-parsers'
 import {api} from './index.ts'
+import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
+import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
 
 /// The routes the app is pointed at; each must exist, or the app's
 /// request for it 404s.
@@ -25,11 +27,24 @@ for (const route of ROUTES) {
 	})
 }
 
-/// The v1 routes behind a bare app, with the server's caching stubbed out.
-async function serve(t: test.TestContext) {
+/// The v1 routes behind a bare app. The server's caching is stubbed out, unless
+/// `realCache` asks for the real middleware, keyed as the server keys it.
+async function serve(t: test.TestContext, {realCache = false} = {}) {
 	let app = new Koa()
-	app.context['cacheControl'] = noop
-	app.context['cached'] = () => false
+	if (realCache) {
+		ctxCacheControl(app)
+		let store = new Map<string, CacheObject>()
+		app.use(
+			cachable({
+				get: (key) => store.get(key),
+				set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
+				statusName: 'test-cache',
+			}),
+		)
+	} else {
+		app.context['cacheControl'] = noop
+		app.context['cached'] = () => false
+	}
 	withBodyParsers(app)
 	app.use(api.routes())
 
@@ -147,10 +162,9 @@ void test('/streams/search is registered', () => {
 	assert.ok(api.match('/v1/streams/search', 'GET').route)
 })
 
-/// Calls `/streams/search`, with stolaf.edu's collection API faked; returns the
-/// response and the query strings the server sent it.
-async function searchStreams(t: test.TestContext, search: string) {
-	let base = await serve(t)
+/// stolaf.edu's collection API, faked: it answers with one stream, titled for
+/// the `squery` it was asked, and records the query strings it was sent.
+function fakeStreams(t: test.TestContext) {
 	let real = globalThis.fetch.bind(globalThis)
 	let asked: URLSearchParams[] = []
 	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL, init?: RequestInit) => {
@@ -158,38 +172,160 @@ async function searchStreams(t: test.TestContext, search: string) {
 		if (!url.startsWith('https://www.stolaf.edu/multimedia/api/collection')) {
 			return real(input, init)
 		}
-		asked.push(new URL(url).searchParams)
-		return Promise.resolve(Response.json({results: []}))
+		let params = new URL(url).searchParams
+		asked.push(params)
+		return Promise.resolve(
+			Response.json({
+				results: [
+					{
+						starttime: '2020-01-02 03:04',
+						location: '',
+						eid: 'e1',
+						performer: '',
+						subtitle: '',
+						poster: 'https://example.com/poster',
+						player: 'https://example.com/player',
+						status: 'archived',
+						category: 'concerts',
+						hptitle: '',
+						category_textcolor: '',
+						category_color: '',
+						thumb: 'https://example.com/thumb',
+						title: `result for ${params.get('squery') ?? ''}`,
+						iframesrc: 'https://example.com/embed',
+					},
+				],
+			}),
+		)
 	})
-	let response = await real(`${base}/v1/streams/search${search}`)
+	return asked
+}
+
+/// Calls `/streams/search` once; returns the response and the query strings the
+/// server sent upstream.
+async function searchStreams(t: test.TestContext, search: string) {
+	let base = await serve(t)
+	let asked = fakeStreams(t)
+	let response = await fetch(`${base}/v1/streams/search${search}`)
 	return {response, asked}
 }
 
-/// The year of an upstream `YYYY-MM-DD` date param.
-function yearOf(params: URLSearchParams | undefined, name: string) {
-	return Number(params?.get(name)?.slice(0, 4))
-}
+void test('/streams/search is cached per query, so a new search is never answered with an old one', async (t) => {
+	let base = await serve(t, {realCache: true})
+	let asked = fakeStreams(t)
+	let titleOf = async (query: string) => {
+		let response = await fetch(`${base}/v1/streams/search?query=${query}`)
+		assert.equal(response.status, 200)
+		return ((await response.json()) as {title: string}[]).map((stream) => stream.title)
+	}
 
-void test('/streams/search passes its query upstream as squery, newest first', async (t) => {
-	let {response, asked} = await searchStreams(t, '?query=choir')
+	assert.deepEqual(await titleOf('choir'), ['result for choir'])
+	assert.deepEqual(await titleOf('band'), ['result for band'])
+	assert.deepEqual(await titleOf('choir'), ['result for choir'])
+	assert.deepEqual(await titleOf('band'), ['result for band'])
+	// each distinct search went upstream once; the repeats came from the cache
+	assert.deepEqual(
+		asked.map((params) => params.get('squery')),
+		['choir', 'band'],
+	)
+})
+
+/// The one request `/streams/search` makes upstream for `search`.
+async function upstreamParams(t: test.TestContext, search: string) {
+	let {response, asked} = await searchStreams(t, search)
 	assert.equal(response.status, 200)
 	assert.equal(asked.length, 1)
 	let params = asked.at(0)
 	assert.ok(params)
+	return params
+}
+
+/// Whole days from the upstream `YYYY-MM-DD` date param `from` to `to`.
+function daysBetween(params: URLSearchParams, from: string, to: string) {
+	let day = (name: string) => Date.parse(`${params.get(name) ?? ''}T00:00:00Z`)
+	return Math.round((day(to) - day(from)) / 86_400_000)
+}
+
+void test('/streams/search by default looks at the last 30 years of archived streams, newest first', async (t) => {
+	let params = await upstreamParams(t, '?query=choir')
 	assert.equal(params.get('squery'), 'choir')
 	assert.equal(params.get('class'), 'archived')
 	assert.equal(params.get('sort'), 'descending')
-	assert.equal(yearOf(params, 'date_to') - yearOf(params, 'date_from'), 30)
+	assert.equal(params.get('count'), '50')
+	assert.equal(params.get('offset'), '0')
+	assert.equal(params.has('category'), false)
+	assert.ok(Math.abs(daysBetween(params, 'date_from', 'date_to') - 30 * 365.25) < 2)
 })
 
-void test('/streams/search ignores a date range from the client', async (t) => {
-	let {asked} = await searchStreams(t, '?query=choir&dateFrom=1900-01-01&sort=ascending')
-	let params = asked.at(0)
-	assert.notEqual(params?.get('date_from'), '1900-01-01')
-	assert.equal(params?.get('sort'), 'ascending')
+void test('/streams/search takes a sort', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&sort=ascending')
+	assert.equal(params.get('sort'), 'ascending')
 })
 
-for (const search of ['', '?query=', '?query=%20%20']) {
+void test('/streams/search takes a date range', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&dateFrom=2020-01-01&dateTo=2021-06-30')
+	assert.equal(params.get('date_from'), '2020-01-01')
+	assert.equal(params.get('date_to'), '2021-06-30')
+})
+
+void test('/streams/search takes one end of a date range, and defaults the other', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&dateFrom=2020-01-01')
+	assert.equal(params.get('date_from'), '2020-01-01')
+	assert.match(params.get('date_to') ?? '', /^\d{4}-\d{2}-\d{2}$/)
+})
+
+void test('/streams/search takes a category', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&category=concerts')
+	assert.equal(params.get('category'), 'concerts')
+})
+
+void test('/streams/search takes a count and an offset', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&count=25&offset=50')
+	assert.equal(params.get('count'), '25')
+	assert.equal(params.get('offset'), '50')
+})
+
+void test('/streams/search for upcoming streams asks upstream for current ones, from today on', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&class=upcoming')
+	assert.equal(params.get('class'), 'current')
+	assert.ok(daysBetween(params, 'date_from', 'date_to') > 0)
+	let today = new Date().toISOString().slice(0, 10)
+	assert.ok(Math.abs(Date.parse(params.get('date_from') ?? '') - Date.parse(today)) <= 86_400_000)
+})
+
+void test('/streams/search for all streams spans the past and the near future', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&class=all')
+	assert.equal(params.get('class'), 'all')
+	assert.ok(daysBetween(params, 'date_from', 'date_to') > 30 * 365)
+})
+
+void test("/streams/search keeps a client's own range over a class's default", async (t) => {
+	let params = await upstreamParams(
+		t,
+		'?query=choir&class=upcoming&dateFrom=2030-01-01&dateTo=2030-02-01',
+	)
+	assert.equal(params.get('date_from'), '2030-01-01')
+	assert.equal(params.get('date_to'), '2030-02-01')
+})
+
+const REFUSED = [
+	'',
+	'?query=',
+	'?query=%20%20',
+	'?query=choir&class=bogus',
+	'?query=choir&sort=sideways',
+	'?query=choir&category=',
+	'?query=choir&dateFrom=yesterday',
+	'?query=choir&dateFrom=2021-01-01&dateTo=2020-01-01',
+	'?query=choir&count=0',
+	'?query=choir&count=201',
+	'?query=choir&count=lots',
+	'?query=choir&count=1.5',
+	'?query=choir&offset=-1',
+	'?query=choir&offset=soon',
+]
+
+for (const search of REFUSED) {
 	void test(`/streams/search${search} is refused without asking upstream`, async (t) => {
 		let {response, asked} = await searchStreams(t, search)
 		assert.equal(response.status, 400)
