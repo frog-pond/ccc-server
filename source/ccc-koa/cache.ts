@@ -69,8 +69,6 @@ type FillOutcome =
 	| {kind: 'error'; error: unknown}
 	/** Its body can't be shared (a type the cache can't hold either): fetch for yourself. */
 	| {kind: 'own'}
-	/** It ran past `fillWaitTimeout` without ending: one waiter takes it over. */
-	| {kind: 'hung'}
 
 /// A fill in progress: how it will end, and how to end it.
 interface Fill {
@@ -185,13 +183,6 @@ interface Options {
 	hash?(ctx: ExtendableContext): string
 
 	/**
-	 * How long (in milliseconds) a request filling a key may run before the
-	 * requests waiting on it count it as hung, and one of them takes it over.
-	 * @default 10_000
-	 */
-	fillWaitTimeout?: number | undefined
-
-	/**
 	 * Whether a burst of concurrent misses for a key shares one fetch, asked
 	 * of the first request in the burst to miss. If not, every request in the
 	 * burst fetches for itself, as every request did before fetches were shared.
@@ -215,9 +206,7 @@ interface Options {
 
 	/**
 	 * Told, once for each fill, how it ended and how many requests waited on
-	 * it, with the request that started it. A fill that hangs is told so when
-	 * it hangs, not again when that request is done; its takeover is a fill
-	 * of its own.
+	 * it, with the request that started it.
 	 */
 	onFillEnd?(ctx: ExtendableContext, outcome: FillOutcome['kind'], waiters: number): void
 
@@ -247,7 +236,6 @@ export function cachable(options: Options): Middleware {
 		get,
 		set,
 		hash = (ctx) => ctx.request.url,
-		fillWaitTimeout = 10_000,
 		shareFetch = () => true,
 		onBurst = () => undefined,
 		onLookup = () => undefined,
@@ -257,8 +245,8 @@ export function cachable(options: Options): Middleware {
 
 	const methods = {...defaultMethods, ...options.methods}
 
-	// The reporting hooks only watch: one that throws mustn't fail a request,
-	// change how a fill ends, or escape the hang timer. Each is logged the first
+	// The reporting hooks only watch: one that throws mustn't fail a request or
+	// change how a fill ends. Each is logged the first
 	// time it throws, so a broken hook shows without flooding the log.
 	const brokenHooks = new Set<string>()
 	function report(name: string, hook: () => void): void {
@@ -284,27 +272,20 @@ export function cachable(options: Options): Middleware {
 	// `bypassing` instead of a fill, so the rest of the burst knows to fetch for
 	// itself too, until that first request is done or the key is stored.
 	//
-	// A fill that runs past `fillWaitTimeout` has hung: its waiters are let go
-	// together, and the first of them takes the fill over, fetching while the
-	// rest wait on it instead. A request waits on at most two fills, the one it
-	// found and one takeover, so about twice `fillWaitTimeout` at most. When a
-	// takeover hangs too, the first waiter to hear of it takes over in turn and
-	// the rest of its followers fetch for themselves.
+	// Waiters wait as long as the fill takes. A fill always ends, since its
+	// request settles it when done, and an upstream that stalls is cut off by
+	// the HTTP client's own timeouts -- as each waiter would be, fetching alone.
 	const filling = new Map<string, Fill>()
 
 	function startFill(ctx: ExtendableContext): Fill {
 		let key = ctx[CACHE_KEY]
 		let {promise, resolve} = Promise.withResolvers<FillOutcome>()
+		// a request that stores its response settles its fill there, then again when done
 		let settled = false
-		let hang = setTimeout(() => {
-			fill.settle({kind: 'hung'})
-		}, fillWaitTimeout)
-		hang.unref()
 		let fill: Fill = {
 			outcome: promise,
 			waiters: 0,
 			settle(outcome) {
-				clearTimeout(hang)
 				if (filling.get(key) === fill) filling.delete(key)
 				resolve(outcome)
 				if (settled) return
@@ -378,10 +359,6 @@ export function cachable(options: Options): Middleware {
 			return false
 		}
 
-		// A request that took over a fill finds the cache filled after all
-		this[CACHE_FILL_KEY]?.settle({kind: 'stored'})
-		this[CACHE_FILL_KEY] = undefined
-
 		// serve from cache
 		if (obj.type) {
 			this.response.type = obj.type
@@ -423,7 +400,7 @@ export function cachable(options: Options): Middleware {
 			if (fill) {
 				onBurst(ctx, true)
 				ctx[CACHE_WAITED_KEY] = true
-				let outcome = await waitFor(ctx, fill)
+				let outcome = await waitFor(fill)
 				if (outcome.kind === 'error') {
 					throw outcome.error
 				}
@@ -433,10 +410,9 @@ export function cachable(options: Options): Middleware {
 					if (outcome.body !== null && outcome.body !== undefined) ctx.body = outcome.body
 					return
 				}
-				// 'stored' goes on to serve from the cache; 'own' and 'timeout'
-				// go on to fetch for themselves, as does 'stored' when the store
-				// has already let the entry go (a maxAge of 0); 'took over' goes on
-				// to fetch for its waiters.
+				// 'stored' goes on to serve from the cache; 'own' goes on to fetch
+				// for itself, as does 'stored' when the store has already let the
+				// entry go (a maxAge of 0).
 			}
 		}
 
@@ -460,37 +436,11 @@ export function cachable(options: Options): Middleware {
 		}
 	}
 
-	type WaitOutcome = Exclude<FillOutcome, {kind: 'hung'}> | {kind: 'timeout' | 'took over'}
-
-	/// Waits on `fill` until it ends. If it hangs, takes it over, or follows
-	/// whoever did -- once.
-	function waitFor(ctx: ExtendableContext, fill: Fill): Promise<WaitOutcome> {
+	/// Waits on `fill` until it ends.
+	function waitFor(fill: Fill): Promise<FillOutcome> {
+		fill.waiters++
 		return Sentry.startSpan({name: 'wait for cache fill', op: 'cache.wait'}, async (span) => {
-			let outcome: WaitOutcome
-			let followed = false
-			for (;;) {
-				fill.waiters++
-				// each wait follows from the last: a fill is taken over only once it hangs
-				// eslint-disable-next-line no-await-in-loop
-				let ended = await fill.outcome
-				if (ended.kind !== 'hung') {
-					outcome = ended
-					break
-				}
-				let takeover = filling.get(ctx[CACHE_KEY])
-				if (!takeover) {
-					// the first waiter to hear of the hang takes the fill over
-					ctx[CACHE_FILL_KEY] = startFill(ctx)
-					outcome = {kind: 'took over'}
-					break
-				}
-				if (followed) {
-					outcome = {kind: 'timeout'}
-					break
-				}
-				followed = true
-				fill = takeover
-			}
+			let outcome = await fill.outcome
 			span.setAttribute('cache.wait.outcome', outcome.kind)
 			return outcome
 		})
