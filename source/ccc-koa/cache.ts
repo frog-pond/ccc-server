@@ -150,6 +150,8 @@ export interface CacheObject {
 	lastModified: Date | null
 	etag: string | null
 	gzip?: Buffer
+	/** The response headers named in `storedHeaders`, given back with this copy */
+	headers?: Record<string, string>
 }
 
 interface Options {
@@ -175,6 +177,13 @@ interface Options {
 	 * `Infinity`, the header leaves `ttl` out.
 	 */
 	expiresIn?(key: string): number | undefined
+
+	/**
+	 * Response headers kept with a cached copy and given back with it on every
+	 * hit, such as `link`. Any other header is about the one response that was
+	 * cached, and is not given back.
+	 */
+	storedHeaders?: readonly string[] | undefined
 
 	/**
 	 * A hashing function. By default, it caches based on the URL. It runs once,
@@ -258,6 +267,7 @@ export function cachable(options: Options): Middleware {
 	/* eslint-enable @typescript-eslint/unbound-method */
 
 	const methods = {...defaultMethods, ...options.methods}
+	const storedHeaders = options.storedHeaders ?? []
 
 	/// Says how the cache handled this request, in a `Cache-Status` header
 	/// (RFC 9211) made of `params`.
@@ -389,6 +399,9 @@ export function cachable(options: Options): Middleware {
 		}
 		if (obj.etag) {
 			this.response.etag = obj.etag
+		}
+		if (obj.headers) {
+			this.response.set(obj.headers)
 		}
 		if (this[CACHE_WAITED_KEY]) {
 			// it waited on another request's fetch, then took the copy that fetch stored
@@ -560,6 +573,15 @@ export function cachable(options: Options): Middleware {
 			type: ctx.response.get('Content-Type') || null,
 			lastModified: ctx.response.lastModified,
 			etag: ctx.response.get('etag') || null,
+		}
+
+		let headers: Record<string, string> = {}
+		for (let name of storedHeaders) {
+			let value = ctx.response.get(name)
+			if (value) headers[name] = value
+		}
+		if (Object.keys(headers).length > 0) {
+			obj.headers = headers
 		}
 
 		// if the content-type was `text` or `text/plain` then don't cache

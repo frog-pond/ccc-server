@@ -21,6 +21,7 @@ async function serve(
 		onFillEnd?: (ctx: Koa.ExtendableContext, outcome: string, waiters: number) => void
 		onStore?: (ctx: Koa.ExtendableContext, body: unknown) => void
 		expiresIn?: (key: string) => number | undefined
+		storedHeaders?: string[]
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -37,6 +38,7 @@ async function serve(
 			...(options.onLookup && {onLookup: options.onLookup}),
 			...(options.onFillEnd && {onFillEnd: options.onFillEnd}),
 			...(options.onStore && {onStore: options.onStore}),
+			...(options.storedHeaders && {storedHeaders: options.storedHeaders}),
 		}),
 	)
 	if (options.before) app.use(options.before)
@@ -61,6 +63,11 @@ async function serve(
 			// a 200 the cache won't hold
 			ctx.body = ''
 			return
+		}
+		if (ctx.path.startsWith('/linked')) {
+			ctx.set('Link', `<${ctx.path}?page=2>; rel="next"`)
+			// a header about this one response, which a cached copy must not give back
+			ctx.set('X-Request-Only', 'first')
 		}
 		ctx.body = body
 	})
@@ -618,4 +625,40 @@ void test('a route that does not cache has no Cache-Status', async (t) => {
 
 	let response = await get('/uncached')
 	t.assert.equal(response.headers.get('Cache-Status'), null)
+})
+
+void test('a hit gives back the headers the cache was told to store, and no others', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {storedHeaders: ['link']})
+	release()
+
+	await get('/linked')
+	let response = await get('/linked')
+	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; hit')
+	t.assert.equal(response.headers.get('Link'), '</linked?page=2>; rel="next"')
+	t.assert.equal(response.headers.get('X-Request-Only'), null)
+})
+
+void test('waiters on a stored fill get its stored headers', async (t) => {
+	let {releaseFirst, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {storedHeaders: ['link']})
+
+	let first = get('/linked')
+	await tick()
+	let second = get('/linked')
+	await tick()
+	releaseFirst()
+
+	let [, waiter] = await Promise.all([first, second])
+	t.assert.equal(waiter.headers.get('Link'), '</linked?page=2>; rel="next"')
+})
+
+void test('without storedHeaders, a hit gives back none of the headers it was fetched with', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream)
+	release()
+
+	await get('/linked')
+	let response = await get('/linked')
+	t.assert.equal(response.headers.get('Link'), null)
 })
