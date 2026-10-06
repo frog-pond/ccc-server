@@ -8,9 +8,10 @@ import type {Context} from '../../ccc-server/context.ts'
 /// a cached copy of, in WordPress's own shape.
 export const UPSTREAM = 'https://olafmessenger.com/wp-json/wp/v2'
 
-// Each value has one spelling, and each list a size WordPress serves, so the
-// cache holds at most one copy of an answer the app asks for, and anyone asking
-// for something else is refused before it costs a fetch from the paper.
+// Each value has one meaning and a size WordPress serves, so anything the app
+// would not ask for is refused before it costs a fetch from the paper. Other
+// spellings of the same request -- percent-encoded, or in another order -- are
+// let through, and share one last good copy (see `canonicalKey`).
 const ID = '[1-9][0-9]{0,9}'
 /// `items` comma-separated, from one to `max` of them.
 const listOf = (items: string, max: number) =>
@@ -184,6 +185,9 @@ const PASSED_HEADERS = ['x-wp-total', 'x-wp-totalpages']
 /// response cache's `storedHeaders`.
 export const PAGING_HEADERS = ['link', ...PASSED_HEADERS]
 
+/// UTF-8's byte order mark.
+const BYTE_ORDER_MARK = Buffer.from([0xef, 0xbb, 0xbf])
+
 /// How long the paper has to answer: well inside the app's own 10 seconds, so
 /// that while the paper hangs, the last good copy reaches the reader in time.
 const UPSTREAM_TIMEOUT = 7_000
@@ -211,6 +215,9 @@ async function fetchUpstream(url: string, timeout: number): Promise<Answer | und
 		if (!type?.includes('json')) return undefined
 		if (response.status >= 500 || OUTAGE_STATUSES.has(response.status)) return undefined
 		let body = Buffer.from(await response.arrayBuffer())
+		// A byte order mark, which a stray one in a theme's PHP file puts ahead of
+		// every answer, is dropped: JSON.parse refuses it, and the app needs none.
+		if (body.subarray(0, 3).equals(BYTE_ORDER_MARK)) body = body.subarray(3)
 		// throws, and so fails, for anything but JSON
 		JSON.parse(body.toString('utf8'))
 		let headers: Record<string, string> = {}
@@ -224,17 +231,28 @@ async function fetchUpstream(url: string, timeout: number): Promise<Answer | und
 	}
 }
 
-function send(ctx: Context, answer: Answer): void {
+/// Sends `answer`, with paging links when the list is one `rules` lets the app
+/// page through: a link to a page this route would refuse is no use to anyone.
+function send(ctx: Context, answer: Answer, rules: Rules): void {
 	ctx.status = answer.status
 	// the type goes first, or Koa guesses one from the string body
 	ctx.type = answer.type
 	ctx.set(answer.headers)
 	let totalPages = Number(answer.headers['x-wp-totalpages'])
-	if (answer.status === 200 && Number.isInteger(totalPages)) {
+	let paged = Object.hasOwn(rules.params, 'page')
+	if (paged && answer.status === 200 && Number.isInteger(totalPages)) {
 		let link = paginationLinks(ctx.path, ctx.querystring, totalPages)
 		if (link) ctx.set('Link', link)
 	}
 	ctx.body = answer.body
+}
+
+/// The key a request's last good copy is kept under: its path and its query
+/// decoded and in order of name, so every spelling of one request shares one
+/// copy, and no number of them can push out the copy the app's own needs.
+export function canonicalKey(path: string, query: URLSearchParams): string {
+	let sorted = [...query].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+	return `${path}?${sorted.map(([name, value]) => `${name}=${value}`).join('&')}`
 }
 
 /// The Messenger's WordPress API, answered from the response cache, then the
@@ -266,20 +284,21 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 
 		let path = id === undefined ? resource : `${resource}/${id}`
 		let url = `${UPSTREAM}/${path}${ctx.querystring ? `?${ctx.querystring}` : ''}`
+		let key = canonicalKey(path, new URLSearchParams(ctx.querystring))
 		let answer = await fetchUpstream(url, timeout)
 
 		if (answer) {
 			// a 4xx is passed on but not cached: the cache holds only 200s, and
 			// Cache-Control goes only on an answer worth keeping
 			if (answer.status === 200) {
-				lastGood.set(url, answer)
+				lastGood.set(key, answer)
 				ctx.cacheControl(ttl)
 			}
-			send(ctx, answer)
+			send(ctx, answer, verdict.rules)
 			return
 		}
 
-		let copy = lastGood.get(url)
+		let copy = lastGood.get(key)
 		if (!copy) {
 			ctx.throw(502, `the Olaf Messenger could not be reached for ${path}`)
 			return
@@ -287,7 +306,7 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 		// ask the paper again soon, rather than holding the old copy for the whole ttl
 		ctx.setCacheTTL(ONE_MINUTE)
 		ctx.cacheControl(ONE_MINUTE)
-		send(ctx, copy)
+		send(ctx, copy, verdict.rules)
 	}
 }
 

@@ -319,6 +319,77 @@ void test('wordpress', async (t) => {
 	)
 
 	await t.test(
+		'keeps the category tree’s last good copy however many other spellings of it are asked for',
+		async (t: TestContext) => {
+			let route = makeWordpressRoute()
+			let path = '/v1/news/mess/wp/v2/categories'
+			let real = 'per_page=100&_fields=id,name,parent'
+			let up = answerWith(t, () => Promise.resolve(json([{id: 1, name: 'News'}])))
+			await route(makeContext(path, {resource: 'categories'}, real).ctx)
+
+			let spellings = [
+				'per_page=100&_fields=id,parent,name',
+				'per_page=100&_fields=name,id,parent',
+				'per_page=100&_fields=name,parent,id',
+				'per_page=100&_fields=parent,id,name',
+				'per_page=100&_fields=parent,name,id',
+				'_fields=id,name,parent&per_page=100',
+				'per_page=%31%30%30&_fields=id,name,parent',
+				'per_page=1%30%30&_fields=id,name,parent',
+				'per_page=10%30&_fields=id,name,parent',
+				'per_page=%3100&_fields=id,name,parent',
+			]
+			for (let querystring of spellings) {
+				// eslint-disable-next-line no-await-in-loop
+				await route(makeContext(path, {resource: 'categories'}, querystring).ctx)
+			}
+			up.restore()
+
+			answerWith(t, () => Promise.resolve(new Response('down', {status: 503})))
+			let {ctx, raw} = makeContext(path, {resource: 'categories'}, real)
+			await route(ctx)
+
+			t.assert.equal(String(raw.body), '[{"id":1,"name":"News"}]')
+		},
+	)
+
+	await t.test(
+		'reads an answer with a byte order mark as JSON, and passes it on without one',
+		async (t: TestContext) => {
+			answerWith(t, () =>
+				Promise.resolve(
+					new Response('\uFEFF[{"id":1}]', {
+						headers: {'content-type': 'application/json; charset=UTF-8'},
+					}),
+				),
+			)
+			let {ctx, raw} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2')
+
+			await makeWordpressRoute()(ctx)
+
+			t.assert.equal(raw.status, 200)
+			t.assert.equal(String(raw.body), '[{"id":1}]')
+		},
+	)
+
+	await t.test(
+		'links pages only of a list this route lets the app page through',
+		async (t: TestContext) => {
+			answerWith(t, () => Promise.resolve(json([{id: 1}], {headers: {'x-wp-totalpages': '3'}})))
+			let {ctx, headers} = makeContext(
+				'/v1/news/mess/wp/v2/categories',
+				{resource: 'categories'},
+				'per_page=10',
+			)
+
+			await makeWordpressRoute()(ctx)
+
+			t.assert.equal(headers.get('x-wp-totalpages'), '3')
+			t.assert.equal(headers.has('link'), false)
+		},
+	)
+
+	await t.test(
 		'keeps the category tree’s last good copy however many stories are read',
 		async (t: TestContext) => {
 			let route = makeWordpressRoute()
