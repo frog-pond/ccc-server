@@ -100,7 +100,8 @@ async function main() {
 	}, 60_000).unref()
 	app.use(
 		cachable({
-			setCachedHeader: true,
+			statusName: 'ccc-server',
+			expiresIn: (key) => cache.expiresIn(key),
 			// for this percentage of bursts of concurrent misses for a key, share
 			// one upstream fetch among the burst
 			shareFetch: percentChance(

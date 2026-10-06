@@ -171,8 +171,8 @@ interface Options {
 
 	/**
 	 * How long (in milliseconds) a key has left before it expires, for the
-	 * `ttl` in `Cache-Status`. If it isn't set, or says `undefined`, the header
-	 * leaves `ttl` out.
+	 * `ttl` in `Cache-Status`. If it isn't set, or says `undefined` or
+	 * `Infinity`, the header leaves `ttl` out.
 	 */
 	expiresIn?(key: string): number | undefined
 
@@ -390,8 +390,18 @@ export function cachable(options: Options): Middleware {
 		if (obj.etag) {
 			this.response.etag = obj.etag
 		}
-		let ttl = expiresIn(this[CACHE_KEY])
-		setCacheStatus(this, ttl === undefined ? ['hit'] : ['hit', `ttl=${Math.floor(ttl / 1000)}`])
+		if (this[CACHE_WAITED_KEY]) {
+			// it waited on another request's fetch, then took the copy that fetch stored
+			setCacheStatus(this, ['fwd=uri-miss', 'collapsed', 'stored'])
+		} else {
+			let ttl = expiresIn(this[CACHE_KEY])
+			let params = ['hit']
+			// an entry that never expires has no ttl to give
+			if (ttl !== undefined && Number.isFinite(ttl)) {
+				params.push(`ttl=${Math.floor(ttl / 1000).toFixed(0)}`)
+			}
+			setCacheStatus(this, params)
+		}
 
 		if (this.request.fresh) {
 			this.response.status = 304
@@ -426,6 +436,7 @@ export function cachable(options: Options): Middleware {
 				}
 				if (outcome.kind === 'replay') {
 					ctx.set(outcome.headers)
+					setCacheStatus(ctx, ['fwd=uri-miss', 'collapsed'])
 					ctx.status = outcome.status
 					if (outcome.body !== null && outcome.body !== undefined) ctx.body = outcome.body
 					return
@@ -441,7 +452,11 @@ export function cachable(options: Options): Middleware {
 			await next()
 			let stored = await store(ctx)
 			if (ctx[CACHE_INFO_KEY]) {
-				setCacheStatus(ctx, stored ? ['fwd=uri-miss', 'stored'] : ['fwd=uri-miss'])
+				let params = ['fwd=uri-miss']
+				if (stored) params.push('stored')
+				// a stored response is a 200; store() answers a fresh request with a 304
+				if (stored && ctx.status === 304) params.push('fwd-status=200')
+				setCacheStatus(ctx, params)
 			}
 			if (stored) {
 				outcome = {kind: 'stored'}

@@ -73,7 +73,8 @@ async function serve(
 	})
 	await new Promise((resolve) => server.once('listening', resolve))
 	let {port} = server.address() as AddressInfo
-	return (path: string) => fetch(`http://localhost:${String(port)}${path}`)
+	return (path: string, init?: RequestInit) =>
+		fetch(`http://localhost:${String(port)}${path}`, init)
 }
 
 /// An upstream that answers only when told to, and counts its calls. The first
@@ -434,7 +435,7 @@ void test('a lookup hook that throws does not fail the request', async (t) => {
 	t.assert.equal(first.status, 200)
 	let second = await get('/menu')
 	t.assert.equal(second.status, 200)
-	t.assert.equal(second.headers.get('X-Cached-Response'), null)
+	t.assert.equal(second.headers.get('Cache-Status'), 'test-cache; hit')
 	t.assert.deepEqual(await second.json(), {path: '/menu'})
 	t.assert.equal(logged.mock.callCount(), 1, 'a broken hook is logged once, not every time')
 })
@@ -514,4 +515,107 @@ void test('a response served from the cache says so in Cache-Status, with its tt
 	await get('/menu')
 	let response = await get('/menu')
 	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; hit; ttl=42')
+})
+
+void test('a hit on a key that never expires leaves ttl out', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {expiresIn: () => Number.POSITIVE_INFINITY})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; hit')
+})
+
+void test('a response fetched but not stored says only that it went upstream', async (t) => {
+	let upstream = slowUpstream(t, () => undefined)
+	let get = await serve(t, upstream.fetchUpstream)
+	upstream.releaseFirst()
+
+	let response = await get('/menu')
+	t.assert.equal(response.status, 404)
+	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; fwd=uri-miss')
+})
+
+/// Gives every response the same Last-Modified, so a request that sends it back
+/// in If-Modified-Since is answered with a 304.
+const LAST_MODIFIED = new Date('2026-01-01T00:00:00Z')
+const lastModified: Koa.Middleware = async (ctx, next) => {
+	await next()
+	ctx.lastModified = LAST_MODIFIED
+}
+/// fetch sends a conditional request with Cache-Control: no-cache, which Koa
+/// never answers with a 304; `cache: 'no-cache'` sends max-age=0 instead.
+const ifModifiedSince: RequestInit = {
+	headers: {'If-Modified-Since': LAST_MODIFIED.toUTCString()},
+	cache: 'no-cache',
+}
+
+void test('a fetched response answered with a 304 gives the 200 it stored as fwd-status', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {before: lastModified})
+	release()
+
+	let response = await get('/menu', ifModifiedSince)
+	t.assert.equal(response.status, 304)
+	t.assert.equal(
+		response.headers.get('Cache-Status'),
+		'test-cache; fwd=uri-miss; stored; fwd-status=200',
+	)
+})
+
+void test('a 304 served from the cache is still a hit', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {before: lastModified})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu', ifModifiedSince)
+	t.assert.equal(response.status, 304)
+	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; hit')
+})
+
+/// The Cache-Status of each response, in order, since the requests in a burst
+/// can reach the server in any order.
+const cacheStatuses = (responses: Response[]) =>
+	responses.map((r) => r.headers.get('Cache-Status')).toSorted()
+
+void test('waiters that shared a stored fetch say they were collapsed', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream)
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	release()
+	t.assert.deepEqual(cacheStatuses(await burst), [
+		'test-cache; fwd=uri-miss; collapsed; stored',
+		'test-cache; fwd=uri-miss; stored',
+	])
+})
+
+void test('waiters that shared a fetch the cache did not hold say they were collapsed', async (t) => {
+	let upstream = slowUpstream(t, () => undefined)
+	let get = await serve(t, upstream.fetchUpstream)
+
+	let burst = Promise.all([get('/menu'), get('/menu')])
+	await tick()
+	upstream.releaseFirst()
+	let responses = await burst
+	t.assert.deepEqual(
+		responses.map((r) => r.status),
+		[404, 404],
+	)
+	t.assert.deepEqual(cacheStatuses(responses), [
+		'test-cache; fwd=uri-miss',
+		'test-cache; fwd=uri-miss; collapsed',
+	])
+})
+
+void test('a route that does not cache has no Cache-Status', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream)
+	release()
+
+	let response = await get('/uncached')
+	t.assert.equal(response.headers.get('Cache-Status'), null)
 })
