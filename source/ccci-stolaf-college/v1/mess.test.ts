@@ -1,6 +1,6 @@
 import {test, type TestContext} from 'node:test'
 
-import {rulesFor} from './mess.ts'
+import {paginationLinks, rulesFor, withPage} from './mess.ts'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 
 const query = (querystring: string) => new URLSearchParams(querystring)
@@ -87,5 +87,68 @@ void test('rulesFor', async (t) => {
 
 	await t.test('checks the decoded values of an encoded query string', (t: TestContext) => {
 		t.assert.ok('rules' in rulesFor('posts', undefined, query('_fields=id%2Cdate&per_page=2')))
+	})
+})
+
+void test('withPage', async (t) => {
+	await t.test('sets page last, as the app appends it', (t: TestContext) => {
+		t.assert.equal(withPage('per_page=50&_embed=true', 3), 'per_page=50&_embed=true&page=3')
+		t.assert.equal(withPage('per_page=50&page=2&_embed=true', 3), 'per_page=50&_embed=true&page=3')
+	})
+
+	await t.test(
+		'drops page for the first page, which the app asks for without one',
+		(t: TestContext) => {
+			t.assert.equal(withPage('per_page=50&_embed=true&page=4', 1), 'per_page=50&_embed=true')
+			t.assert.equal(withPage('page=4', 1), '')
+		},
+	)
+
+	await t.test(
+		'leaves the rest of the query as it came, encoded commas and all',
+		(t: TestContext) => {
+			t.assert.equal(
+				withPage('_fields=id%2Cdate&per_page=2', 2),
+				'_fields=id%2Cdate&per_page=2&page=2',
+			)
+		},
+	)
+})
+
+void test('paginationLinks', async (t) => {
+	const path = '/v1/news/mess/wp/v2/posts'
+
+	await t.test('gives first, prev, next and last for a middle page', (t: TestContext) => {
+		t.assert.equal(
+			paginationLinks(path, 'per_page=2&page=2', 5),
+			[
+				`<${path}?per_page=2>; rel="first"`,
+				`<${path}?per_page=2>; rel="prev"`,
+				`<${path}?per_page=2&page=3>; rel="next"`,
+				`<${path}?per_page=2&page=5>; rel="last"`,
+			].join(', '),
+		)
+	})
+
+	await t.test('gives no prev on the first page and no next on the last', (t: TestContext) => {
+		t.assert.equal(
+			paginationLinks(path, 'per_page=2', 2),
+			`<${path}?per_page=2>; rel="first", <${path}?per_page=2&page=2>; rel="next", <${path}?per_page=2&page=2>; rel="last"`,
+		)
+		t.assert.equal(
+			paginationLinks(path, 'per_page=2&page=2', 2),
+			`<${path}?per_page=2>; rel="first", <${path}?per_page=2>; rel="prev", <${path}?per_page=2&page=2>; rel="last"`,
+		)
+	})
+
+	await t.test('gives a bare path when the query held only the page', (t: TestContext) => {
+		t.assert.equal(
+			paginationLinks(path, 'page=2', 2),
+			`<${path}>; rel="first", <${path}>; rel="prev", <${path}?page=2>; rel="last"`,
+		)
+	})
+
+	await t.test('gives nothing for an empty list', (t: TestContext) => {
+		t.assert.equal(paginationLinks(path, 'per_page=2', 0), undefined)
 	})
 })
