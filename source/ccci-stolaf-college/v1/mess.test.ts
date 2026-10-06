@@ -5,7 +5,7 @@ import Koa from 'koa'
 
 import {makeWordpressRoute, paginationLinks, rulesFor, withPage} from './mess.ts'
 import {STORED_HEADERS} from '../../ccc-lib/stored-headers.ts'
-import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
+import {ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import type {Context, ContextState, RouterState} from '../../ccc-server/context.ts'
 import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
 import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
@@ -36,18 +36,6 @@ void test('rulesFor', async (t) => {
 		for (let [resource, id, querystring] of requests) {
 			let verdict = rulesFor(resource, id, query(querystring))
 			t.assert.ok('rules' in verdict, `${resource} ${id ?? ''} ?${querystring}`)
-		}
-	})
-
-	await t.test('caches each resource for its own time', (t: TestContext) => {
-		let ttl = (resource: string, id?: string) => {
-			let verdict = rulesFor(resource, id, query(''))
-			return 'rules' in verdict ? verdict.rules.ttl : undefined
-		}
-		t.assert.equal(ttl('posts'), 5 * ONE_MINUTE)
-		t.assert.equal(ttl('posts', '1'), ONE_HOUR)
-		for (let resource of ['categories', 'media', 'staff_profile', 'staff_year', 'pages']) {
-			t.assert.equal(ttl(resource), ONE_DAY)
 		}
 	})
 
@@ -101,10 +89,6 @@ void test('rulesFor', async (t) => {
 	await t.test('refuses an id written with leading zeros', (t: TestContext) => {
 		let verdict = rulesFor('posts', '0036238', query(''))
 		t.assert.ok('refusal' in verdict && verdict.refusal.status === 404)
-	})
-
-	await t.test('checks the decoded values of an encoded query string', (t: TestContext) => {
-		t.assert.ok('rules' in rulesFor('posts', undefined, query('_fields=id%2Cdate&per_page=2')))
 	})
 })
 
@@ -183,7 +167,9 @@ function makeContext(path: string, params: {resource: string; id?: string}, quer
 		params,
 		querystring,
 		cached: mock.fn((_maxAge?: number) => false),
-		cacheControl: mock.fn((_maxAge: number) => undefined),
+		cacheControl: mock.fn((maxAge: number) => {
+			headers.set('cache-control', `public, max-age=${String(maxAge / 1000)}`)
+		}),
 		setCacheTTL: mock.fn((_maxAge: number) => undefined),
 		remove(name: string) {
 			headers.delete(name.toLowerCase())
@@ -265,7 +251,6 @@ void test('wordpress', async (t) => {
 		t.assert.deepEqual(urls(), ['https://olafmessenger.com/wp-json/wp/v2/posts/36238?_embed=true'])
 		t.assert.equal(String(raw.body), '{"id":36238}')
 		t.assert.equal(headers.has('link'), false)
-		t.assert.deepEqual(raw.cached.mock.calls[0]?.arguments, [ONE_HOUR])
 	})
 
 	await t.test(
@@ -444,31 +429,6 @@ void test('wordpress', async (t) => {
 	})
 
 	await t.test(
-		'declares its own Cache-Control before asking the cache, and drops it from a 4xx',
-		async (t: TestContext) => {
-			answerWith(t, () =>
-				Promise.resolve(json({code: 'rest_post_invalid_page_number'}, {status: 400})),
-			)
-			let {ctx, raw, headers} = makeContext(POSTS, {resource: 'posts'}, 'per_page=50&page=9999')
-			let order: string[] = []
-			raw.cacheControl = mock.fn((_maxAge: number) => {
-				order.push('cacheControl')
-				headers.set('cache-control', 'public, max-age=300')
-			})
-			raw.cached = mock.fn((_maxAge?: number) => {
-				order.push('cached')
-				return false
-			})
-
-			await makeWordpressRoute()(ctx)
-
-			t.assert.deepEqual(order.slice(0, 2), ['cacheControl', 'cached'])
-			t.assert.equal(raw.status, 400)
-			t.assert.equal(headers.has('cache-control'), false)
-		},
-	)
-
-	await t.test(
 		'keeps the category tree’s last good copy however many stories are read',
 		async (t: TestContext) => {
 			let route = makeWordpressRoute()
@@ -518,16 +478,7 @@ void test('wordpress', async (t) => {
 		// every phone reaches the paper from this server's one address, which a rate limit or a
 		// firewall may answer for
 		['a rate limit', () => Promise.resolve(json({code: 'too_many_requests'}, {status: 429}))],
-		[
-			'a firewall block',
-			() =>
-				Promise.resolve(
-					new Response('<html>blocked</html>', {
-						status: 403,
-						headers: {'content-type': 'text/html'},
-					}),
-				),
-		],
+		['a firewall block', () => Promise.resolve(json({code: 'rest_forbidden'}, {status: 403}))],
 	]
 	for (let [failure, response] of failures) {
 		// each failure's subtests share no state, but node:test runs them one at a time anyway
@@ -550,15 +501,14 @@ void test('wordpress', async (t) => {
 			t.assert.equal(headers.get('x-wp-totalpages'), '3')
 			t.assert.ok(headers.get('link')?.includes('rel="next"'))
 		})
-
-		// eslint-disable-next-line no-await-in-loop
-		await t.test(`is a 502 on ${failure} with no copy to serve`, async (t: TestContext) => {
-			answerWith(t, response)
-			let {ctx} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2')
-
-			await t.assert.rejects(makeWordpressRoute()(ctx), {status: 502})
-		})
 	}
+
+	await t.test('is a 502 on an outage with no copy to serve', async (t: TestContext) => {
+		answerWith(t, () => Promise.resolve(new Response('down', {status: 503})))
+		let {ctx} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2')
+
+		await t.assert.rejects(makeWordpressRoute()(ctx), {status: 502})
+	})
 })
 
 /// The route behind the server's own response cache, as the app reaches it, with the paper

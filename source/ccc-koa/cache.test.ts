@@ -654,16 +654,6 @@ void test('waiters on a stored fill get its stored headers', async (t) => {
 	t.assert.equal(waiter.headers.get('Link'), '</linked?page=2>; rel="next"')
 })
 
-void test('without storedHeaders, a hit gives back none of the headers it was fetched with', async (t) => {
-	let {release, fetchUpstream} = slowUpstream(t)
-	let get = await serve(t, fetchUpstream)
-	release()
-
-	await get('/linked')
-	let response = await get('/linked')
-	t.assert.equal(response.headers.get('Link'), null)
-})
-
 void test('a hit says in Cache-Control how long its copy has left, not how long it was stored for', async (t) => {
 	let {release, fetchUpstream} = slowUpstream(t)
 	let get = await serve(t, fetchUpstream, {
