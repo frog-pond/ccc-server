@@ -55,10 +55,7 @@ void test('image', async (t) => {
 		t.assert.equal(ctx.type, 'image/webp')
 		t.assert.deepEqual(ctx.body, Buffer.from([82, 73, 70, 70]))
 		const [request] = fetch.mock.calls[0]?.arguments as [Request]
-		t.assert.equal(
-			request.url,
-			'https://stolaf.dev/AAO-React-Native/img/webcams/madson.webp',
-		)
+		t.assert.equal(request.url, 'https://stolaf.dev/AAO-React-Native/img/webcams/madson.webp')
 	})
 
 	await t.test('is a 404 for an image Pages does not have', async (t: TestContext) => {
