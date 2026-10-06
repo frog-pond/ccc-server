@@ -1,6 +1,7 @@
 import {z} from 'zod'
 import {ONE_DAY, ONE_MINUTE} from '../ccc-lib/constants.ts'
 import {getJson} from '../ccc-lib/http.ts'
+import {countedLoad, feedName} from '../ccc-lib/feed-metrics.ts'
 
 // ── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -481,7 +482,11 @@ export function withYesterday(scores: Score[], yesterday: Score[]): Score[] {
 	return [...yesterday.filter((score) => !known.has(score.id)), ...scores]
 }
 
-export async function fetchAthleticsScores(url: string, teamName: string): Promise<Score[]> {
+export function fetchAthleticsScores(url: string, teamName: string): Promise<Score[]> {
+	return countedLoad('athletics', feedName(url), () => loadAthleticsScores(url, teamName))
+}
+
+async function loadAthleticsScores(url: string, teamName: string): Promise<Score[]> {
 	const now = new Date()
 	const [scoresJson, livestatsJson, calendarJson] = await Promise.all([
 		getJson(url),

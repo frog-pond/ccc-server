@@ -1,4 +1,5 @@
 import {getJson, http} from '../ccc-lib/http.ts'
+import {countedLoad} from '../ccc-lib/feed-metrics.ts'
 import {
 	advisorsOf,
 	contactsOf,
@@ -117,13 +118,15 @@ const SORTABLE_PREFIXES = /^(St\.? Olaf(?: College)?|The) +/i
 /// the list lacks -- the same description, as HTML, and the same meeting
 /// fields -- so the list is one request rather than one per org; what only
 /// an org's own pages hold is `presenceOrg`'s job, one org at a time.
-export async function presence(school: string): Promise<SortableStudentOrgType[]> {
-	let base = `https://api.presence.io/${school}/v1`
+export function presence(school: string): Promise<SortableStudentOrgType[]> {
+	return countedLoad('presence', school, async () => {
+		let base = `https://api.presence.io/${school}/v1`
 
-	let [list, campus] = await Promise.all([getJson(`${base}/organizations`), fetchCampus(base)])
-	let body = BasicPresenceOrgSchema.array().parse(list)
+		let [list, campus] = await Promise.all([getJson(`${base}/organizations`), fetchCampus(base)])
+		let body = BasicPresenceOrgSchema.array().parse(list)
 
-	return sortOrgs(body.map((org) => cleanOrg(org, SORTABLE_PREFIXES, campus)))
+		return sortOrgs(body.map((org) => cleanOrg(org, SORTABLE_PREFIXES, campus)))
+	})
 }
 
 /// One row per org-category membership — an org with two categories appears

@@ -4,6 +4,7 @@ import moment from 'moment'
 import getUrls from 'get-urls'
 import {htmlFragment, textFromHtml} from '../../ccc-lib/dom.ts'
 import {getJson} from '../../ccc-lib/http.ts'
+import {countedLoad, feedName} from '../../ccc-lib/feed-metrics.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
 
@@ -113,11 +114,13 @@ async function fetchAllPosts() {
 	return posts
 }
 
-export async function getAllJobs() {
-	let posts = await fetchAllPosts()
-	return posts
-		.filter((p) => !p._embedded?.['wp:term']?.flat().some((t) => t.name === 'Archived'))
-		.map(convertJobPost)
+export function getAllJobs() {
+	return countedLoad('wp-jobs', feedName(jobsUrl), async () => {
+		let posts = await fetchAllPosts()
+		return posts
+			.filter((p) => !p._embedded?.['wp:term']?.flat().some((t) => t.name === 'Archived'))
+			.map(convertJobPost)
+	})
 }
 
 export async function jobs(ctx: Context) {

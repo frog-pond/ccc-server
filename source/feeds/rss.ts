@@ -3,12 +3,16 @@ import {getText} from '../ccc-lib/http.ts'
 import {parseXml, textFromHtml} from '../ccc-lib/dom.ts'
 import {FeedItemSchema, type FeedItemType} from './types.ts'
 import moment from 'moment'
+import {countedLoad, feedName} from '../ccc-lib/feed-metrics.ts'
 
 export async function fetchRssFeed(url: string | URL, query = {}): Promise<FeedItemType[]> {
 	try {
-		const body = await getText(url, {searchParams: query})
-		const dom = parseXml(body)
-		return Array.from(dom.querySelectorAll('item')).map(convertRssItemToStory)
+		// a failure answers with no stories, so the count is all that shows it
+		return await countedLoad('rss', feedName(url), async () => {
+			const body = await getText(url, {searchParams: query})
+			const dom = parseXml(body)
+			return Array.from(dom.querySelectorAll('item')).map(convertRssItemToStory)
+		})
 	} catch (error) {
 		console.error(`Failed to fetch RSS feed from ${String(url)}:`, error)
 		Sentry.captureException(error, {tags: {url: String(url)}}) // TODO: figure out how these interact - but need to see data in sentry first

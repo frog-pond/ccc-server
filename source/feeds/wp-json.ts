@@ -4,6 +4,7 @@ import {FeedItemSchema, type FeedItemType} from './types.ts'
 import type {SearchParamsOption} from 'ky'
 import {z} from 'zod'
 import moment from 'moment'
+import {countedLoad, feedName} from '../ccc-lib/feed-metrics.ts'
 
 export type WpJsonFeedEntryType = z.infer<typeof WpJsonFeedEntrySchema>
 export const WpJsonFeedEntrySchema = z.object({
@@ -49,12 +50,14 @@ export const WpJsonFeedEntrySchema = z.object({
 
 const WpJsonFeedResponseSchema = z.array(WpJsonFeedEntrySchema)
 
-export async function fetchWpJson(
+export function fetchWpJson(
 	url: string | URL,
 	query: SearchParamsOption = {},
 ): Promise<FeedItemType[]> {
-	const feed = WpJsonFeedResponseSchema.parse(await getJson(url, {searchParams: query}))
-	return feed.map(convertWpJsonItemToStory)
+	return countedLoad('wp-json', feedName(url), async () => {
+		const feed = WpJsonFeedResponseSchema.parse(await getJson(url, {searchParams: query}))
+		return feed.map(convertWpJsonItemToStory)
+	})
 }
 
 export function convertWpJsonItemToStory(item: WpJsonFeedEntryType) {
