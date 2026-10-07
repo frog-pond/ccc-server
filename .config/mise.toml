@@ -26,6 +26,10 @@ run = "node --watch source/ccc-server/index.ts"
 run = { task = "start" }
 env = { NODE_ENV = "production" }
 
+[tasks.all]
+run = "mise run start"
+env = { INSTITUTION = "all" }
+
 [tasks."stolaf-college"]
 run = "mise run start"
 env = { INSTITUTION = "stolaf-college" }
