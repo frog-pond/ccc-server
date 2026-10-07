@@ -297,6 +297,18 @@ void test('/streams/search for all streams has no date limit either', async (t) 
 	assert.equal(params.has('date_to'), false)
 })
 
+void test('/streams/upcoming and searching upcoming streams use the same default window', async (t) => {
+	let base = await serve(t)
+	let asked = fakeStreams(t)
+	assert.equal((await fetch(`${base}/v1/streams/upcoming`)).status, 200)
+	assert.equal((await fetch(`${base}/v1/streams/search?query=choir&class=upcoming`)).status, 200)
+	let [route, search] = asked
+	assert.ok(route && search)
+	assert.equal(route.get('class'), 'current')
+	assert.equal(route.get('date_from'), search.get('date_from'))
+	assert.equal(route.get('date_to'), search.get('date_to'))
+})
+
 void test('/streams/search sends only the date it was given, for archived and all streams', async (t) => {
 	let from = await upstreamParams(t, '?query=choir&dateFrom=2020-01-01')
 	assert.equal(from.get('date_from'), '2020-01-01')
