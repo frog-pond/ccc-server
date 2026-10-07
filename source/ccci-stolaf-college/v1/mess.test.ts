@@ -23,7 +23,11 @@ void test('rulesFor', async (t) => {
 			['posts', '36238', '_embed=true'],
 			['posts', '36238', '_fields=content'],
 			['categories', undefined, 'per_page=100&_fields=id,name,parent'],
-			['media', undefined, 'include=4,5&per_page=100&_fields=id,source_url,media_details,caption'],
+			[
+				'media',
+				undefined,
+				'include=4,5&per_page=100&_fields=id,source_url,media_details,caption,alt_text',
+			],
 			['staff_profile', undefined, 'staff_name=390&_embed=true'],
 			[
 				'staff_profile',

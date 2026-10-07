@@ -36,6 +36,7 @@ const FIELD_NAMES = [
 	'source_url',
 	'media_details',
 	'caption',
+	'alt_text',
 	'_links',
 	'_embedded',
 ]
