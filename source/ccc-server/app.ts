@@ -17,7 +17,7 @@ import {ONE_DAY} from '../ccc-lib/constants.ts'
 import {STORED_HEADERS} from '../ccc-lib/stored-headers.ts'
 import {parsePercent, percentChance, recordFlagInSentry} from '../ccc-lib/feature-flags.ts'
 
-export const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
+export const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college', 'all'])
 
 /// The route a request matched, as the router's template (`/v1/food/named/:name`),
 /// so a metric gets one series per route rather than one per URL.
@@ -34,10 +34,19 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 	// set up the routes
 	//
 	const router = new Router<RouterState, ContextState>()
-	const {v1} = await (institution === 'stolaf-college'
-		? import('../ccci-stolaf-college/index.ts')
-		: import('../ccci-carleton-college/index.ts'))
-	router.use(v1.routes())
+	if (institution === 'all') {
+		const [stolaf, carleton] = await Promise.all([
+			import('../ccci-stolaf-college/index.ts'),
+			import('../ccci-carleton-college/index.ts'),
+		])
+		router.use('/stolaf', stolaf.v1.routes())
+		router.use('/carleton', carleton.v1.routes())
+	} else {
+		const {v1} = await (institution === 'stolaf-college'
+			? import('../ccci-stolaf-college/index.ts')
+			: import('../ccci-carleton-college/index.ts'))
+		router.use(v1.routes())
+	}
 
 	router.get('/', (ctx) => {
 		ctx.body = 'Hello world!'

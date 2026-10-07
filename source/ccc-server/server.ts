@@ -51,6 +51,7 @@ async function main() {
 		process.exit(1)
 	}
 	const boundPort = boundAddress.port
+	const discoveryPath = institution === 'all' ? '/' : '/v1/'
 	console.log(`listening on port ${String(boundPort)}`)
 
 	if (process.env['ADVERTISE_MDNS'] === '1') {
@@ -100,7 +101,7 @@ async function main() {
 					'local',
 					String(boundPort),
 					`institution=${institution}`,
-					'path=/v1/',
+					`path=${discoveryPath}`,
 				],
 				{stdio: 'ignore', detached: false},
 			)
@@ -123,7 +124,7 @@ async function main() {
 					name: serviceName,
 					type: 'ccc-server',
 					port: boundPort,
-					txt: {institution, path: '/v1/'},
+					txt: {institution, path: discoveryPath},
 				})
 				console.log(
 					`advertising mDNS service: ${service.name}._ccc-server._tcp on port ${String(boundPort)}`,
