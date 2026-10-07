@@ -34,11 +34,8 @@ const GetStreamsParamsSchema = z.object({
 	sort: z.enum(['ascending', 'descending']).default('ascending'),
 })
 
-// How far back search looks, unless asked for a range.
-const SEARCH_YEARS = 30
-
 // How far ahead the upcoming streams reach, for the `upcoming` route and for
-// search.
+// searching them.
 const UPCOMING_MONTHS = 2
 
 const chicagoToday = () => moment().tz('America/Chicago')
@@ -57,10 +54,11 @@ const wholeNumber = (min: number, max = Number.MAX_SAFE_INTEGER) =>
 		.pipe(z.number().int().min(min).max(max))
 
 // Search by `query` (required: upstream answers a blank one with everything).
-// `class` is which streams to look at; `dateFrom` and `dateTo` narrow or widen
-// the range it looks in, which otherwise depends on the class. Results come a
-// `count` at a time, starting at `offset`. `sort` is newest first for what has
-// happened and soonest first for what is to come.
+// `class` is which streams to look at; `dateFrom` and `dateTo` limit the range
+// it looks in. Without them, archived streams and all streams are searched
+// without limit, and upcoming streams cover the next UPCOMING_MONTHS. Results
+// come a `count` at a time, starting at `offset`. `sort` is newest first for
+// what has happened and soonest first for what is to come.
 const SearchStreamsParamsSchema = z
 	.object({
 		query: z.string().trim().min(1),
@@ -91,9 +89,18 @@ const StOlafStreamsParamsSchema = z.object({
 	count: z.number().optional(),
 	offset: z.number().optional(),
 })
-type StOlafStreamsParamsType = z.infer<typeof StOlafStreamsParamsSchema>
 
-const getStreams = async (params: StOlafStreamsParamsType) => {
+// Search alone may leave out either date. Upstream then takes the one given, or
+// none, and searches without limit on the end that is missing (checked against
+// the live API: a lone date_from, a lone date_to or neither each answer 200
+// with the right matches, in well under a second for a broad term).
+const StOlafSearchParamsSchema = StOlafStreamsParamsSchema.partial({
+	date_from: true,
+	date_to: true,
+})
+type StOlafParamsType = z.infer<typeof StOlafSearchParamsSchema>
+
+const getStreams = async (params: StOlafParamsType) => {
 	const url = 'https://www.stolaf.edu/multimedia/api/collection'
 	const response = await getJson(url, {searchParams: params})
 	const json = (await response) as Promise<(z.infer<typeof StreamEntry> & {starttime: string})[]>
@@ -113,9 +120,10 @@ export async function upcoming(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
+	const window = upcomingWindow()
 	const {
-		dateFrom = chicagoToday().format('YYYY-MM-DD'),
-		dateTo = chicagoToday().add(UPCOMING_MONTHS, 'month').format('YYYY-MM-DD'),
+		dateFrom = window.from,
+		dateTo = window.to,
 		sort,
 	} = GetStreamsParamsSchema.parse(Object.fromEntries(ctx.URL.searchParams.entries()))
 
@@ -191,14 +199,35 @@ function pageLinks(page: {
 	return links.length ? links.join(', ') : undefined
 }
 
-/// An ISO date moved by `amount` of `unit`, as the St. Olaf calendar day.
-function shiftDate(date: string, amount: number, unit: 'month' | 'year') {
-	return moment.tz(date, 'YYYY-MM-DD', 'America/Chicago').add(amount, unit).format('YYYY-MM-DD')
+/// An ISO date moved by `months`, as the St. Olaf calendar day.
+function shiftMonths(date: string, months: number) {
+	return moment.tz(date, 'YYYY-MM-DD', 'America/Chicago').add(months, 'month').format('YYYY-MM-DD')
+}
+
+/// Today and UPCOMING_MONTHS ahead, as ISO dates: the usual window for upcoming
+/// streams, for the `upcoming` route and for searching them.
+function upcomingWindow() {
+	const from = chicagoToday().format('YYYY-MM-DD')
+	return {from, to: shiftMonths(from, UPCOMING_MONTHS)}
 }
 
 // ISO dates sort as text.
 const earlier = (a: string, b: string) => (a < b ? a : b)
 const later = (a: string, b: string) => (a > b ? a : b)
+
+/// The range to search upcoming streams in: what the client gave, and for an
+/// end it left out, the end of the usual window, moved out if that would cut
+/// off the end it gave (someone looking from a date past the usual end means to
+/// look on from there). Only upcoming streams are in the range: a `dateTo`
+/// before today leaves a range in the past, which upstream has no upcoming
+/// streams in either way.
+function upcomingRange(dateFrom: string | undefined, dateTo: string | undefined) {
+	const usual = upcomingWindow()
+	return {
+		from: dateFrom ?? (dateTo ? earlier(usual.from, dateTo) : usual.from),
+		to: dateTo ?? (dateFrom ? later(usual.to, shiftMonths(dateFrom, UPCOMING_MONTHS)) : usual.to),
+	}
+}
 
 // Upstream answers a page at a time, so what has happened is newest first: with
 // ascending order a broad query would only ever show the oldest matches.
@@ -215,31 +244,15 @@ export async function search(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	const today = chicagoToday()
-	const ahead = today.clone().add(UPCOMING_MONTHS, 'month')
-	const lookback = today.clone().subtract(SEARCH_YEARS, 'year')
-	const defaults = {
-		archived: {from: lookback, to: today},
-		upcoming: {from: today, to: ahead},
-		all: {from: lookback, to: ahead},
-	}[streamClass]
-	const defaultFrom = defaults.from.format('YYYY-MM-DD')
-	const defaultTo = defaults.to.format('YYYY-MM-DD')
+	// Archived streams and all streams are searched without limit unless the
+	// client gives a date; upstream takes either end alone.
+	const range =
+		streamClass === 'upcoming' ? upcomingRange(dateFrom, dateTo) : {from: dateFrom, to: dateTo}
 
-	// An end the client left out is the class's default, moved out if it would
-	// otherwise cut off the end they gave: someone looking from a date past
-	// the default end means to look on from there.
-	const from =
-		dateFrom ??
-		(dateTo ? earlier(defaultFrom, shiftDate(dateTo, -SEARCH_YEARS, 'year')) : defaultFrom)
-	const to =
-		dateTo ??
-		(dateFrom ? later(defaultTo, shiftDate(dateFrom, UPCOMING_MONTHS, 'month')) : defaultTo)
-
-	const params = StOlafStreamsParamsSchema.parse({
+	const params = StOlafSearchParamsSchema.parse({
 		class: streamClass === 'upcoming' ? 'current' : streamClass,
-		date_from: from,
-		date_to: to,
+		...(range.from && {date_from: range.from}),
+		...(range.to && {date_to: range.to}),
 		sort,
 		squery: query,
 		...(category && {category}),
