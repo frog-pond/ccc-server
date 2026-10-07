@@ -90,6 +90,21 @@ mise run build
 mise run start:prod
 ```
 
+## Endpoint versioning
+
+Each institution's `index.ts` registers complete versioned paths on an unprefixed
+router. Handlers live in version directories such as `v1/`. To introduce a new
+version of one endpoint, add its handler in `v2/` (or `v1.1/` or whatever) and register it alongside v1:
+
+```ts
+api.get('/v1/spaces/hours', hoursV1.buildingHours)
+api.get('/v2/spaces/hours', hoursV2.buildingHours)
+```
+
+Other endpoints can stay on v1. Combined mode adds the institution prefix to both
+paths, for example `/stolaf/v2/spaces/hours`. `/v1/routes` lists all registered
+endpoint versions for the institution.
+
 ## Images
 
 `GET /v1/images/<group>/<name>.webp` (both servers) proxies `img/<group>/<name>.webp` from the All About Olaf GitHub Pages site, which publishes the `images/` folder of [StoDevX/AAO-React-Native](https://github.com/StoDevX/AAO-React-Native). The groups are `contacts`, `news-sources`, `spaces`, `streaming` and `webcams`; any other group or file name is a 404.
