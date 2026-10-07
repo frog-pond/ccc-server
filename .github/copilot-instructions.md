@@ -5,7 +5,7 @@
 - **Architecture:**
   - Modular structure under `source/` for each institution (`ccci-stolaf-college`, `ccci-carleton-college`).
   - Each institution exposes an API router with individually versioned endpoints for food menus, calendars, contacts, news, orgs, etc.
-  - Main entry: `source/ccc-server/server.ts` selects institution via `INSTITUTION` env var and wires up middleware/routes.
+  - `source/ccc-server/server.ts` selects the serving mode via `INSTITUTION` and starts the server; `source/ccc-server/app.ts` creates the app and wires up middleware/routes.
   - Shared utilities in `source/ccc-lib/` and `source/calendar/`.
 - **Data Flow:**
   - Requests enter via Koa server, routed by institution, handled by modular endpoint files.
@@ -18,6 +18,7 @@
 - **Development:**
   - Watch/reload: `npm run watch` (runs both TypeScript compilation and server in watch mode) or use `mise run build:watch` + `mise run start:watch` in separate terminals
   - Institution-specific dev: `mise run stolaf-college` or `mise run carleton-college` (these set `INSTITUTION` and depend on `build`)
+  - Combined dev: `mise run all` (sets `INSTITUTION=all` to serve both institutions in one process).
 - **Build:** `mise run build` (same as `npm run build`)
 - **Production:** `mise run start:prod` (or `npm run start:prod`)
 - **Testing / TDD workflow:**
@@ -35,7 +36,9 @@
   - Register full versioned paths (for example `/v1/spaces/hours` and `/v2/spaces/hours`) on the unprefixed institution router; handlers live in version directories.
   - `/v1/routes` lists all available endpoint versions for introspection/testing.
 - **Environment Variables:**
-  - `INSTITUTION` required for server startup (`stolaf-college` or `carleton-college`).
+  - `INSTITUTION` is required for server startup: `stolaf-college`, `carleton-college`, or `all`.
+  - Single-institution modes serve versioned endpoints under `/v1/`. `all` serves both institutions in one process or container, mounting St. Olaf under `/stolaf` and Carleton under `/carleton`; for example, their route listings are `/stolaf/v1/routes` and `/carleton/v1/routes`. These institution prefixes apply to every endpoint version, including `/stolaf/v2/...` and `/carleton/v1.1/...`.
+  - Combined mode has no unprefixed `/v1` API. `/ping` and `/_cache` stay at the server root, and response cache keys include the institution prefix to keep the two institutions' responses separate.
   - `SMOKE_TEST` disables port binding for test runs.
   - `NODE_PORT` sets server port (default 3000).
 - **Middleware:**
