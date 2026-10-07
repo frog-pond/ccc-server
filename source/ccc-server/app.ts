@@ -39,13 +39,13 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 			import('../ccci-stolaf-college/index.ts'),
 			import('../ccci-carleton-college/index.ts'),
 		])
-		router.use('/stolaf', stolaf.v1.routes())
-		router.use('/carleton', carleton.v1.routes())
+		router.use('/stolaf', stolaf.api.routes())
+		router.use('/carleton', carleton.api.routes())
 	} else {
-		const {v1} = await (institution === 'stolaf-college'
+		const {api} = await (institution === 'stolaf-college'
 			? import('../ccci-stolaf-college/index.ts')
 			: import('../ccci-carleton-college/index.ts'))
-		router.use(v1.routes())
+		router.use(api.routes())
 	}
 
 	router.get('/', (ctx) => {

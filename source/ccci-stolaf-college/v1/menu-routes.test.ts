@@ -1,7 +1,7 @@
 import {test} from 'node:test'
 import Koa from 'koa'
 import {noop} from 'lodash-es'
-import {api} from './index.ts'
+import {api} from '../index.ts'
 import {CafeMenuResponseSchema} from '../../menus-bonapp/types.ts'
 
 /// The v1 routes behind a bare app, with the server's caching stubbed out.

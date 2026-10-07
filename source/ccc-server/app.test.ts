@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {createApp, InstitutionSchema} from './app.ts'
+import {api as stolafApi} from '../ccci-stolaf-college/index.ts'
+import {api as carletonApi} from '../ccci-carleton-college/index.ts'
 import {http} from '../ccc-lib/http.ts'
 
 async function serve(
@@ -91,3 +93,48 @@ for (const institution of ['stolaf-college', 'carleton-college'] as const) {
 		assert.equal((await fetch(`${base}/carleton/v1/routes`)).status, 404)
 	})
 }
+
+void test('endpoints can add v2 alongside v1 in single and combined modes', async (t) => {
+	const upstream = t.mock.method(http, 'get', (url: string) => ({
+		json: () => Promise.resolve({source: url}),
+	}))
+	for (const [name, api] of [
+		['stolaf', stolafApi],
+		['carleton', carletonApi],
+	] as const) {
+		const originalLength = api.stack.length
+		t.after(() => api.stack.splice(originalLength))
+		api.get('/v2/spaces/hours', (ctx) => {
+			ctx.body = {institution: name, version: 2}
+		})
+	}
+	await Promise.all(
+		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
+			const base = await serve(t, mode)
+			const names = mode === 'all' ? ['stolaf', 'carleton'] : [mode.replace('-college', '')]
+			await Promise.all(
+				names.map(async (name) => {
+					const prefix = mode === 'all' ? `/${name}` : ''
+					const v1 = await fetch(`${base}${prefix}/v1/spaces/hours`)
+					assert.equal(v1.status, 200)
+					assert.match(JSON.stringify(await v1.json()), /building-hours.json/)
+					const v2 = await fetch(`${base}${prefix}/v2/spaces/hours`)
+					assert.equal(v2.status, 200)
+					assert.deepEqual(await v2.json(), {institution: name, version: 2})
+					const routes = (await (await fetch(`${base}${prefix}/v1/routes`)).json()) as {
+						path: string
+						displayName: string
+					}[]
+					assert.ok(routes.some((route) => route.path === `${prefix}/v1/spaces/hours`))
+					assert.ok(
+						routes.some(
+							(route) =>
+								route.path === `${prefix}/v2/spaces/hours` && route.displayName === 'spaces/hours',
+						),
+					)
+				}),
+			)
+		}),
+	)
+	assert.equal(upstream.mock.callCount(), 4)
+})

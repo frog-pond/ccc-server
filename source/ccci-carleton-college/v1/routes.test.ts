@@ -2,7 +2,7 @@ import {test} from 'node:test'
 import Koa from 'koa'
 import {noop} from 'lodash-es'
 import {withBodyParsers} from '@koa/body-parsers'
-import {api} from './index.ts'
+import {api} from '../index.ts'
 
 /// The v1 routes behind a bare app, with the server's caching stubbed out.
 async function serve(t: test.TestContext) {
