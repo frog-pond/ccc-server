@@ -94,7 +94,7 @@ for (const institution of ['stolaf-college', 'carleton-college'] as const) {
 	})
 }
 
-void test('endpoints can add v2 alongside v1 in single and combined modes', async (t) => {
+void test('endpoints can add dotted and major versions alongside v1 in single and combined modes', async (t) => {
 	const upstream = t.mock.method(http, 'get', (url: string) => ({
 		json: () => Promise.resolve({source: url}),
 	}))
@@ -104,9 +104,11 @@ void test('endpoints can add v2 alongside v1 in single and combined modes', asyn
 	] as const) {
 		const originalLength = api.stack.length
 		t.after(() => api.stack.splice(originalLength))
-		api.get('/v2/spaces/hours', (ctx) => {
-			ctx.body = {institution: name, version: 2}
-		})
+		for (const version of ['v1.1', 'v2']) {
+			api.get(`/${version}/spaces/hours`, (ctx) => {
+				ctx.body = {institution: name, version}
+			})
+		}
 	}
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
@@ -118,23 +120,56 @@ void test('endpoints can add v2 alongside v1 in single and combined modes', asyn
 					const v1 = await fetch(`${base}${prefix}/v1/spaces/hours`)
 					assert.equal(v1.status, 200)
 					assert.match(JSON.stringify(await v1.json()), /building-hours.json/)
-					const v2 = await fetch(`${base}${prefix}/v2/spaces/hours`)
-					assert.equal(v2.status, 200)
-					assert.deepEqual(await v2.json(), {institution: name, version: 2})
+					await Promise.all(
+						['v1.1', 'v2'].map(async (version) => {
+							const response = await fetch(`${base}${prefix}/${version}/spaces/hours`)
+							assert.equal(response.status, 200)
+							assert.deepEqual(await response.json(), {institution: name, version})
+						}),
+					)
 					const routes = (await (await fetch(`${base}${prefix}/v1/routes`)).json()) as {
 						path: string
 						displayName: string
 					}[]
 					assert.ok(routes.some((route) => route.path === `${prefix}/v1/spaces/hours`))
-					assert.ok(
-						routes.some(
-							(route) =>
-								route.path === `${prefix}/v2/spaces/hours` && route.displayName === 'spaces/hours',
-						),
-					)
+					for (const version of ['v1.1', 'v2']) {
+						assert.ok(
+							routes.some(
+								(route) =>
+									route.path === `${prefix}/${version}/spaces/hours` &&
+									route.displayName === 'spaces/hours',
+							),
+						)
+					}
 				}),
 			)
 		}),
 	)
 	assert.equal(upstream.mock.callCount(), 4)
+})
+
+void test('mixed-case route listings return usable paths in single and combined modes', async (t) => {
+	await Promise.all(
+		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
+			const base = await serve(t, mode)
+			const prefixes = mode === 'all' ? ['/stolaf', '/carleton'] : ['']
+			await Promise.all(
+				prefixes.map(async (prefix) => {
+					const expected: unknown = await (await fetch(`${base}${prefix}/v1/routes`)).json()
+					await Promise.all(
+						['/V1/ROUTES', '/v1/Routes/'].map(async (suffix) => {
+							const response = await fetch(`${base}${prefix}${suffix}`)
+							assert.equal(response.status, 200)
+							const routes = (await response.json()) as {path: string; displayName: string}[]
+							assert.deepEqual(routes, expected)
+							const listing = routes.find((route) => route.displayName === 'routes')
+							assert.ok(listing)
+							assert.equal((await fetch(`${base}${listing.path}`)).status, 200)
+						}),
+					)
+					assert.equal((await fetch(`${base}${prefix}/v1/routes/v1/routes`)).status, 404)
+				}),
+			)
+		}),
+	)
 })

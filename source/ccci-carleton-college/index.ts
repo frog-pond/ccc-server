@@ -126,12 +126,12 @@ api.get('/v1/athletics/scores', athletics.scores)
 
 // sitemap
 api.get('/v1/routes', (ctx: Context) => {
-	const mountPrefix = ctx.path.replace(/\/v1\/routes\/?$/, '')
-	const leadingVersionRegex = /\/v[0-9]+\//
+	const mountPrefix = ctx.path.replace(/\/v1\/routes\/?$/i, '')
+	const leadingVersionRegex = /^\/v[0-9]+(?:\.[0-9]+)*\//
 	ctx.body = api.stack
 		.map((layer) => ({
 			path: `${mountPrefix}${layer.path.toString()}`,
-			displayName: layer.path.toString().split(leadingVersionRegex).slice(1).join(),
+			displayName: layer.path.toString().replace(leadingVersionRegex, ''),
 			params: layer.paramNames.map((param) => param.name),
 		}))
 		.toSorted((a, b) => a.path.localeCompare(b.path))
