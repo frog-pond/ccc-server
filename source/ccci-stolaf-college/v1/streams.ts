@@ -34,11 +34,8 @@ const GetStreamsParamsSchema = z.object({
 	sort: z.enum(['ascending', 'descending']).default('ascending'),
 })
 
-// How far back search looks, unless asked for a range.
-const SEARCH_YEARS = 30
-
 // How far ahead the upcoming streams reach, for the `upcoming` route and for
-// search.
+// searching them.
 const UPCOMING_MONTHS = 2
 
 const chicagoToday = () => moment().tz('America/Chicago')
@@ -57,10 +54,11 @@ const wholeNumber = (min: number, max = Number.MAX_SAFE_INTEGER) =>
 		.pipe(z.number().int().min(min).max(max))
 
 // Search by `query` (required: upstream answers a blank one with everything).
-// `class` is which streams to look at; `dateFrom` and `dateTo` narrow or widen
-// the range it looks in, which otherwise depends on the class. Results come a
-// `count` at a time, starting at `offset`. `sort` is newest first for what has
-// happened and soonest first for what is to come.
+// `class` is which streams to look at; `dateFrom` and `dateTo` limit the range
+// it looks in. Without them, archived streams and all streams are searched
+// without limit, and upcoming streams cover the next UPCOMING_MONTHS. Results
+// come a `count` at a time, starting at `offset`. `sort` is newest first for
+// what has happened and soonest first for what is to come.
 const SearchStreamsParamsSchema = z
 	.object({
 		query: z.string().trim().min(1),
@@ -81,8 +79,9 @@ const SearchStreamsParamsSchema = z
 	})
 
 const StOlafStreamsParamsSchema = z.object({
-	date_from: z.iso.date(),
-	date_to: z.iso.date(),
+	// upstream searches without limit when it is given no dates
+	date_from: z.iso.date().optional(),
+	date_to: z.iso.date().optional(),
 	sort: z.enum(['ascending', 'descending']),
 	// `current` is upstream's word for upcoming
 	class: z.enum(['current', 'archived', 'all']),
@@ -191,14 +190,27 @@ function pageLinks(page: {
 	return links.length ? links.join(', ') : undefined
 }
 
-/// An ISO date moved by `amount` of `unit`, as the St. Olaf calendar day.
-function shiftDate(date: string, amount: number, unit: 'month' | 'year') {
-	return moment.tz(date, 'YYYY-MM-DD', 'America/Chicago').add(amount, unit).format('YYYY-MM-DD')
+/// An ISO date moved by `months`, as the St. Olaf calendar day.
+function shiftMonths(date: string, months: number) {
+	return moment.tz(date, 'YYYY-MM-DD', 'America/Chicago').add(months, 'month').format('YYYY-MM-DD')
 }
 
 // ISO dates sort as text.
 const earlier = (a: string, b: string) => (a < b ? a : b)
 const later = (a: string, b: string) => (a > b ? a : b)
+
+/// The range to search upcoming streams in: what the client gave, and for an
+/// end it left out, today or UPCOMING_MONTHS ahead, moved out if that would
+/// cut off the end it gave (someone looking from a date past the usual end
+/// means to look on from there).
+function upcomingRange(dateFrom: string | undefined, dateTo: string | undefined) {
+	const today = chicagoToday().format('YYYY-MM-DD')
+	const ahead = shiftMonths(today, UPCOMING_MONTHS)
+	return {
+		from: dateFrom ?? (dateTo ? earlier(today, dateTo) : today),
+		to: dateTo ?? (dateFrom ? later(ahead, shiftMonths(dateFrom, UPCOMING_MONTHS)) : ahead),
+	}
+}
 
 // Upstream answers a page at a time, so what has happened is newest first: with
 // ascending order a broad query would only ever show the oldest matches.
@@ -215,31 +227,15 @@ export async function search(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	const today = chicagoToday()
-	const ahead = today.clone().add(UPCOMING_MONTHS, 'month')
-	const lookback = today.clone().subtract(SEARCH_YEARS, 'year')
-	const defaults = {
-		archived: {from: lookback, to: today},
-		upcoming: {from: today, to: ahead},
-		all: {from: lookback, to: ahead},
-	}[streamClass]
-	const defaultFrom = defaults.from.format('YYYY-MM-DD')
-	const defaultTo = defaults.to.format('YYYY-MM-DD')
-
-	// An end the client left out is the class's default, moved out if it would
-	// otherwise cut off the end they gave: someone looking from a date past
-	// the default end means to look on from there.
-	const from =
-		dateFrom ??
-		(dateTo ? earlier(defaultFrom, shiftDate(dateTo, -SEARCH_YEARS, 'year')) : defaultFrom)
-	const to =
-		dateTo ??
-		(dateFrom ? later(defaultTo, shiftDate(dateFrom, UPCOMING_MONTHS, 'month')) : defaultTo)
+	// Archived streams and all streams are searched without limit unless the
+	// client gives a date; upstream takes either end alone.
+	const range =
+		streamClass === 'upcoming' ? upcomingRange(dateFrom, dateTo) : {from: dateFrom, to: dateTo}
 
 	const params = StOlafStreamsParamsSchema.parse({
 		class: streamClass === 'upcoming' ? 'current' : streamClass,
-		date_from: from,
-		date_to: to,
+		...(range.from && {date_from: range.from}),
+		...(range.to && {date_to: range.to}),
 		sort,
 		squery: query,
 		...(category && {category}),

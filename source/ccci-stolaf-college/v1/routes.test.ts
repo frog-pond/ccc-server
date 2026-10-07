@@ -253,7 +253,7 @@ function daysBetween(params: URLSearchParams, from: string, to: string) {
 	return Math.round((day(to) - day(from)) / 86_400_000)
 }
 
-void test('/streams/search by default looks at the last 30 years of archived streams, newest first', async (t) => {
+void test('/streams/search by default looks at all archived streams, newest first, with no date limit', async (t) => {
 	let params = await upstreamParams(t, '?query=choir')
 	assert.equal(params.get('squery'), 'choir')
 	assert.equal(params.get('class'), 'archived')
@@ -261,7 +261,8 @@ void test('/streams/search by default looks at the last 30 years of archived str
 	assert.equal(params.get('count'), '50')
 	assert.equal(params.get('offset'), '0')
 	assert.equal(params.has('category'), false)
-	assert.ok(Math.abs(daysBetween(params, 'date_from', 'date_to') - 30 * 365.25) < 2)
+	assert.equal(params.has('date_from'), false)
+	assert.equal(params.has('date_to'), false)
 })
 
 void test('/streams/search takes a sort', async (t) => {
@@ -280,18 +281,29 @@ void test('/streams/search takes a count and an offset', async (t) => {
 	assert.equal(params.get('offset'), '50')
 })
 
-void test('/streams/search for upcoming streams asks upstream for current ones, from today on', async (t) => {
+void test('/streams/search for upcoming streams asks upstream for current ones, from today for two months', async (t) => {
 	let params = await upstreamParams(t, '?query=choir&class=upcoming')
 	assert.equal(params.get('class'), 'current')
-	assert.ok(daysBetween(params, 'date_from', 'date_to') > 0)
+	let days = daysBetween(params, 'date_from', 'date_to')
+	assert.ok(days >= 59 && days <= 62)
 	let today = new Date().toISOString().slice(0, 10)
 	assert.ok(Math.abs(Date.parse(params.get('date_from') ?? '') - Date.parse(today)) <= 86_400_000)
 })
 
-void test('/streams/search for all streams spans the past and the near future', async (t) => {
+void test('/streams/search for all streams has no date limit either', async (t) => {
 	let params = await upstreamParams(t, '?query=choir&class=all')
 	assert.equal(params.get('class'), 'all')
-	assert.ok(daysBetween(params, 'date_from', 'date_to') > 30 * 365)
+	assert.equal(params.has('date_from'), false)
+	assert.equal(params.has('date_to'), false)
+})
+
+void test('/streams/search sends only the date it was given, for archived and all streams', async (t) => {
+	let from = await upstreamParams(t, '?query=choir&dateFrom=2020-01-01')
+	assert.equal(from.get('date_from'), '2020-01-01')
+	assert.equal(from.has('date_to'), false)
+	let to = await upstreamParams(t, '?query=choir&class=all&dateTo=2021-06-30')
+	assert.equal(to.get('date_to'), '2021-06-30')
+	assert.equal(to.has('date_from'), false)
 })
 
 void test("/streams/search keeps a client's own range over a class's default", async (t) => {
@@ -309,19 +321,16 @@ void test('/streams/search from a date past the default end looks on from there'
 	assert.equal(params.get('date_to'), '2999-03-01')
 })
 
-void test('/streams/search to a date before the default start looks back from there', async (t) => {
-	let params = await upstreamParams(t, '?query=choir&dateTo=1900-01-01')
-	assert.equal(params.get('date_to'), '1900-01-01')
-	assert.equal(params.get('date_from'), '1870-01-01')
+void test('/streams/search for upcoming streams to a date before today looks back to it', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&class=upcoming&dateTo=2020-01-01')
+	assert.equal(params.get('date_to'), '2020-01-01')
+	assert.equal(params.get('date_from'), '2020-01-01')
 })
 
-void test('/streams/search keeps a default end that already suits the date given', async (t) => {
-	let from = await upstreamParams(t, '?query=choir&class=upcoming&dateFrom=2020-01-01')
-	assert.equal(from.get('date_from'), '2020-01-01')
-	assert.ok((from.get('date_to') ?? '') > new Date().toISOString().slice(0, 10))
-	let to = await upstreamParams(t, '?query=choir&dateTo=2020-01-01')
-	assert.equal(to.get('date_to'), '2020-01-01')
-	assert.ok((to.get('date_from') ?? '9') < '1999')
+void test('/streams/search for upcoming streams keeps a default end that already suits the date given', async (t) => {
+	let params = await upstreamParams(t, '?query=choir&class=upcoming&dateFrom=2020-01-01')
+	assert.equal(params.get('date_from'), '2020-01-01')
+	assert.ok((params.get('date_to') ?? '') > new Date().toISOString().slice(0, 10))
 })
 
 void test('/streams/search refuses a bad request before asking the cache', async (t) => {
