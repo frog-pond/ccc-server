@@ -13,8 +13,6 @@ async function serve(
 	fetchUpstream: Upstream,
 	options: {
 		hash?: (ctx: Koa.ExtendableContext) => string
-		/** a Link header for the route to set when it fetches, not when it serves a hit */
-		link?: (path: string) => string
 		before?: Koa.Middleware
 		stream?: PassThrough
 		shareFetch?: (ctx: Koa.ExtendableContext) => boolean
@@ -23,6 +21,7 @@ async function serve(
 		onFillEnd?: (ctx: Koa.ExtendableContext, outcome: string, waiters: number) => void
 		onStore?: (ctx: Koa.ExtendableContext, body: unknown) => void
 		expiresIn?: (key: string) => number | undefined
+		storedHeaders?: string[]
 	} = {},
 ) {
 	let store = new Map<string, CacheObject>()
@@ -39,6 +38,7 @@ async function serve(
 			...(options.onLookup && {onLookup: options.onLookup}),
 			...(options.onFillEnd && {onFillEnd: options.onFillEnd}),
 			...(options.onStore && {onStore: options.onStore}),
+			...(options.storedHeaders && {storedHeaders: options.storedHeaders}),
 		}),
 	)
 	if (options.before) app.use(options.before)
@@ -53,8 +53,8 @@ async function serve(
 		}
 		if (ctx.cached(60_000)) return
 		let body = await fetchUpstream(ctx.path)
-		if (options.link) ctx.set('Link', options.link(ctx.path))
 		if (body === undefined) {
+			if (ctx.path.startsWith('/linked')) ctx.set('Link', `<${ctx.path}?page=2>; rel="next"`)
 			ctx.set('Cache-Control', 'max-age=60')
 			ctx.set('Set-Cookie', 'session=first')
 			ctx.status = 404
@@ -64,6 +64,11 @@ async function serve(
 			// a 200 the cache won't hold
 			ctx.body = ''
 			return
+		}
+		if (ctx.path.startsWith('/linked')) {
+			ctx.set('Link', `<${ctx.path}?page=2>; rel="next"`)
+			// a header about this one response, which a cached copy must not give back
+			ctx.set('X-Request-Only', 'first')
 		}
 		ctx.body = body
 	})
@@ -623,36 +628,85 @@ void test('a route that does not cache has no Cache-Status', async (t) => {
 	t.assert.equal(response.headers.get('Cache-Status'), null)
 })
 
-void test('a hit gives the Link header the fill had, though its route returned before setting one', async (t) => {
-	let calls: string[] = []
-	let get = await serve(
-		t,
-		(path) => {
-			calls.push(path)
-			return Promise.resolve({path})
-		},
-		{link: (path) => `<${path}?offset=50>; rel="next"`},
-	)
+void test('a hit gives back the headers the cache was told to store, and no others', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {storedHeaders: ['link']})
+	release()
 
-	let miss = await get('/page')
-	t.assert.equal(miss.headers.get('link'), '</page?offset=50>; rel="next"')
-	let hit = await get('/page')
-	t.assert.match(hit.headers.get('cache-status') ?? '', /hit/)
-	t.assert.equal(hit.headers.get('link'), '</page?offset=50>; rel="next"')
-	t.assert.equal(calls.length, 1)
+	await get('/linked')
+	let response = await get('/linked')
+	t.assert.equal(response.headers.get('Cache-Status'), 'test-cache; hit')
+	t.assert.equal(response.headers.get('Link'), '</linked?page=2>; rel="next"')
+	t.assert.equal(response.headers.get('X-Request-Only'), null)
 })
 
-void test("a waiter on a fill is given the fill's Link header", async (t) => {
-	let upstream = slowUpstream(t)
-	let get = await serve(t, upstream.fetchUpstream, {
-		link: (path) => `<${path}?offset=50>; rel="next"`,
-	})
+void test('waiters on a stored fill get its stored headers', async (t) => {
+	let {releaseFirst, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {storedHeaders: ['link']})
 
-	let first = get('/page')
-	let second = get('/page')
+	let first = get('/linked')
 	await tick()
-	upstream.release()
-	let [a, b] = await Promise.all([first, second])
-	t.assert.equal(a.headers.get('link'), '</page?offset=50>; rel="next"')
-	t.assert.equal(b.headers.get('link'), '</page?offset=50>; rel="next"')
+	let second = get('/linked')
+	await tick()
+	releaseFirst()
+
+	let [, waiter] = await Promise.all([first, second])
+	t.assert.equal(waiter.headers.get('Link'), '</linked?page=2>; rel="next"')
+})
+
+void test('a hit says in Cache-Control how long its copy has left, not how long it was stored for', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {
+		expiresIn: () => 42_900,
+		before: async (ctx, next) => {
+			ctx.set('Cache-Control', 'public, max-age=60')
+			await next()
+		},
+	})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Control'), 'public, max-age=42')
+})
+
+void test('a hit adds no Cache-Control to a route that sets none', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {expiresIn: () => 42_900})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Control'), null)
+})
+
+void test('waiters on a fill the cache did not hold get its stored headers too', async (t) => {
+	let {releaseFirst, fetchUpstream} = slowUpstream(t, () => undefined)
+	let get = await serve(t, fetchUpstream, {storedHeaders: ['link']})
+
+	let first = get('/linked')
+	await tick()
+	let second = get('/linked')
+	await tick()
+	releaseFirst()
+
+	let [, waiter] = await Promise.all([first, second])
+	t.assert.equal(waiter.status, 404)
+	t.assert.equal(waiter.headers.get('Link'), '</linked?page=2>; rel="next"')
+})
+
+void test('a hit keeps a Cache-Control the route set that forbids shared caching', async (t) => {
+	let {release, fetchUpstream} = slowUpstream(t)
+	let get = await serve(t, fetchUpstream, {
+		expiresIn: () => 42_900,
+		before: async (ctx, next) => {
+			ctx.set('Cache-Control', 'private, no-store')
+			await next()
+		},
+	})
+	release()
+
+	await get('/menu')
+	let response = await get('/menu')
+	t.assert.equal(response.headers.get('Cache-Control'), 'private, no-store')
 })

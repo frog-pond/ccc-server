@@ -5,6 +5,7 @@ import {noop} from 'lodash-es'
 import {withBodyParsers} from '@koa/body-parsers'
 import {api} from './index.ts'
 import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
+import {STORED_HEADERS} from '../../ccc-lib/stored-headers.ts'
 import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
 
 /// The routes the app is pointed at; each must exist, or the app's
@@ -42,6 +43,7 @@ async function serve(
 				get: (key) => store.get(key),
 				set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
 				statusName: 'test-cache',
+				storedHeaders: STORED_HEADERS,
 				...(onLookup && {onLookup}),
 			}),
 		)

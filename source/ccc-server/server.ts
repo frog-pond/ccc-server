@@ -14,6 +14,7 @@ import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
 import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
 import QuickLRU from 'quick-lru'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
+import {STORED_HEADERS} from '../ccc-lib/stored-headers.ts'
 import {parsePercent, percentChance, recordFlagInSentry} from '../ccc-lib/feature-flags.ts'
 
 const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college'])
@@ -101,6 +102,7 @@ async function main() {
 	app.use(
 		cachable({
 			statusName: 'ccc-server',
+			storedHeaders: STORED_HEADERS,
 			expiresIn: (key) => cache.expiresIn(key),
 			// for this percentage of bursts of concurrent misses for a key, share
 			// one upstream fetch among the burst
