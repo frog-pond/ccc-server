@@ -39,6 +39,27 @@ mise run stolaf-college
 mise run carleton-college
 ```
 
+### Combined server
+
+Set `INSTITUTION=all` to serve both institutions from one process or container:
+
+```sh
+mise run all
+# Or for production:
+INSTITUTION=all mise run start:prod
+```
+
+On `api.frogpond.tech`, the API base URLs would be:
+
+- St. Olaf: `https://api.frogpond.tech/stolaf/v1/`
+- Carleton: `https://api.frogpond.tech/carleton/v1/`
+
+Each institution's endpoints and route listing live under its base URL, such as
+`/stolaf/v1/routes` and `/carleton/v1/routes`. `/ping` and `/_cache` remain at the
+server root; cache keys include the institution prefix. Combined mode has no
+unprefixed `/v1` API. The existing `INSTITUTION=stolaf-college` and
+`INSTITUTION=carleton-college` modes continue to serve `/v1/`.
+
 ### Local Network Discovery (mDNS)
 
 When developing alongside a React Native client on the same network, you can advertise the server via mDNS/Bonjour so the client can discover it automatically without typing the IP address.
@@ -48,7 +69,7 @@ mise run stolaf-college:mdns
 mise run carleton-college:mdns
 ```
 
-This publishes a `_ccc-server._tcp` service (via `dns-sd` on macOS, `bonjour-service` elsewhere). The service name includes the hostname (e.g. `ccc-server (Gecko)`), and the TXT record contains the institution name and the `/v1/` path prefix. The advertisement is torn down cleanly on `SIGTERM`/`SIGINT`.
+This publishes a `_ccc-server._tcp` service (via `dns-sd` on macOS, `bonjour-service` elsewhere). The service name includes the hostname (e.g. `ccc-server (Gecko)`), and the TXT record contains the institution name and the `/v1/` path prefix (`institution=all` and `path=/` in combined mode). The advertisement is torn down cleanly on `SIGTERM`/`SIGINT`.
 
 You can also set `ADVERTISE_MDNS=1` manually alongside any start command:
 
@@ -68,6 +89,21 @@ dns-sd -B _ccc-server._tcp local
 mise run build
 mise run start:prod
 ```
+
+## Endpoint versioning
+
+Each institution's `index.ts` registers complete versioned paths on an unprefixed
+router. Handlers live in version directories such as `v1/`. To introduce a new
+version of one endpoint, add its handler in `v2/` (or `v1.1/` or whatever) and register it alongside v1:
+
+```ts
+api.get('/v1/spaces/hours', hoursV1.buildingHours)
+api.get('/v2/spaces/hours', hoursV2.buildingHours)
+```
+
+Other endpoints can stay on v1. Combined mode adds the institution prefix to both
+paths, for example `/stolaf/v2/spaces/hours`. `/v1/routes` lists all registered
+endpoint versions for the institution.
 
 ## Images
 
