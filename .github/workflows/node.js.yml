@@ -14,12 +14,18 @@ jobs:
   # It is the equivalent of the old `build`, `test`, `lint`, and `format` jobs combined.
   checks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # lets the flakiness.io reporter upload test results via GitHub OIDC
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup mise
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
       - run: npm ci
       - run: mise run check
+        env:
+          FLAKINESS_PROJECT: frogpond/ccc-server
 
   smoke-test-stolaf:
     runs-on: ubuntu-latest

@@ -27,7 +27,7 @@
     "carleton-college": "env INSTITUTION=carleton-college npm run start:dev",
     "test:stolaf-college": "./scripts/smoke-test.sh stolaf-college",
     "test:carleton-college": "./scripts/smoke-test.sh carleton-college",
-    "test": "node --test 'source/**/*.test.ts'",
+    "test": "node --test --test-reporter=spec --test-reporter=@mxschmitt/flakiness-node --test-reporter-destination=stdout --test-reporter-destination=stdout 'source/**/*.test.ts'",
     "watch": "npm run build:watch & npm run start:watch"
   },
   "dependencies": {
@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@mxschmitt/flakiness-node": "0.1.1",
     "@types/koa": "3.0.3",
     "@types/koa__router": "15.0.0",
     "@types/koa-compress": "4.0.7",
