@@ -3,7 +3,12 @@ import {readFileSync} from 'node:fs'
 import {describe, it} from 'node:test'
 import {z} from 'zod'
 import {parseScheduleData} from './parse.ts'
-import {calendarResponse, resolveScheduleData, resolveSchedules} from './resolve.ts'
+import {
+	calendarResponse,
+	resolveScheduleData,
+	resolveScheduleResponses,
+	resolveSchedules,
+} from './resolve.ts'
 
 function must<T>(value: T | undefined): T {
 	assert.notEqual(value, undefined)
@@ -33,12 +38,37 @@ void describe('server schedule contracts', () => {
 	void it('matches complete upstream hours and calendar response fixtures without mutating inputs', () => {
 		let input = pair()
 		let before = structuredClone(input)
-		assert.deepEqual(resolveScheduleData(input.calendar, input.spaces), fixture('spaces-resolved'))
+		let responses = resolveScheduleResponses(input.calendar, input.spaces)
+		assert.deepEqual(responses, {
+			hours: fixture('spaces-resolved'),
+			calendar: fixture('calendar-response'),
+		})
+		assert.deepEqual(resolveScheduleData(input.calendar, input.spaces), responses.hours)
 		let parsed = parseScheduleData(input.calendar, input.spaces)
 		assert.deepEqual(calendarResponse(parsed.calendar), fixture('calendar-response'))
 		assert.deepEqual(input, before)
 		assert.equal(must(must(parsed.spaces[0]).breakSchedule)['easter'], 'spring')
 	})
+	for (let [name, path, value, diagnostic] of [
+		[
+			'hours',
+			'spaces.0.breakSchedule.fall',
+			'missing-template',
+			/spaces\[0\]\.breakSchedule\.fall: unknown template missing-template/u,
+		],
+		[
+			'calendar',
+			'calendar.breaks.fall.end',
+			'2026-10-09',
+			/calendar\.breaks\.fall: A calendar interval must start on or before its end/u,
+		],
+	] as const) {
+		void it(`rejects invalid ${name} before returning either projection`, () => {
+			let input = pair()
+			set(input, path, value)
+			assert.throws(() => resolveScheduleResponses(input.calendar, input.spaces), diagnostic)
+		})
+	}
 	void it('preserves normal schedule exceptions through break aliases', () => {
 		let input = pair()
 		let christmasEve = {date: '2026-12-24', schedule: closed}

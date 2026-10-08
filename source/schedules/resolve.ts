@@ -75,8 +75,16 @@ function resolvePolicy<T>(
 
 /** Validates the complete pair before returning any canonical hours. */
 export function resolveScheduleData(calendarInput: unknown, spacesInput: unknown) {
+	return resolveScheduleResponses(calendarInput, spacesInput).hours
+}
+
+/** Build both public projections from a single validated pair of inputs. */
+export function resolveScheduleResponses(calendarInput: unknown, spacesInput: unknown) {
 	let {calendar, spaces} = parseScheduleData(calendarInput, spacesInput)
-	return {data: resolveValidatedSchedules(calendar, spaces)}
+	return {
+		hours: {data: resolveValidatedSchedules(calendar, spaces)},
+		calendar: calendarResponse(calendar),
+	}
 }
 
 /** Pure calendar projection for the matched response contract; no route integration. */
