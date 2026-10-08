@@ -14,18 +14,15 @@ function harness() {
 	let time = 0
 	let calls = 0
 	let next: ScheduleResponses | Error = responses('first')
-	let fallbacks: unknown[] = []
 	let store = createScheduleStore({
 		load: () => {
 			calls += 1
 			return next instanceof Error ? Promise.reject(next) : Promise.resolve(next)
 		},
 		now: () => time,
-		onFallback: (error) => fallbacks.push(error),
 	})
 	return {
 		store,
-		fallbacks,
 		setTime: (value: number) => {
 			time = value
 		},
@@ -38,15 +35,14 @@ function harness() {
 
 void test('fresh reads share one response pair and a fixed deadline, refreshing at the boundary', async () => {
 	let {store, setTime, setNext, calls} = harness()
-	assert.equal(store.hasEntry, false)
+	assert.equal(store.expiresIn(), undefined)
 	let first = await store.read()
-	assert.equal(first.source, 'refresh')
-	assert.equal(first.freshness, 'fresh')
+	assert.equal(first.status, 'MISS')
 	assert.equal(first.freshUntil, ONE_HOUR)
 	setTime(ONE_HOUR - 1)
 	let hit = await store.read()
 	assert.equal(hit.responses, first.responses)
-	assert.equal(hit.source, 'hit')
+	assert.equal(hit.status, 'HIT')
 	assert.equal(hit.freshUntil, ONE_HOUR)
 	assert.equal(store.expiresIn(), 1)
 	assert.equal(calls(), 1)
@@ -68,45 +64,44 @@ void test('cold failures share one attempt, throttle until the retry boundary, a
 		{status: 'rejected', reason: failure},
 	])
 	assert.equal(calls(), 1)
-	assert.equal(store.hasEntry, true)
 	assert.equal(store.expiresIn(), ONE_MINUTE)
 	setNext(responses('recovered'))
 	setTime(ONE_MINUTE - 1)
 	await assert.rejects(store.read(), (error: unknown) => error === failure)
 	assert.equal(calls(), 1)
 	setTime(ONE_MINUTE)
-	assert.equal((await store.read()).freshness, 'fresh')
+	assert.equal((await store.read()).status, 'MISS')
 	assert.equal(calls(), 2)
 })
 
-void test('fallback retries do not extend retention, and stop exactly at the retention boundary', async () => {
-	let {store, setTime, setNext, calls, fallbacks} = harness()
+void test('fallback retries do not extend retention, and stop exactly at the retention boundary', async (t) => {
+	let warnings = t.mock.method(console, 'warn', () => undefined)
+	let {store, setTime, setNext, calls} = harness()
 	let first = await store.read()
 	let failure = new Error('invalid replacement')
 	setNext(failure)
 	setTime(ONE_HOUR)
 	let stale = await store.read()
 	assert.equal(stale.responses, first.responses)
-	assert.equal(stale.freshness, 'stale')
-	assert.equal(stale.source, 'refresh')
+	assert.equal(stale.status, 'STALE')
 	assert.equal(stale.freshUntil, ONE_HOUR)
 	assert.equal(store.expiresIn(), ONE_MINUTE)
 	setTime(ONE_HOUR + ONE_MINUTE - 1)
-	assert.equal((await store.read()).source, 'hit')
+	assert.equal((await store.read()).status, 'STALE')
 	assert.equal(calls(), 2)
 	setTime(ONE_HOUR + ONE_MINUTE)
 	await store.read()
 	assert.equal(calls(), 3)
 	setTime(ONE_DAY - 1)
-	assert.equal((await store.read()).freshness, 'stale')
+	assert.equal((await store.read()).status, 'STALE')
 	assert.equal(store.expiresIn(), 1)
-	assert.equal(fallbacks.length, 3)
+	assert.equal(warnings.mock.callCount(), 3)
 	setTime(ONE_DAY)
 	await assert.rejects(store.read(), (error: unknown) => error === failure)
 	assert.equal(calls(), 4)
 	setNext(responses('recovered'))
 	setTime(ONE_DAY - 1 + ONE_MINUTE)
-	assert.equal((await store.read()).freshness, 'fresh')
+	assert.equal((await store.read()).status, 'MISS')
 })
 
 void test('retention is checked when a failed refresh finishes, not when it starts', async () => {
@@ -140,13 +135,13 @@ void test('concurrent readers share an in-flight refresh and freshness starts at
 		now: () => time,
 	})
 	let readers = [store.read(), store.read(), store.read()]
-	assert.equal(store.hasEntry, true)
+	assert.notEqual(store.expiresIn(), undefined)
 	assert.equal(calls, 1)
 	time = ONE_MINUTE
 	gate.resolve(responses('loaded'))
 	let results = await Promise.all(readers)
 	for (let result of results) {
-		assert.equal(result.source, 'refresh')
+		assert.equal(result.status, 'MISS')
 		assert.equal(result.freshUntil, ONE_MINUTE + ONE_HOUR)
 		assert.equal(result.responses, results[0]?.responses)
 	}
@@ -171,8 +166,7 @@ for (let outcome of ['success', 'failure'] as const) {
 				? assert.rejects(oldRead, (error: unknown) => error === failure)
 				: oldRead
 		store.clear()
-		assert.equal(store.hasEntry, false)
-		assert.equal(store.expiresIn(), 0)
+		assert.equal(store.expiresIn(), undefined)
 		assert.equal((await store.read()).responses, replacement)
 		if (outcome === 'failure') gate.reject(failure)
 		else gate.resolve(responses('detached success'))
@@ -197,6 +191,6 @@ void test('clear resets retry throttling, including synchronous loader failures'
 	await assert.rejects(store.read(), (error: unknown) => error === failure)
 	assert.equal(calls, 1)
 	store.clear()
-	assert.equal((await store.read()).freshness, 'fresh')
+	assert.equal((await store.read()).status, 'MISS')
 	assert.equal(calls, 2)
 })

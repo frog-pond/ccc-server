@@ -15,38 +15,21 @@ interface StoreState {
 	pending?: Promise<void>
 }
 
-export interface SnapshotRead {
+interface SnapshotRead {
 	responses: ScheduleResponses
-	freshness: 'fresh' | 'stale'
+	status: 'HIT' | 'MISS' | 'STALE'
 	freshUntil: number
-	source: 'hit' | 'refresh'
 }
 
 /** Scheduling policy only: load must return a completely validated response pair. */
 export function createScheduleStore({
 	load,
 	now,
-	onFallback,
 }: {
 	load: () => Promise<ScheduleResponses>
 	now: () => number
-	onFallback?: (error: unknown) => void
 }) {
 	let state: StoreState = {}
-
-	function available(current: StoreState, source: SnapshotRead['source']): SnapshotRead {
-		let time = now()
-		let snapshot = current.lastGood
-		if (!snapshot || snapshot.retainUntil <= time) {
-			throw current.failure?.error ?? new Error('Schedule snapshot retention expired')
-		}
-		return {
-			responses: snapshot.responses,
-			freshness: snapshot.freshUntil > time ? 'fresh' : 'stale',
-			freshUntil: snapshot.freshUntil,
-			source,
-		}
-	}
 
 	async function refresh(current: StoreState): Promise<void> {
 		try {
@@ -63,35 +46,41 @@ export function createScheduleStore({
 				delete current.lastGood
 				throw failure
 			}
-			onFallback?.(failure)
+			console.warn('Schedule refresh failed; serving the last validated snapshot', failure)
 		}
 	}
 
 	return {
 		async read(): Promise<SnapshotRead> {
-			// Capture the generation: clear() detaches every reader and refresh already in flight.
+			// clear() replaces state; an old refresh can only update its detached state object.
 			let current = state
 			let time = now()
-			if (current.lastGood && current.lastGood.freshUntil > time) return available(current, 'hit')
-			if (current.failure && current.failure.retryAt > time) return available(current, 'hit')
-			if (!current.pending) {
-				let pending = refresh(current).finally(() => {
-					if (current.pending === pending) delete current.pending
+			let fresh = current.lastGood !== undefined && current.lastGood.freshUntil > time
+			let throttled = current.failure !== undefined && current.failure.retryAt > time
+			let hit = fresh || throttled
+			if (!hit) {
+				current.pending ??= refresh(current).finally(() => {
+					delete current.pending
 				})
-				current.pending = pending
+				await current.pending
 			}
-			await current.pending
-			return available(current, 'refresh')
+			let snapshot = current.lastGood
+			time = now()
+			if (!snapshot || snapshot.retainUntil <= time) {
+				throw current.failure?.error ?? new Error('Schedule snapshot retention expired')
+			}
+			return {
+				responses: snapshot.responses,
+				freshUntil: snapshot.freshUntil,
+				status: snapshot.freshUntil <= time ? 'STALE' : hit ? 'HIT' : 'MISS',
+			}
 		},
 		clear(): void {
 			state = {}
 		},
-		get hasEntry(): boolean {
-			return (
-				state.lastGood !== undefined || state.failure !== undefined || state.pending !== undefined
-			)
-		},
-		expiresIn(): number {
+		/** Undefined means empty; zero means an existing entry is due for refresh. */
+		expiresIn(): number | undefined {
+			if (!state.lastGood && !state.failure && !state.pending) return undefined
 			let time = now()
 			let snapshot = state.lastGood
 			if (snapshot && snapshot.freshUntil > time) return snapshot.freshUntil - time
