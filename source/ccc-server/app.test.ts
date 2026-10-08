@@ -205,8 +205,16 @@ for (const institution of ['stolaf-college', 'carleton-college'] as const) {
 }
 
 void test('endpoints can add dotted and major versions alongside v1 in single and combined modes', async (t) => {
-	const upstream = t.mock.method(http, 'get', (url: string) => ({
-		json: () => Promise.resolve({source: url}),
+	const upstream = t.mock.method(http, 'get', (url: string | URL) => ({
+		json: () => {
+			if (String(url).endsWith('/AAO-React-Native/breaks.json')) {
+				return Promise.resolve({data: {timezone: 'America/Chicago', breaks: {}}})
+			}
+			if (String(url).endsWith('/AAO-React-Native/building-hours.json')) {
+				return Promise.resolve({data: []})
+			}
+			return Promise.resolve({source: url})
+		},
 	}))
 	for (const [name, api] of [
 		['stolaf', stolafApi],
@@ -229,7 +237,8 @@ void test('endpoints can add dotted and major versions alongside v1 in single an
 					const prefix = mode === 'all' ? `/${name}` : ''
 					const v1 = await fetch(`${base}${prefix}/v1/spaces/hours`)
 					assert.equal(v1.status, 200)
-					assert.match(JSON.stringify(await v1.json()), /building-hours.json/)
+					if (name === 'stolaf') assert.deepEqual(await v1.json(), {data: []})
+					else assert.match(JSON.stringify(await v1.json()), /building-hours.json/)
 					await Promise.all(
 						['v1.1', 'v2'].map(async (version) => {
 							const response = await fetch(`${base}${prefix}/${version}/spaces/hours`)
@@ -255,7 +264,7 @@ void test('endpoints can add dotted and major versions alongside v1 in single an
 			)
 		}),
 	)
-	assert.equal(upstream.mock.callCount(), 4)
+	assert.equal(upstream.mock.callCount(), 6)
 })
 
 void test('mixed-case route listings return usable paths in single and combined modes', async (t) => {
