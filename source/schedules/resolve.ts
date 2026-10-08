@@ -20,39 +20,64 @@ function resolveValidatedSchedules<T>(
 	calendar: BreakCalendar<T>,
 	spaces: readonly Space<T, string | Schedule<T>>[],
 ): Space<T>[] {
-	return spaces.map((space) => {
-		let {breakSchedule: entries, ...fields} = space
-		if (entries === undefined) return fields
-		let resolved = new Map<string, Schedule<T>>()
-		let template = (key: string, name: string): Schedule<T> => {
-			let local = calendar.breaks[key]?.templates ?? {}
-			let policy = Object.hasOwn(local, name) ? local[name] : calendar.templates?.[name]
-			assert(policy !== undefined, `unknown template ${name}`)
-			return policy
-		}
-		let resolve = (key: string): Schedule<T> => {
-			let cached = resolved.get(key)
-			if (cached) return cached
-			let policy = entries[key]
-			assert(policy !== undefined, `missing authored alias target ${key}`)
-			let result: Schedule<T>
-			if (typeof policy !== 'string') result = policy
-			else if (policy === 'normal') {
-				result = {schedule: space.schedule, exceptions: space.exceptions ?? []}
-			} else if (policy === 'inherit') {
-				let fallback = calendar.breaks[key]?.defaultSpaceSchedule
-				assert(fallback !== undefined, `inherit requires a break default for ${key}`)
-				result = typeof fallback === 'string' ? template(key, fallback) : fallback
-			} else if (Object.hasOwn(calendar.breaks, policy)) result = resolve(policy)
-			else result = template(key, policy)
-			resolved.set(key, result)
-			return result
-		}
-		return {
-			...fields,
-			breakSchedule: Object.fromEntries(Object.keys(entries).map((key) => [key, resolve(key)])),
-		}
-	})
+	return spaces.map((space) => resolveSpace(calendar, space))
+}
+
+interface ResolutionContext<T> {
+	calendar: BreakCalendar<T>
+	space: Space<T, string | Schedule<T>>
+	resolved: Map<string, Schedule<T>>
+}
+
+function resolveSpace<T>(
+	calendar: BreakCalendar<T>,
+	space: Space<T, string | Schedule<T>>,
+): Space<T> {
+	let {breakSchedule: entries, ...fields} = space
+	if (entries === undefined) return fields
+
+	let context: ResolutionContext<T> = {calendar, space, resolved: new Map()}
+	let breakSchedule = Object.fromEntries(
+		Object.keys(entries).map((key) => [key, resolveBreakPolicy(context, key)]),
+	)
+	return {...fields, breakSchedule}
+}
+
+function resolveBreakPolicy<T>(context: ResolutionContext<T>, key: string): Schedule<T> {
+	let cached = context.resolved.get(key)
+	if (cached) return cached
+
+	let policy = context.space.breakSchedule?.[key]
+	assert(policy !== undefined, `missing authored alias target ${key}`)
+	let result = typeof policy === 'string' ? resolveReference(context, key, policy) : policy
+	context.resolved.set(key, result)
+	return result
+}
+
+function resolveReference<T>(
+	context: ResolutionContext<T>,
+	key: string,
+	reference: string,
+): Schedule<T> {
+	let {calendar, space} = context
+	if (reference === 'normal') {
+		return {schedule: space.schedule, exceptions: space.exceptions ?? []}
+	}
+	if (reference === 'inherit') {
+		let fallback = calendar.breaks[key]?.defaultSpaceSchedule
+		assert(fallback !== undefined, `inherit requires a break default for ${key}`)
+		return typeof fallback === 'string' ? resolveTemplate(calendar, key, fallback) : fallback
+	}
+	// Aliases use the target break's template/default context.
+	if (Object.hasOwn(calendar.breaks, reference)) return resolveBreakPolicy(context, reference)
+	return resolveTemplate(calendar, key, reference)
+}
+
+function resolveTemplate<T>(calendar: BreakCalendar<T>, key: string, name: string): Schedule<T> {
+	let local = calendar.breaks[key]?.templates ?? {}
+	let policy = Object.hasOwn(local, name) ? local[name] : calendar.templates?.[name]
+	assert(policy !== undefined, `unknown template ${name}`)
+	return policy
 }
 
 /** Validates the complete pair before returning any canonical hours. */
@@ -67,18 +92,13 @@ export function calendarResponse<T>(calendar: BreakCalendar<T>) {
 		data: {
 			timezone: calendar.timezone,
 			breaks: Object.fromEntries(
-				Object.entries(calendar.breaks).map(([key, entry]) => {
-					return [
-						key,
-						{
-							name: entry.name,
-							...(entry.date !== undefined
-								? {date: entry.date}
-								: {start: entry.start, end: entry.end}),
-						},
-					]
-				}),
+				Object.entries(calendar.breaks).map(([key, entry]) => [key, calendarBreakResponse(entry)]),
 			),
 		},
 	}
+}
+
+function calendarBreakResponse<T>(entry: BreakCalendar<T>['breaks'][string]) {
+	if (entry.date !== undefined) return {name: entry.name, date: entry.date}
+	return {name: entry.name, start: entry.start, end: entry.end}
 }

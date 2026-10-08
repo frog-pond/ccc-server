@@ -1,11 +1,28 @@
 import {normalizeCalendarInterval} from './calendar.ts'
-import type {BreakCalendar, Schedule, Space} from './types.ts'
+import type {BreakCalendar, CalendarInterval, Schedule, Space} from './types.ts'
 
 /** Supplies an author-facing label without tying validation to files or buildings. */
 export interface ScheduleValidationInput<T> {
 	label: string
 	schedules: Space<T, string | Schedule<T>>
 }
+
+interface CalendarValidationContext<T> {
+	calendar: BreakCalendar<T>
+	label: string
+	breakKeys: Set<string>
+}
+
+interface ReferenceValidationContext<T> {
+	calendar: BreakCalendar<T>
+	breakKeys: Set<string>
+	label: string
+	entries: Record<string, string | Schedule<T>>
+	visiting: Set<string>
+	visited: Set<string>
+}
+
+const reservedNames = new Set(['normal', 'inherit'])
 
 /** Reports the location of invalid authored data. */
 function fail(path: string, message: string): never {
@@ -23,42 +40,47 @@ export function validateSchedules<T>(
 	calendarLabel = 'calendar',
 ): void {
 	// A calendar with no breaks still needs a usable timezone.
+	normalizeInterval({date: '2000-01-01'}, calendar.timezone, `${calendarLabel}.timezone`)
+	let context = {calendar, label: calendarLabel, breakKeys: new Set(Object.keys(calendar.breaks))}
+	validateNamespaces(context)
+	validateBreakIntervals(context)
+	validateCalendarPolicies(context)
+	validateSpaces(context, spaces)
+}
+
+function normalizeInterval(interval: CalendarInterval, timezone: string, path: string) {
 	try {
-		normalizeCalendarInterval({date: '2000-01-01'}, calendar.timezone)
+		return normalizeCalendarInterval(interval, timezone)
 	} catch (error) {
-		fail(`${calendarLabel}.timezone`, error instanceof Error ? error.message : String(error))
+		return fail(path, error instanceof Error ? error.message : String(error))
 	}
-	let breakKeys = new Set(Object.keys(calendar.breaks))
-	let reserved = new Set(['normal', 'inherit'])
-	let globalTemplates = calendar.templates ?? {}
-	let templateKeys = new Set(Object.keys(globalTemplates))
+}
+
+function validateNamespaces<T>({calendar, label, breakKeys}: CalendarValidationContext<T>): void {
+	let templateKeys = new Set(Object.keys(calendar.templates ?? {}))
 	for (let entry of Object.values(calendar.breaks)) {
 		for (let key of Object.keys(entry.templates ?? {})) templateKeys.add(key)
 	}
 	for (let key of breakKeys) {
-		if (reserved.has(key)) fail(`${calendarLabel}.breaks.${key}`, 'reserved name')
+		if (reservedNames.has(key)) fail(`${label}.breaks.${key}`, 'reserved name')
 		if (templateKeys.has(key)) {
-			fail(`${calendarLabel}.breaks.${key}`, 'break and template names must be disjoint')
+			fail(`${label}.breaks.${key}`, 'break and template names must be disjoint')
 		}
 	}
 	for (let key of templateKeys) {
-		if (reserved.has(key)) fail(`${calendarLabel}.templates.${key}`, 'reserved name')
+		if (reservedNames.has(key)) fail(`${label}.templates.${key}`, 'reserved name')
 	}
+}
 
-	let intervals = Object.entries(calendar.breaks).map(([key, entry]) => {
-		try {
-			return {key, ...normalizeCalendarInterval(entry, calendar.timezone)}
-		} catch (error) {
-			return fail(
-				`${calendarLabel}.breaks.${key}`,
-				error instanceof Error ? error.message : String(error),
-			)
-		}
-	})
+function validateBreakIntervals<T>({calendar, label}: CalendarValidationContext<T>): void {
+	let intervals = Object.entries(calendar.breaks).map(([key, entry]) => ({
+		key,
+		...normalizeInterval(entry, calendar.timezone, `${label}.breaks.${key}`),
+	}))
 	for (let [index, first] of intervals.entries()) {
 		for (let second of intervals.slice(index + 1)) {
 			if (first.startMs === second.startMs && first.endMs === second.endMs) {
-				fail(`${calendarLabel}.breaks.${second.key}`, `duplicates the interval of ${first.key}`)
+				fail(`${label}.breaks.${second.key}`, `duplicates the interval of ${first.key}`)
 			}
 			if (
 				first.calendarDays === second.calendarDays &&
@@ -66,7 +88,7 @@ export function validateSchedules<T>(
 				second.startMs < first.endMs
 			) {
 				fail(
-					`${calendarLabel}.breaks.${second.key}`,
+					`${label}.breaks.${second.key}`,
 					`overlaps ${first.key} with an equal calendar-day span`,
 				)
 			}
@@ -75,63 +97,82 @@ export function validateSchedules<T>(
 				(first.startMs <= second.startMs && first.endMs >= second.endMs) ||
 				(second.startMs <= first.startMs && second.endMs >= first.endMs)
 			if (overlaps && !nested) {
-				fail(`${calendarLabel}.breaks.${second.key}`, `partially overlaps ${first.key}`)
+				fail(`${label}.breaks.${second.key}`, `partially overlaps ${first.key}`)
 			}
 		}
 	}
+}
 
-	let validateSchedule = (policy: Schedule<T>, path: string) => {
-		let {schedule, exceptions} = policy
-		if (schedule.length === 0) {
-			fail(`${path}.schedule`, 'a schedule must contain at least one service')
-		}
-		// Complete policies may be reused by other breaks; retain out-of-range exceptions.
-		let dates = new Set<string>()
-		for (let [index, exception] of exceptions.entries()) {
-			let exceptionPath = `${path}.exceptions[${index.toFixed(0)}]`
-			try {
-				normalizeCalendarInterval({date: exception.date}, calendar.timezone)
-			} catch (error) {
-				fail(`${exceptionPath}.date`, error instanceof Error ? error.message : String(error))
-			}
-			if (dates.has(exception.date)) {
-				fail(exceptionPath, `duplicate exception date ${exception.date}`)
-			}
-			dates.add(exception.date)
-			if (exception.schedule.length === 0) {
-				fail(`${exceptionPath}.schedule`, 'a replacement must contain at least one service')
-			}
+function validateSchedule<T>(policy: Schedule<T>, timezone: string, path: string): void {
+	if (policy.schedule.length === 0) {
+		fail(`${path}.schedule`, 'a schedule must contain at least one service')
+	}
+	// Complete policies may be reused by other breaks; retain out-of-range exceptions.
+	let dates = new Set<string>()
+	for (let [index, exception] of policy.exceptions.entries()) {
+		let exceptionPath = `${path}.exceptions[${index.toFixed(0)}]`
+		normalizeInterval({date: exception.date}, timezone, `${exceptionPath}.date`)
+		if (dates.has(exception.date)) fail(exceptionPath, `duplicate exception date ${exception.date}`)
+		dates.add(exception.date)
+		if (exception.schedule.length === 0) {
+			fail(`${exceptionPath}.schedule`, 'a replacement must contain at least one service')
 		}
 	}
-	let hasTemplate = (key: string, name: string, path: string) => {
-		let entry = calendar.breaks[key]
-		if (entry === undefined) fail(path, 'unknown break key')
-		return Object.hasOwn(entry.templates ?? {}, name) || Object.hasOwn(globalTemplates, name)
+}
+
+function hasTemplate<T>(
+	calendar: BreakCalendar<T>,
+	key: string,
+	name: string,
+	path: string,
+): boolean {
+	let entry = calendar.breaks[key]
+	if (entry === undefined) fail(path, 'unknown break key')
+	return Object.hasOwn(entry.templates ?? {}, name) || Object.hasOwn(calendar.templates ?? {}, name)
+}
+
+function validateTemplates<T>(
+	templates: Record<string, Schedule<T>>,
+	timezone: string,
+	path: string,
+): void {
+	for (let [name, policy] of Object.entries(templates)) {
+		validateSchedule(policy, timezone, `${path}.${name}`)
 	}
-	for (let [name, policy] of Object.entries(globalTemplates)) {
-		validateSchedule(policy, `${calendarLabel}.templates.${name}`)
-	}
+}
+
+function validateCalendarPolicies<T>(context: CalendarValidationContext<T>): void {
+	let {calendar, label} = context
+	validateTemplates(calendar.templates ?? {}, calendar.timezone, `${label}.templates`)
 	for (let [key, entry] of Object.entries(calendar.breaks)) {
-		let path = `${calendarLabel}.breaks.${key}`
-		for (let [name, policy] of Object.entries(entry.templates ?? {})) {
-			validateSchedule(policy, `${path}.templates.${name}`)
-		}
-		let defaultPolicy = entry.defaultSpaceSchedule
-		if (typeof defaultPolicy === 'string') {
-			if (reserved.has(defaultPolicy) || breakKeys.has(defaultPolicy)) {
-				fail(
-					`${path}.defaultSpaceSchedule`,
-					'defaults cannot use normal, inherit or break references',
-				)
-			}
-			if (!hasTemplate(key, defaultPolicy, `${path}.defaultSpaceSchedule`)) {
-				fail(`${path}.defaultSpaceSchedule`, `unknown template ${defaultPolicy}`)
-			}
-		} else if (defaultPolicy !== undefined) {
-			validateSchedule(defaultPolicy, `${path}.defaultSpaceSchedule`)
-		}
+		let path = `${label}.breaks.${key}`
+		validateTemplates(entry.templates ?? {}, calendar.timezone, `${path}.templates`)
+		validateDefaultPolicy(context, key, `${path}.defaultSpaceSchedule`)
 	}
+}
 
+function validateDefaultPolicy<T>(
+	context: CalendarValidationContext<T>,
+	key: string,
+	path: string,
+): void {
+	let {calendar, breakKeys} = context
+	let policy = calendar.breaks[key]?.defaultSpaceSchedule
+	if (policy === undefined) return
+	if (typeof policy !== 'string') {
+		validateSchedule(policy, calendar.timezone, path)
+		return
+	}
+	if (reservedNames.has(policy) || breakKeys.has(policy)) {
+		fail(path, 'defaults cannot use normal, inherit or break references')
+	}
+	if (!hasTemplate(calendar, key, policy, path)) fail(path, `unknown template ${policy}`)
+}
+
+function validateSpaces<T>(
+	context: CalendarValidationContext<T>,
+	spaces: readonly ScheduleValidationInput<T>[],
+): void {
 	let names = new Map<string, string>()
 	for (let {label, schedules} of spaces) {
 		let previous = names.get(schedules.name)
@@ -142,39 +183,78 @@ export function validateSchedules<T>(
 			)
 		}
 		names.set(schedules.name, label)
-		validateSchedule({schedule: schedules.schedule, exceptions: schedules.exceptions ?? []}, label)
-		let entries = schedules.breakSchedule ?? {}
-		for (let key of Object.keys(entries)) {
-			if (!breakKeys.has(key)) fail(`${label}.breakSchedule.${key}`, 'unknown break key')
+		validateSchedule(
+			{schedule: schedules.schedule, exceptions: schedules.exceptions ?? []},
+			context.calendar.timezone,
+			label,
+		)
+		validateSpaceReferences(context, schedules.breakSchedule ?? {}, label)
+	}
+}
+
+function validateSpaceReferences<T>(
+	context: CalendarValidationContext<T>,
+	entries: Record<string, string | Schedule<T>>,
+	label: string,
+): void {
+	for (let key of Object.keys(entries)) {
+		if (!context.breakKeys.has(key)) fail(`${label}.breakSchedule.${key}`, 'unknown break key')
+	}
+	let graph: ReferenceValidationContext<T> = {
+		calendar: context.calendar,
+		breakKeys: context.breakKeys,
+		label,
+		entries,
+		visiting: new Set(),
+		visited: new Set(),
+	}
+	for (let key of Object.keys(entries)) visitBreakPolicy(graph, key, [])
+}
+
+function visitBreakPolicy<T>(
+	context: ReferenceValidationContext<T>,
+	key: string,
+	trail: string[],
+): void {
+	let {entries, visiting, visited, calendar, label} = context
+	let path = `${label}.breakSchedule.${key}`
+	if (visiting.has(key)) fail(path, `cyclic break reference: ${[...trail, key].join(' -> ')}`)
+	if (visited.has(key)) return
+	let policy = entries[key]
+	if (!Object.hasOwn(entries, key) || policy === undefined) {
+		fail(path, 'missing authored alias target')
+	}
+	visiting.add(key)
+	if (typeof policy === 'string') {
+		validateReference(context, key, policy, trail)
+	} else {
+		validateSchedule(policy, calendar.timezone, path)
+	}
+	visiting.delete(key)
+	visited.add(key)
+}
+
+function validateReference<T>(
+	context: ReferenceValidationContext<T>,
+	key: string,
+	reference: string,
+	trail: string[],
+): void {
+	let {calendar, breakKeys, label} = context
+	let path = `${label}.breakSchedule.${key}`
+	if (reference === 'normal') return
+	if (reference === 'inherit') {
+		if (calendar.breaks[key]?.defaultSpaceSchedule === undefined) {
+			fail(path, 'inherit requires a break default')
 		}
-		let visiting = new Set<string>()
-		let visited = new Set<string>()
-		let visit = (key: string, trail: string[]) => {
-			let path = `${label}.breakSchedule.${key}`
-			if (visiting.has(key)) fail(path, `cyclic break reference: ${[...trail, key].join(' -> ')}`)
-			if (visited.has(key)) return
-			if (!Object.hasOwn(entries, key) || entries[key] === undefined) {
-				fail(path, 'missing authored alias target')
-			}
-			visiting.add(key)
-			let policy = entries[key]
-			if (typeof policy !== 'string') {
-				validateSchedule(policy, path)
-			} else if (policy === 'inherit') {
-				if (calendar.breaks[key]?.defaultSpaceSchedule === undefined) {
-					fail(path, 'inherit requires a break default')
-				}
-			} else if (policy !== 'normal') {
-				if (breakKeys.has(policy)) {
-					if (policy === key) fail(path, 'a break cannot reference itself')
-					visit(policy, [...trail, key])
-				} else if (!hasTemplate(key, policy, path)) {
-					fail(path, `unknown template ${policy} in ${key}'s context`)
-				}
-			}
-			visiting.delete(key)
-			visited.add(key)
-		}
-		for (let key of Object.keys(entries)) visit(key, [])
+		return
+	}
+	if (breakKeys.has(reference)) {
+		if (reference === key) fail(path, 'a break cannot reference itself')
+		visitBreakPolicy(context, reference, [...trail, key])
+		return
+	}
+	if (!hasTemplate(calendar, key, reference, path)) {
+		fail(path, `unknown template ${reference} in ${key}'s context`)
 	}
 }
