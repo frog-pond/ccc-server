@@ -1,5 +1,4 @@
 import {z} from 'zod'
-import QuickLRU from 'quick-lru'
 import {getJson} from '../../ccc-lib/http.ts'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {resolveScheduleResponses} from '../../schedules/resolve.ts'
@@ -18,8 +17,15 @@ interface Snapshot {
 	stale: boolean
 }
 
+interface SnapshotSlot {
+	snapshot: Snapshot
+	expiresAt: number
+}
+
 interface SnapshotCache {
-	values: QuickLRU<'current' | 'last-good', Snapshot>
+	current?: SnapshotSlot
+	lastGood?: SnapshotSlot
+	failure?: {error: unknown; retryAt: number}
 	pending?: Promise<Snapshot>
 }
 
@@ -34,16 +40,26 @@ async function refresh(cache: SnapshotCache): Promise<Snapshot> {
 		])
 		let responses = resolveScheduleResponses(calendar, hours)
 		let snapshot = {responses, stale: false}
-		cache.values.set('last-good', snapshot, {maxAge: ONE_DAY})
-		cache.values.set('current', snapshot, {maxAge: ONE_HOUR})
+		let now = Date.now()
+		cache.lastGood = {snapshot, expiresAt: now + ONE_DAY}
+		cache.current = {snapshot, expiresAt: now + ONE_HOUR}
+		delete cache.failure
 		return snapshot
 	} catch (error) {
-		let previous = cache.values.get('last-good')
-		if (!previous) throw error
-		let snapshot = {...previous, stale: true}
-		// Throttle failed refreshes without extending the last-good snapshot's retention.
-		let remaining = cache.values.expiresIn('last-good') ?? 0
-		cache.values.set('current', snapshot, {maxAge: Math.min(ONE_MINUTE, remaining)})
+		let now = Date.now()
+		cache.failure = {error, retryAt: now + ONE_MINUTE}
+		let previous = cache.lastGood
+		if (!previous || previous.expiresAt <= now) {
+			delete cache.lastGood
+			delete cache.current
+			throw error
+		}
+		let snapshot = {...previous.snapshot, stale: true}
+		// Retry each minute without extending the last-good snapshot's retention.
+		cache.current = {
+			snapshot,
+			expiresAt: Math.min(cache.failure.retryAt, previous.expiresAt),
+		}
 		console.warn('Schedule refresh failed; serving the last validated snapshot', error)
 		return snapshot
 	}
@@ -53,12 +69,17 @@ async function refresh(cache: SnapshotCache): Promise<Snapshot> {
 export async function getScheduleSnapshot(ctx: Context) {
 	let cache = caches.get(ctx.app)
 	if (!cache) {
-		cache = {values: new QuickLRU({maxSize: 2})}
+		cache = {}
 		caches.set(ctx.app, cache)
 	}
-	let snapshot = cache.values.get('current')
-	let hit = snapshot !== undefined
-	if (!hit) {
+	let current = cache.current
+	let hit = current !== undefined && current.expiresAt > Date.now()
+	let snapshot: Snapshot
+	if (current && hit) {
+		snapshot = current.snapshot
+	} else {
+		// Throttle failures even at boot, or after the last-good snapshot expires.
+		if (cache.failure && cache.failure.retryAt > Date.now()) throw cache.failure.error
 		cache.pending ??= refresh(cache)
 		try {
 			snapshot = await cache.pending
@@ -66,13 +87,12 @@ export async function getScheduleSnapshot(ctx: Context) {
 			delete cache.pending
 		}
 	}
-	if (!snapshot) throw new Error('No validated schedule snapshot')
 	if (snapshot.stale) {
 		ctx.cacheControl(false)
 		ctx.set('X-Cached-Response', 'STALE')
 	} else {
 		// Both responses expire with their shared snapshot, even when requested at different times.
-		let remaining = Math.max(0, cache.values.expiresIn('current') ?? 0)
+		let remaining = Math.max(0, (cache.current?.expiresAt ?? 0) - Date.now())
 		ctx.cacheControl(Math.floor(remaining / 1000) * 1000)
 		if (hit) ctx.set('X-Cached-Response', 'HIT')
 	}
