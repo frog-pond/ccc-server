@@ -5,7 +5,8 @@ import type {Context, ContextState, RouterState} from './context.ts'
 export interface CacheAdmin {
 	keys(): IterableIterator<string>
 	expiresIn(key: string): number | undefined
-	delete(key: string): boolean
+	/** Boolean stores evict one entry; grouped stores report the number of listed keys evicted. */
+	delete(key: string): boolean | number
 	clear(): void
 	readonly size: number
 }
@@ -48,7 +49,8 @@ export function setupHelpers(
 		if (requestedKeys.length) {
 			for (const key of requestedKeys) {
 				for (const store of stores) {
-					if (store.delete(key)) found++
+					let deleted = store.delete(key)
+					found += typeof deleted === 'number' ? deleted : Number(deleted)
 				}
 			}
 		} else {

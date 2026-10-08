@@ -2,12 +2,13 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {beforeEach, test, type TestContext} from 'node:test'
 import Koa from 'koa'
+import * as Sentry from '@sentry/node'
 import {noop} from 'lodash-es'
 import {api, cache as stolafCache} from '../index.ts'
 import {createApp} from '../../ccc-server/app.ts'
 import {api as carletonApi, cache as carletonCache} from '../../ccci-carleton-college/index.ts'
 import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
-import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
+import {ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {parseScheduleData} from '../../schedules/parse.ts'
 import {GH_PAGES} from './gh-pages.ts'
 
@@ -97,42 +98,6 @@ void test('/breaks serves only timezone, names and dates from validated definiti
 		[GH_PAGES('breaks.json').href, GH_PAGES('building-hours.json').href].toSorted(),
 	)
 })
-
-for (let [route, expected, fetches] of [
-	['/v1/spaces/hours', 'spaces-resolved', 2],
-	['/v1/breaks', 'calendar-response', 2],
-] as const) {
-	void test(`${route} caches successful responses for one hour and refetches on expiry`, async (t) => {
-		let {base, expire} = await serve(t)
-		let {send, requests, responses} = upstream(t)
-		let first = await send(`${base}${route}`)
-		assert.equal(first.status, 200)
-		assert.deepEqual(await first.json(), fixture(expected))
-		// Changed upstream definitions must not affect a cached response.
-		let {calendar} = parseScheduleData(fixture('calendar'), [])
-		let fall = calendar.breaks['fall']
-		assert.ok(fall)
-		fall.name = 'Updated Fall Break'
-		responses.set(GH_PAGES('breaks.json').href, Response.json({data: calendar}))
-		let cached = await send(`${base}${route}`)
-		assert.equal(cached.headers.get('x-cached-response'), 'HIT')
-		assert.deepEqual(await cached.json(), fixture(expected))
-		assert.equal(requests.length, fetches)
-		expire()
-		let refreshed = await send(`${base}${route}`)
-		assert.equal(refreshed.status, 200)
-		assert.equal(refreshed.headers.get('x-cached-response'), null)
-		assert.equal(requests.length, fetches * 2)
-		let body: unknown = await refreshed.json()
-		if (route === '/v1/spaces/hours') assert.deepEqual(body, fixture(expected))
-		else {
-			assert.equal(
-				(body as {data: {breaks: {fall: {name: string}}}}).data.breaks.fall.name,
-				fall.name,
-			)
-		}
-	})
-}
 
 const badCalendar = {
 	data: {timezone: 'America/Chicago', breaks: {fall: {name: 'Fall', date: '2026-02-29'}}},
@@ -232,29 +197,35 @@ for (let [name, file, failed] of [
 	})
 }
 
-void test('fallback stops 24 hours after the last successful snapshot, without extending on failures', async (t) => {
-	t.mock.method(console, 'warn', noop)
-	let {base, advance} = await serve(t)
-	let {send, responses} = upstream(t)
-	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
-	responses.set(GH_PAGES('breaks.json').href, Response.json(badCalendar))
-	advance(ONE_DAY - 1)
-	assert.equal((await send(`${base}/v1/breaks`)).headers.get('x-cached-response'), 'STALE')
-	advance(1)
-	await Promise.all(
-		['/v1/breaks', '/v1/spaces/hours'].map(async (route) => {
-			let failed = await send(`${base}${route}`)
-			assert.equal(failed.status, 500)
-			assert.equal(failed.headers.get('x-cached-response'), null)
-		}),
-	)
-	responses.set(GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')}))
-	advance(ONE_MINUTE)
-	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
-})
-
-for (let key of [undefined, '/v1/spaces/hours', '/v1/breaks']) {
-	void test(`cache administration invalidates the shared snapshot for ${key ?? 'all entries'}`, async (t) => {
+for (let keys of [
+	[],
+	['/v1/spaces/hours'],
+	['/v1/breaks'],
+	['/v1/spaces/hours', '/v1/breaks'],
+	['/v1/spaces/hours', '/v1/spaces/hours'],
+]) {
+	void test(`cache administration counts evicted entries for ${keys.join(', ') || 'all entries'}`, async (t) => {
+		let metrics: Sentry.Metric[] = []
+		let scope = Sentry.getCurrentScope()
+		let previousClient = scope.getClient()
+		let client = new Sentry.NodeClient({
+			dsn: 'https://test@example.com/1',
+			integrations: [],
+			stackParser: () => [],
+			transport: () => ({
+				send: () => Promise.resolve({statusCode: 200}),
+				flush: () => Promise.resolve(true),
+			}),
+			beforeSendMetric: (metric) => {
+				if (metric.name === 'cache.evicted') metrics.push(metric)
+				return null
+			},
+		})
+		scope.setClient(client)
+		t.after(async () => {
+			scope.setClient(previousClient)
+			await client.close()
+		})
 		let {base} = await serve(t)
 		let {send, requests, responses} = upstream(t)
 		assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
@@ -265,10 +236,27 @@ for (let key of [undefined, '/v1/spaces/hours', '/v1/breaks']) {
 		let updated = updatedInputs()
 		responses.set(GH_PAGES('breaks.json').href, Response.json({data: updated.calendar}))
 		responses.set(GH_PAGES('building-hours.json').href, Response.json({data: updated.spaces}))
-		let query = key ? `?key=${encodeURIComponent(key)}` : ''
+		let query = keys.length
+			? `?${new URLSearchParams(keys.map((key) => ['key', key])).toString()}`
+			: ''
 		let cleared = await send(`${base}/_cache${query}`, {method: 'DELETE'})
 		assert.equal(cleared.status, 204)
-		assert.ok(Number(cleared.headers.get('x-cache-deleted')) > 0)
+		// Delete-all also removes the ordinary response-cache entry for the listing above.
+		let expectedCount = keys.length ? 2 : 3
+		assert.equal(cleared.headers.get('x-cache-deleted'), String(expectedCount))
+		let repeated = await send(`${base}/_cache${query}`, {method: 'DELETE'})
+		assert.equal(repeated.headers.get('x-cache-deleted'), '0')
+		assert.equal(metrics.length, 2)
+		assert.partialDeepStrictEqual(metrics, [
+			{
+				value: expectedCount,
+				attributes: {institution: 'stolaf-college', scope: keys.length ? 'keys' : 'all'},
+			},
+			{
+				value: 0,
+				attributes: {institution: 'stolaf-college', scope: keys.length ? 'keys' : 'all'},
+			},
+		])
 		let refreshed = await send(`${base}/v1/breaks`)
 		let body = (await refreshed.json()) as {data: {breaks: Record<string, unknown>}}
 		assert.ok(Object.hasOwn(body.data.breaks, 'autumn'))

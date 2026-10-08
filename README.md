@@ -122,9 +122,18 @@ after one minute, including when no successful snapshot exists yet.
 
 `/_cache` lists this snapshot under both route paths (with `/stolaf` in combined
 mode). Deleting either listed key invalidates the whole pair, including any
-failure retry window. Deleting all entries also clears the snapshot. An
+failure retry window. Either key reports two evicted entries in `X-Cache-Deleted`
+and the `cache.evicted` metric, matching the listing; requesting both keys counts
+the pair once. Deleting all entries also clears the snapshot. An
 in-flight request may finish using its old data, but cannot refill an evicted
 snapshot. Query-string variants share the same snapshot and canonical admin keys.
+
+The server validates both fetched files and publishes their responses together in
+its local store. The upstream URLs do not expose a shared revision, so validation
+cannot prove that both files belong to the same upstream publication. Separate
+client requests straddling a refresh can also observe different snapshots. A
+stronger consistency contract requires a shared upstream revision (or one combined
+artifact) and a way for clients to request or compare that revision.
 
 ## Images
 
