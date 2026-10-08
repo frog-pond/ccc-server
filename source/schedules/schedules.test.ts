@@ -298,6 +298,20 @@ void describe('server schedule contracts', () => {
 			assert.throws(() => parseScheduleData(calendar, []), /equal calendar-day span/u)
 		})
 	}
+	void it('accepts adjacent breaks when DST skips the first midnight', () => {
+		assert.doesNotThrow(() =>
+			parseScheduleData(
+				{
+					timezone: 'America/Santiago',
+					breaks: {
+						first: {name: 'DST day', date: '2026-09-06'},
+						second: {name: 'Following day', date: '2026-09-07'},
+					},
+				},
+				[],
+			),
+		)
+	})
 	void it('accepts adjacent equal spans, arbitrary matched keys and an empty calendar', () => {
 		assert.doesNotThrow(() => parseScheduleData({timezone: 'America/Chicago', breaks: {}}, []))
 		let input = pair()

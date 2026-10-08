@@ -41,6 +41,12 @@ const cases: {
 		expected: {startMs: Date.UTC(2026, 9, 31, 5), endMs: Date.UTC(2026, 10, 3, 6), calendarDays: 3},
 	},
 	{
+		name: '23-hour day when DST skips midnight',
+		interval: {date: '2026-09-06'},
+		timezone: 'America/Santiago',
+		expected: {startMs: Date.UTC(2026, 8, 6, 4), endMs: Date.UTC(2026, 8, 7, 3), calendarDays: 1},
+	},
+	{
 		name: 'leap day in UTC',
 		interval: {date: '2028-02-29'},
 		timezone: 'UTC',
