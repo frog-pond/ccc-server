@@ -86,7 +86,7 @@ void test('/spaces/hours resolves both published inputs against the matched cont
 	)
 })
 
-void test('/breaks serves only timezone, names and dates from validated definitions', async (t) => {
+void test('/breaks serves only timezone, names and dates from the retained calendar', async (t) => {
 	let {base} = await serve(t)
 	let {send, requests} = upstream(t)
 	let response = await send(`${base}/v1/breaks`)
@@ -99,8 +99,8 @@ void test('/breaks serves only timezone, names and dates from validated definiti
 	)
 })
 
-const badCalendar = {
-	data: {timezone: 'America/Chicago', breaks: {fall: {name: 'Fall', date: '2026-02-29'}}},
+const malformedCalendar = {
+	data: {timezone: 'America/Chicago', breaks: {fall: {name: 'Fall', start: '2026-10-10'}}},
 }
 
 function updatedInputs() {
@@ -153,9 +153,55 @@ void test('both routes share a snapshot and its expiry, including after break ke
 	assert.equal(store.size, 0)
 })
 
+for (let changed of ['hours', 'calendar'] as const) {
+	void test(`changing only ${changed} refreshes the pair when the other endpoint is requested`, async (t) => {
+		let {base, expire} = await serve(t)
+		let {send, requests, responses} = upstream(t)
+		assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
+		let {calendar, spaces} = parseScheduleData(fixture('calendar'), fixture('spaces'))
+		if (changed === 'hours') {
+			let space = spaces[0]
+			assert.ok(space?.breakSchedule)
+			space.breakSchedule['fall'] = {
+				schedule: [{title: 'Updated fall hours', isPhysicallyOpen: false, hours: []}],
+				exceptions: [],
+			}
+			responses.set(GH_PAGES('building-hours.json').href, Response.json({data: spaces}))
+		} else {
+			let fall = calendar.breaks['fall']
+			assert.ok(fall)
+			calendar.breaks['fall'] = {...fall, name: 'Updated fall calendar'}
+			responses.set(GH_PAGES('breaks.json').href, Response.json({data: calendar}))
+		}
+		expire()
+		let trigger = changed === 'hours' ? '/v1/breaks' : '/v1/spaces/hours'
+		assert.equal((await send(`${base}${trigger}`)).status, 200)
+		assert.equal(requests.length, 4)
+		let changedResponse = await send(
+			`${base}${changed === 'hours' ? '/v1/spaces/hours' : '/v1/breaks'}`,
+		)
+		assert.equal(changedResponse.headers.get('x-cached-response'), 'HIT')
+		if (changed === 'hours') {
+			let body = (await changedResponse.json()) as {
+				data: {breakSchedule: {fall: {schedule: {title: string}[]}}}[]
+			}
+			assert.equal(body.data[0]?.breakSchedule.fall.schedule[0]?.title, 'Updated fall hours')
+		} else {
+			let body = (await changedResponse.json()) as {data: {breaks: {fall: {name: string}}}}
+			assert.equal(body.data.breaks.fall.name, 'Updated fall calendar')
+		}
+		assert.equal(requests.length, 4)
+	})
+}
+
 for (let [name, file, failed] of [
-	['invalid calendar', 'breaks.json', Response.json(badCalendar)],
+	['malformed calendar', 'breaks.json', Response.json(malformedCalendar)],
 	['invalid hours', 'building-hours.json', Response.json({data: [{}]})],
+	[
+		'incompatible calendar revision',
+		'breaks.json',
+		Response.json({data: updatedInputs().calendar}),
+	],
 	['upstream outage', 'breaks.json', new Response('unavailable', {status: 400})],
 ] as const) {
 	void test(`both routes retain the last-good pair after ${name}, throttle retries and recover`, async (t) => {
@@ -270,7 +316,7 @@ for (let keys of [
 void test('cache administration can clear a failed cold snapshot retry window', async (t) => {
 	let {base} = await serve(t)
 	let {send, requests, responses} = upstream(t)
-	responses.set(GH_PAGES('breaks.json').href, Response.json(badCalendar))
+	responses.set(GH_PAGES('breaks.json').href, Response.json(malformedCalendar))
 	assert.equal((await send(`${base}/v1/breaks`)).status, 500)
 	responses.set(GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')}))
 	await send(`${base}/_cache`, {method: 'DELETE'})
@@ -356,15 +402,17 @@ for (let [name, file, response, routes] of [
 		['/v1/spaces/hours', '/v1/breaks'],
 	],
 	[
-		'invalid calendar',
+		'malformed calendar',
 		'breaks.json',
-		Response.json(badCalendar),
+		Response.json(malformedCalendar),
 		['/v1/spaces/hours', '/v1/breaks'],
 	],
 	[
-		'invalid unused template',
+		'malformed unused template container',
 		'breaks.json',
-		Response.json({data: {timezone: 'America/Chicago', templates: {empty: []}, breaks: {}}}),
+		Response.json({
+			data: {timezone: 'America/Chicago', templates: {malformed: {schedule: {}}}, breaks: {}},
+		}),
 		['/v1/spaces/hours', '/v1/breaks'],
 	],
 	[

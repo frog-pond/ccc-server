@@ -10,13 +10,13 @@ export type ScheduleResponses = ReturnType<typeof resolveScheduleResponses>
 
 const envelope = z.object({data: z.unknown()})
 
-/** Unwrap published JSON; the paired schedule parser validates the payload. */
+/** Unwrap AAO's normalized publications; expansion checks their structural compatibility. */
 async function getScheduleData(filename: 'building-hours.json' | 'breaks.json') {
 	return envelope.parse(await getJson(GH_PAGES(filename))).data
 }
 
 async function loadScheduleResponses() {
-	// These independent URLs have no shared upstream revision. Validate before publishing locally.
+	// These independent URLs have no shared upstream revision. Expand before replacing the local pair.
 	let [hours, calendar] = await Promise.all([
 		getScheduleData('building-hours.json'),
 		getScheduleData('breaks.json'),
@@ -100,7 +100,7 @@ interface SnapshotRead {
 	freshUntil: number
 }
 
-/** Scheduling policy only: load must return a completely validated response pair. */
+/** Scheduling policy only: load returns a completely expanded response pair. */
 export function createScheduleStore({
 	load,
 	now,
@@ -125,7 +125,7 @@ export function createScheduleStore({
 				delete current.lastGood
 				throw failure
 			}
-			console.warn('Schedule refresh failed; serving the last validated snapshot', failure)
+			console.warn('Schedule refresh failed; serving the last resolved snapshot', failure)
 		}
 	}
 

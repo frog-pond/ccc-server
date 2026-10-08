@@ -114,7 +114,7 @@ endpoint versions for the institution.
 
 ## Schedule snapshots
 
-St. Olaf's `/v1/spaces/hours` and `/v1/breaks` share one validated snapshot per
+St. Olaf's `/v1/spaces/hours` and `/v1/breaks` share one resolved snapshot per
 app instance, refreshed after an hour. If a refresh fails, both routes can serve
 the last successful snapshot for up to 24 hours, with `X-Cached-Response: STALE`
 and `Cache-Control: private, no-cache, no-store`. Refresh failures are retried
@@ -128,9 +128,11 @@ the pair once. Deleting all entries also clears the snapshot. An
 in-flight request may finish using its old data, but cannot refill an evicted
 snapshot. Query-string variants share the same snapshot and canonical admin keys.
 
-The server validates both fetched files and publishes their responses together in
-its local store. The upstream URLs do not expose a shared revision, so validation
-cannot prove that both files belong to the same upstream publication. Separate
+On refresh, the server fetches both inputs and expands their references before
+replacing either cached response. AAO validates authoring before publication;
+the server checks normalized containers and the references it expands. The upstream
+URLs do not expose a shared revision, so these checks cannot prove that both files
+belong to the same upstream publication. Separate
 client requests straddling a refresh can also observe different snapshots. A
 stronger consistency contract requires a shared upstream revision (or one combined
 artifact) and a way for clients to request or compare that revision.
