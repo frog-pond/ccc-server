@@ -1,14 +1,17 @@
-import {test} from 'node:test'
+import {beforeEach, test} from 'node:test'
 import Koa from 'koa'
+import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
 import {noop} from 'lodash-es'
 import {withBodyParsers} from '@koa/body-parsers'
-import {api} from '../index.ts'
+import {api, cache} from '../index.ts'
 
-/// The v1 routes behind a bare app, with the server's caching stubbed out.
+beforeEach(() => {
+	cache.clear()
+})
+
+/// The institution router includes its response cache middleware.
 async function serve(t: test.TestContext) {
-	let app = new Koa()
-	app.context['cacheControl'] = noop
-	app.context['cached'] = () => false
+	let app = ctxCacheControl(new Koa())
 	withBodyParsers(app)
 	app.use(api.routes())
 

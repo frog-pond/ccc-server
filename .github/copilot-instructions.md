@@ -38,7 +38,8 @@
 - **Environment Variables:**
   - `INSTITUTION` is required for server startup: `stolaf-college`, `carleton-college`, or `all`.
   - Single-institution modes serve versioned endpoints under `/v1/`. `all` serves both institutions in one process or container, mounting St. Olaf under `/stolaf` and Carleton under `/carleton`; for example, their route listings are `/stolaf/v1/routes` and `/carleton/v1/routes`. These institution prefixes apply to every endpoint version, including `/stolaf/v2/...` and `/carleton/v1.1/...`.
-  - Combined mode has no unprefixed `/v1` API. `/ping` and `/_cache` stay at the server root, and response cache keys include the institution prefix to keep the two institutions' responses separate.
+  - Institution modules export fully configured `api` routers with their helpers and response cache middleware. Each module owns a 10,000-entry cache shared across apps mounting that institution in one process; `createApp` mounts the routers and supplies shared HTTP middleware.
+  - Combined mode also serves `/ping` at the server root for health checks. Server utilities and greetings use the institution prefix (`/stolaf/ping`, `/carleton/ping`, `/stolaf/_cache`, `/carleton/_cache`, `/stolaf/`, and `/carleton/`). Cache listings and deletions are scoped to the institution, and response cache keys include the institution prefix to keep the two institutions' responses separate.
   - `SMOKE_TEST` disables port binding for test runs.
   - `NODE_PORT` sets server port (default 3000).
 - **Middleware:**
