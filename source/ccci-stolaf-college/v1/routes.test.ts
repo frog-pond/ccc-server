@@ -30,15 +30,8 @@ for (const route of ROUTES) {
 }
 
 /// The institution router includes its response cache middleware.
-async function serve(t: test.TestContext, {onLookup}: {onLookup?: () => void} = {}) {
+async function serve(t: test.TestContext) {
 	let app = ctxCacheControl(new Koa())
-	if (onLookup) {
-		const get = cache.get.bind(cache)
-		t.mock.method(cache, 'get', (key: string) => {
-			onLookup()
-			return get(key)
-		})
-	}
 	withBodyParsers(app)
 	app.use(api.routes())
 
@@ -334,12 +327,8 @@ void test('/streams/search for upcoming streams keeps a default end that already
 })
 
 void test('/streams/search refuses a bad request before asking the cache', async (t) => {
-	let lookups = 0
-	let base = await serve(t, {
-		onLookup: () => {
-			lookups += 1
-		},
-	})
+	let base = await serve(t)
+	let lookups = t.mock.method(cache, 'get')
 	let asked = fakeStreams(t)
 	let statuses = await Promise.all(
 		['?query=', '?query=choir&dateFrom=2021-01-01&dateTo=2020-01-01'].map(
@@ -347,12 +336,12 @@ void test('/streams/search refuses a bad request before asking the cache', async
 		),
 	)
 	assert.deepEqual(statuses, [400, 400])
-	assert.equal(lookups, 0)
+	assert.equal(lookups.mock.callCount(), 0)
 	assert.equal(asked.length, 0)
 
 	// and a good one does ask it
 	await fetch(`${base}/v1/streams/search?query=choir`)
-	assert.equal(lookups, 1)
+	assert.equal(lookups.mock.callCount(), 1)
 })
 
 const REFUSED = [
