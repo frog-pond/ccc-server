@@ -24,9 +24,6 @@ export interface BreakCalendar<T> {
 /** Scheduling fields share one container before and after reference expansion. */
 export interface Space<T, B = Schedule<T>> {
 	[key: string]: unknown
-	name: string
-	category: string
-	kind: 'building' | 'office' | 'space' | 'service'
 	schedule: T[]
 	exceptions?: Schedule<T>['exceptions'] | undefined
 	breakSchedule?: Record<string, B> | undefined

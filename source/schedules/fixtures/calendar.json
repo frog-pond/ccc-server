@@ -1,13 +1,16 @@
 {
   "timezone": "America/Chicago",
   "templates": {
-    "closed": [
-      {
-        "title": "Closed",
-        "isPhysicallyOpen": false,
-        "hours": []
-      }
-    ],
+    "closed": {
+      "schedule": [
+        {
+          "title": "Closed",
+          "isPhysicallyOpen": false,
+          "hours": []
+        }
+      ],
+      "exceptions": []
+    },
     "office-hours": {
       "schedule": [
         {
@@ -59,20 +62,24 @@
             "notes": "Contact the office to arrange a visit.",
             "hours": []
           }
-        ]
+        ],
+        "exceptions": []
       }
     },
     "interim": {
       "name": "Interim Break",
       "start": "2027-01-30",
       "end": "2027-02-07",
-      "defaultSpaceSchedule": [
-        {
-          "title": "Closed",
-          "isPhysicallyOpen": false,
-          "hours": []
-        }
-      ]
+      "defaultSpaceSchedule": {
+        "schedule": [
+          {
+            "title": "Closed",
+            "isPhysicallyOpen": false,
+            "hours": []
+          }
+        ],
+        "exceptions": []
+      }
     },
     "spring": {
       "name": "Spring Break",
@@ -111,13 +118,16 @@
             }
           ]
         },
-        "spring-only": [
-          {
-            "title": "By appointment",
-            "notes": "Arrange a visit.",
-            "hours": []
-          }
-        ]
+        "spring-only": {
+          "schedule": [
+            {
+              "title": "By appointment",
+              "notes": "Arrange a visit.",
+              "hours": []
+            }
+          ],
+          "exceptions": []
+        }
       }
     },
     "easter": {

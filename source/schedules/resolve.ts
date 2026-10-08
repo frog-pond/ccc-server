@@ -1,105 +1,102 @@
-import assert from 'node:assert/strict'
 import type {BreakCalendar, Schedule, AuthoredSpace, ResolvedSpace} from './types.ts'
 import {parseScheduleData} from './parse.ts'
-import {validateSchedules} from './validate.ts'
-import {classifySpacePolicy} from './references.ts'
 
-/** Expand all authored entries, without consulting the clock or modifying inputs. */
-export function resolveSchedules<T>(
-	calendar: BreakCalendar<T>,
-	spaces: readonly AuthoredSpace<T>[],
-): ResolvedSpace<T>[] {
-	validateSchedules(
-		calendar,
-		spaces.map((schedules, index) => ({label: `spaces[${index.toFixed(0)}]`, schedules})),
-	)
-	return resolveValidatedSchedules(calendar, spaces)
+function fail(path: string, message: string): never {
+	throw new Error(`${path}: ${message}`)
 }
 
-/** Internal expansion for inputs whose complete reference graph has been validated. */
-function resolveValidatedSchedules<T>(
-	calendar: BreakCalendar<T>,
-	spaces: readonly AuthoredSpace<T>[],
-): ResolvedSpace<T>[] {
-	return spaces.map((space) => resolveSpace(calendar, space))
+/** Local templates replace whole global policies; inherited object keys never count. */
+function template(calendar: BreakCalendar<unknown>, key: string, name: string, path: string) {
+	let local = calendar.breaks[key]?.templates ?? {}
+	let global = calendar.templates ?? {}
+	let policy = Object.hasOwn(local, name)
+		? local[name]
+		: Object.hasOwn(global, name)
+			? global[name]
+			: undefined
+	return policy ?? fail(path, `unknown template ${name} in ${key}'s context`)
 }
 
-interface ResolutionContext<T> {
-	calendar: BreakCalendar<T>
-	space: AuthoredSpace<T>
-	resolved: Map<string, Schedule<T>>
-}
-
-function resolveSpace<T>(calendar: BreakCalendar<T>, space: AuthoredSpace<T>): ResolvedSpace<T> {
-	let {breakSchedule: entries, ...fields} = space
+function resolveSpace(
+	calendar: BreakCalendar<unknown>,
+	space: AuthoredSpace<unknown>,
+	index: number,
+): ResolvedSpace<unknown> {
+	const {breakSchedule: entries, ...fields} = space
 	if (entries === undefined) return fields
+	const policies = entries
+	let resolved = new Map<string, Schedule<unknown>>()
+	let visiting = new Set<string>()
 
-	let context: ResolutionContext<T> = {calendar, space, resolved: new Map()}
-	let breakSchedule = Object.fromEntries(
-		Object.keys(entries).map((key) => [key, resolveBreakPolicy(context, key)]),
-	)
-	return {...fields, breakSchedule}
-}
+	// Resolve and check references in one traversal. AAO validates each published
+	// dataset, but independently fetched files can still contain incompatible references.
+	function resolve(key: string): Schedule<unknown> {
+		let path = `spaces[${index.toFixed(0)}].breakSchedule.${key}`
+		let cached = resolved.get(key)
+		if (cached) return cached
+		if (visiting.has(key)) {
+			fail(path, `cyclic break reference: ${[...visiting, key].join(' -> ')}`)
+		}
+		let entry = Object.hasOwn(calendar.breaks, key) ? calendar.breaks[key] : undefined
+		if (entry === undefined) fail(path, 'unknown break key')
+		let policy = Object.hasOwn(policies, key) ? policies[key] : undefined
+		if (policy === undefined) fail(path, 'missing authored alias target')
+		visiting.add(key)
+		let result: Schedule<unknown>
+		if (typeof policy !== 'string') {
+			result = policy
+		} else if (policy === 'normal') {
+			result = {schedule: space.schedule, exceptions: space.exceptions ?? []}
+		} else if (policy === 'inherit') {
+			let fallback = entry.defaultSpaceSchedule
+			if (fallback === undefined) fail(path, 'inherit requires a break default')
+			if (typeof fallback === 'string') {
+				if (
+					fallback === 'normal' ||
+					fallback === 'inherit' ||
+					Object.hasOwn(calendar.breaks, fallback)
+				) {
+					fail(path, 'defaults cannot use normal, inherit or break references')
+				}
+				result = template(calendar, key, fallback, path)
+			} else {
+				result = fallback
+			}
+		} else if (Object.hasOwn(calendar.breaks, policy)) {
+			// An alias uses its target break's template/default context.
+			result = resolve(policy)
+		} else {
+			result = template(calendar, key, policy, path)
+		}
+		visiting.delete(key)
+		resolved.set(key, result)
+		return result
+	}
 
-function resolveBreakPolicy<T>(context: ResolutionContext<T>, key: string): Schedule<T> {
-	let cached = context.resolved.get(key)
-	if (cached) return cached
-
-	let policy = context.space.breakSchedule?.[key]
-	assert(policy !== undefined, `missing authored alias target ${key}`)
-	let result = resolvePolicy(context, key, policy)
-	context.resolved.set(key, result)
-	return result
-}
-
-function resolvePolicy<T>(
-	context: ResolutionContext<T>,
-	key: string,
-	policy: string | Schedule<T>,
-): Schedule<T> {
-	let {calendar, space} = context
-	let classified = classifySpacePolicy(calendar, key, policy, `breakSchedule.${key}`)
-	switch (classified.kind) {
-		case 'normal':
-			return {schedule: space.schedule, exceptions: space.exceptions ?? []}
-		case 'inherit':
-			return classified.fallback.policy
-		// Aliases use the target break's template/default context.
-		case 'alias':
-			return resolveBreakPolicy(context, classified.target)
-		case 'template':
-		case 'inline':
-			return classified.policy
+	return {
+		...fields,
+		breakSchedule: Object.fromEntries(Object.keys(entries).map((key) => [key, resolve(key)])),
 	}
 }
 
-/** Validates the complete pair before returning any canonical hours. */
-export function resolveScheduleData(calendarInput: unknown, spacesInput: unknown) {
-	return resolveScheduleResponses(calendarInput, spacesInput).hours
-}
-
-/** Build both public projections from a single validated pair of inputs. */
+/** Expand every authored policy and project its calendar, without date-dependent selection. */
 export function resolveScheduleResponses(calendarInput: unknown, spacesInput: unknown) {
 	let {calendar, spaces} = parseScheduleData(calendarInput, spacesInput)
+	let hours = {data: spaces.map((space, index) => resolveSpace(calendar, space, index))}
 	return {
-		hours: {data: resolveValidatedSchedules(calendar, spaces)},
-		calendar: calendarResponse(calendar),
-	}
-}
-
-/** Pure calendar projection for the matched response contract; no route integration. */
-export function calendarResponse<T>(calendar: BreakCalendar<T>) {
-	return {
-		data: {
-			timezone: calendar.timezone,
-			breaks: Object.fromEntries(
-				Object.entries(calendar.breaks).map(([key, entry]) => [key, calendarBreakResponse(entry)]),
-			),
+		hours,
+		calendar: {
+			data: {
+				timezone: calendar.timezone,
+				breaks: Object.fromEntries(
+					Object.entries(calendar.breaks).map(([key, entry]) => [
+						key,
+						entry.date !== undefined
+							? {name: entry.name, date: entry.date}
+							: {name: entry.name, start: entry.start, end: entry.end},
+					]),
+				),
+			},
 		},
 	}
-}
-
-function calendarBreakResponse<T>(entry: BreakCalendar<T>['breaks'][string]) {
-	if (entry.date !== undefined) return {name: entry.name, date: entry.date}
-	return {name: entry.name, start: entry.start, end: entry.end}
 }

@@ -137,10 +137,13 @@ This repository practices TDD for agentic development: write a failing AVA test 
 
 ## Schedule authoring contracts
 
-Schedule JSON retains additive metadata, including unknown fields on service blocks,
-hours rows, policies, exceptions, and spaces. This is an intentional compatibility
-policy: unknown optional field names (including typos) are not rejected. Known
-scheduling fields and the complete reference graph are validated before serving.
+AAO owns authoring validation and publishes normalized schedule objects, with
+explicit exception lists and references intact. The server checks the published
+containers and expands references in one traversal; missing references and cycles
+fail expansion. It does not repeat service, date, timezone, or overlap validation.
+Service contents and additive metadata pass through unchanged.
 Defaults accept only inline policies or template names. Space break policies also
 accept `normal`, `inherit`, and aliases to explicitly authored break entries. Local
 templates replace global policies completely; aliases use their target's context.
+The hours response includes every authored break policy; clients choose the
+applicable key using the breaks calendar. The server does not select today's hours.
