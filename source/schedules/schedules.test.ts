@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {describe, it} from 'node:test'
+import {z} from 'zod'
 import {parseScheduleData} from './parse.ts'
 import {calendarResponse, resolveScheduleData, resolveSchedules} from './resolve.ts'
 
@@ -142,6 +143,23 @@ void describe('server schedule contracts', () => {
 		assert.deepEqual(must(policies['winter']).exceptions, must(policies['fall']).exceptions)
 		assert.equal(must(must(policies['winter']).exceptions[0]).date, '2026-10-10')
 	})
+	void it('resolves identically regardless of authored object insertion order', () => {
+		let {calendar, spaces} = parseScheduleData(fixture('calendar'), fixture('spaces'))
+		let expected = resolveSchedules(calendar, spaces)
+		calendar.breaks = Object.fromEntries(Object.entries(calendar.breaks).reverse())
+		calendar.templates = Object.fromEntries(Object.entries(calendar.templates ?? {}).reverse())
+		for (let entry of Object.values(calendar.breaks)) {
+			if (entry.templates) {
+				entry.templates = Object.fromEntries(Object.entries(entry.templates).reverse())
+			}
+		}
+		for (let space of spaces) {
+			if (space.breakSchedule) {
+				space.breakSchedule = Object.fromEntries(Object.entries(space.breakSchedule).reverse())
+			}
+		}
+		assert.deepEqual(resolveSchedules(calendar, spaces), expected)
+	})
 	for (let [start, end] of [
 		['2026-10-12', '2026-10-16'],
 		['2026-10-08', '2026-10-11'],
@@ -160,21 +178,81 @@ void describe('server schedule contracts', () => {
 		})
 	}
 
-	const invalid: [string, string, unknown][] = [
+	const invalid: [string, string, unknown, string?][] = [
 		['empty space name', 'spaces.0.name', ''],
 		['blank space name', 'spaces.0.name', '   '],
-		['unknown break', 'spaces.0.breakSchedule.fal', 'normal'],
-		['unknown template', 'spaces.0.breakSchedule.spring', 'typo'],
-		['template from another context', 'spaces.0.breakSchedule.easter', 'spring-only'],
-		['missing alias target', 'spaces.0.breakSchedule', {easter: 'fall'}],
-		['self-reference', 'spaces.0.breakSchedule.easter', 'easter'],
-		['cycle', 'spaces.0.breakSchedule', {fall: 'winter', winter: 'spring', spring: 'fall'}],
-		['inherit without default', 'spaces.0.breakSchedule.easter', 'inherit'],
-		['prototype template', 'spaces.0.breakSchedule.fall', 'toString'],
-		['global collision', 'calendar.templates.fall', closed],
-		['local collision', 'calendar.breaks.spring.templates.fall', closed],
-		['unknown unused default', 'calendar.breaks.fall.defaultSpaceSchedule', 'unknown'],
-		['cross-break default', 'calendar.breaks.fall.defaultSpaceSchedule', 'winter'],
+		[
+			'unknown break',
+			'spaces.0.breakSchedule.fal',
+			'normal',
+			'spaces[0].breakSchedule.fal: unknown break key',
+		],
+		[
+			'unknown template',
+			'spaces.0.breakSchedule.spring',
+			'typo',
+			"spaces[0].breakSchedule.spring: unknown template typo in spring's context",
+		],
+		[
+			'template from another context',
+			'spaces.0.breakSchedule.easter',
+			'spring-only',
+			"spaces[0].breakSchedule.easter: unknown template spring-only in easter's context",
+		],
+		[
+			'missing alias target',
+			'spaces.0.breakSchedule',
+			{easter: 'fall'},
+			'spaces[0].breakSchedule.fall: missing authored alias target',
+		],
+		[
+			'self-reference',
+			'spaces.0.breakSchedule.easter',
+			'easter',
+			'spaces[0].breakSchedule.easter: a break cannot reference itself',
+		],
+		[
+			'cycle',
+			'spaces.0.breakSchedule',
+			{fall: 'winter', winter: 'spring', spring: 'fall'},
+			'spaces[0].breakSchedule.fall: cyclic break reference: fall -> winter -> spring -> fall',
+		],
+		[
+			'inherit without default',
+			'spaces.0.breakSchedule.easter',
+			'inherit',
+			'spaces[0].breakSchedule.easter: inherit requires a break default',
+		],
+		[
+			'prototype template',
+			'spaces.0.breakSchedule.fall',
+			'toString',
+			"spaces[0].breakSchedule.fall: unknown template toString in fall's context",
+		],
+		[
+			'global collision',
+			'calendar.templates.fall',
+			closed,
+			'calendar.breaks.fall: break and template names must be disjoint',
+		],
+		[
+			'local collision',
+			'calendar.breaks.spring.templates.fall',
+			closed,
+			'calendar.breaks.fall: break and template names must be disjoint',
+		],
+		[
+			'unknown unused default',
+			'calendar.breaks.fall.defaultSpaceSchedule',
+			'unknown',
+			"calendar.breaks.fall.defaultSpaceSchedule: unknown template unknown in fall's context",
+		],
+		[
+			'cross-break default',
+			'calendar.breaks.fall.defaultSpaceSchedule',
+			'winter',
+			'calendar.breaks.fall.defaultSpaceSchedule: defaults cannot use normal, inherit or break references',
+		],
 		['global template reference', 'calendar.templates.closed', 'office-hours'],
 		['local template reference', 'calendar.breaks.spring.templates.spring-only', 'closed'],
 		['empty shorthand', 'spaces.0.breakSchedule.fall', []],
@@ -195,11 +273,21 @@ void describe('server schedule contracts', () => {
 		['24-hour time', 'spaces.0.schedule.0.hours.0.to', '19:00pm'],
 		['short minutes', 'spaces.0.schedule.0.hours.0.from', '9:5am'],
 		['invalid time', 'spaces.0.schedule.0.hours.0.from', '25:99am'],
-		['invalid timezone', 'calendar.timezone', 'Invalid/Timezone'],
+		[
+			'invalid timezone',
+			'calendar.timezone',
+			'Invalid/Timezone',
+			'calendar.timezone: Invalid time zone specified: Invalid/Timezone',
+		],
 		['missing timezone', 'calendar.timezone', undefined],
 		['invalid date', 'calendar.breaks.easter.date', '2027-02-29'],
 		['timestamp date', 'calendar.breaks.easter.date', '2027-03-28T00:00:00Z'],
-		['reversed interval', 'calendar.breaks.fall.end', '2026-10-09'],
+		[
+			'reversed interval',
+			'calendar.breaks.fall.end',
+			'2026-10-09',
+			'calendar.breaks.fall: A calendar interval must start on or before its end',
+		],
 		['mixed interval', 'calendar.breaks.fall.date', '2026-10-10'],
 		['incomplete interval', 'calendar.breaks.fall.end', undefined],
 		['missing name', 'calendar.breaks.fall.name', undefined],
@@ -207,6 +295,7 @@ void describe('server schedule contracts', () => {
 			'duplicate interval',
 			'calendar.breaks.duplicate',
 			{name: 'Duplicate', start: '2027-03-28', end: '2027-03-28'},
+			'calendar.breaks.duplicate: duplicates the interval of easter',
 		],
 	]
 	void it('rejects duplicate space names with both input locations', () => {
@@ -228,14 +317,26 @@ void describe('server schedule contracts', () => {
 				`reserved break ${reserved}`,
 				`calendar.breaks.${reserved}`,
 				{name: reserved, date: '2027-05-18'},
+				`calendar.breaks.${reserved}: reserved name`,
 			],
-			[`reserved template ${reserved}`, `calendar.templates.${reserved}`, closed],
+			[
+				`reserved template ${reserved}`,
+				`calendar.templates.${reserved}`,
+				closed,
+				`calendar.templates.${reserved}: reserved name`,
+			],
 			[
 				`reserved local template ${reserved}`,
 				`calendar.breaks.spring.templates.${reserved}`,
 				closed,
+				`calendar.templates.${reserved}: reserved name`,
 			],
-			[`reserved default ${reserved}`, 'calendar.breaks.fall.defaultSpaceSchedule', reserved],
+			[
+				`reserved default ${reserved}`,
+				'calendar.breaks.fall.defaultSpaceSchedule',
+				reserved,
+				'calendar.breaks.fall.defaultSpaceSchedule: defaults cannot use normal, inherit or break references',
+			],
 		)
 	}
 	for (let path of [
@@ -262,6 +363,7 @@ void describe('server schedule contracts', () => {
 					{date: '2026-10-10', schedule: closed},
 					{date: '2026-10-10', schedule: closed},
 				],
+				`${path.replace(/\.(\d+)(?=\.|$)/gu, '[$1]')}.exceptions[1]: duplicate exception date 2026-10-10`,
 			],
 			[`invalid exception ${path}`, `${path}.exceptions.0.date`, '2026-02-29'],
 			[
@@ -271,11 +373,35 @@ void describe('server schedule contracts', () => {
 			],
 		)
 	}
-	for (let [name, path, value] of invalid) {
+	for (let [name, path, value, diagnostic] of invalid) {
 		void it(`rejects ${name} before returning a response`, () => {
 			let input = pair()
 			set(input, path, value)
-			assert.throws(() => resolveScheduleData(input.calendar, input.spaces))
+			assert.throws(
+				() => resolveScheduleData(input.calendar, input.spaces),
+				(error: unknown) => {
+					assert.ok(error instanceof Error)
+					if (diagnostic !== undefined) {
+						assert.equal(error.message, diagnostic)
+					} else {
+						assert.ok(error instanceof z.ZodError)
+						// Union failures can be attached to the containing policy rather than its field.
+						let expected = path.split('.').slice(1).join('.')
+						assert.ok(
+							error.issues.some((issue) => {
+								let actual = issue.path.join('.')
+								return (
+									actual === expected ||
+									expected.startsWith(`${actual}.`) ||
+									actual.startsWith(`${expected}.`)
+								)
+							}),
+							error.message,
+						)
+					}
+					return true
+				},
+			)
 		})
 	}
 	const transitions: [string, string, string][] = [

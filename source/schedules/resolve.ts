@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict'
-import type {BreakCalendar, Schedule, Space} from './types.ts'
+import type {BreakCalendar, Schedule, AuthoredSpace, ResolvedSpace} from './types.ts'
 import {parseScheduleData} from './parse.ts'
 import {validateSchedules} from './validate.ts'
+import {classifySpacePolicy} from './references.ts'
 
 /** Expand all authored entries, without consulting the clock or modifying inputs. */
 export function resolveSchedules<T>(
 	calendar: BreakCalendar<T>,
-	spaces: readonly Space<T, string | Schedule<T>>[],
-): Space<T>[] {
+	spaces: readonly AuthoredSpace<T>[],
+): ResolvedSpace<T>[] {
 	validateSchedules(
 		calendar,
 		spaces.map((schedules, index) => ({label: `spaces[${index.toFixed(0)}]`, schedules})),
@@ -18,21 +19,18 @@ export function resolveSchedules<T>(
 /** Internal expansion for inputs whose complete reference graph has been validated. */
 function resolveValidatedSchedules<T>(
 	calendar: BreakCalendar<T>,
-	spaces: readonly Space<T, string | Schedule<T>>[],
-): Space<T>[] {
+	spaces: readonly AuthoredSpace<T>[],
+): ResolvedSpace<T>[] {
 	return spaces.map((space) => resolveSpace(calendar, space))
 }
 
 interface ResolutionContext<T> {
 	calendar: BreakCalendar<T>
-	space: Space<T, string | Schedule<T>>
+	space: AuthoredSpace<T>
 	resolved: Map<string, Schedule<T>>
 }
 
-function resolveSpace<T>(
-	calendar: BreakCalendar<T>,
-	space: Space<T, string | Schedule<T>>,
-): Space<T> {
+function resolveSpace<T>(calendar: BreakCalendar<T>, space: AuthoredSpace<T>): ResolvedSpace<T> {
 	let {breakSchedule: entries, ...fields} = space
 	if (entries === undefined) return fields
 
@@ -49,35 +47,30 @@ function resolveBreakPolicy<T>(context: ResolutionContext<T>, key: string): Sche
 
 	let policy = context.space.breakSchedule?.[key]
 	assert(policy !== undefined, `missing authored alias target ${key}`)
-	let result = typeof policy === 'string' ? resolveReference(context, key, policy) : policy
+	let result = resolvePolicy(context, key, policy)
 	context.resolved.set(key, result)
 	return result
 }
 
-function resolveReference<T>(
+function resolvePolicy<T>(
 	context: ResolutionContext<T>,
 	key: string,
-	reference: string,
+	policy: string | Schedule<T>,
 ): Schedule<T> {
 	let {calendar, space} = context
-	if (reference === 'normal') {
-		return {schedule: space.schedule, exceptions: space.exceptions ?? []}
+	let classified = classifySpacePolicy(calendar, key, policy, `breakSchedule.${key}`)
+	switch (classified.kind) {
+		case 'normal':
+			return {schedule: space.schedule, exceptions: space.exceptions ?? []}
+		case 'inherit':
+			return classified.fallback.policy
+		// Aliases use the target break's template/default context.
+		case 'alias':
+			return resolveBreakPolicy(context, classified.target)
+		case 'template':
+		case 'inline':
+			return classified.policy
 	}
-	if (reference === 'inherit') {
-		let fallback = calendar.breaks[key]?.defaultSpaceSchedule
-		assert(fallback !== undefined, `inherit requires a break default for ${key}`)
-		return typeof fallback === 'string' ? resolveTemplate(calendar, key, fallback) : fallback
-	}
-	// Aliases use the target break's template/default context.
-	if (Object.hasOwn(calendar.breaks, reference)) return resolveBreakPolicy(context, reference)
-	return resolveTemplate(calendar, key, reference)
-}
-
-function resolveTemplate<T>(calendar: BreakCalendar<T>, key: string, name: string): Schedule<T> {
-	let local = calendar.breaks[key]?.templates ?? {}
-	let policy = Object.hasOwn(local, name) ? local[name] : calendar.templates?.[name]
-	assert(policy !== undefined, `unknown template ${name}`)
-	return policy
 }
 
 /** Validates the complete pair before returning any canonical hours. */

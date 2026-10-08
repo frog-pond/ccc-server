@@ -1,5 +1,5 @@
 import {z} from 'zod'
-import type {BreakCalendar, Schedule, Space} from './types.ts'
+import type {BreakCalendar, AuthoredSpace} from './types.ts'
 import {validateSchedules} from './validate.ts'
 
 const text = z.string().regex(/\S/u)
@@ -65,7 +65,7 @@ const spaceSchema = z.looseObject({
 
 export interface ScheduleData {
 	calendar: BreakCalendar<ServiceBlock>
-	spaces: Space<ServiceBlock, string | Schedule<ServiceBlock>>[]
+	spaces: AuthoredSpace<ServiceBlock>[]
 }
 
 /** Parse JSON payloads, normalize shorthand, then validate the entire reference graph. */

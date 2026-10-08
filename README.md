@@ -134,3 +134,13 @@ mise run test:carleton-college
 TDD workflow
 
 This repository practices TDD for agentic development: write a failing AVA test next to the implementation (`*.test.ts`), run `mise run test`, implement until green, then run smoke tests for integration checks.
+
+## Schedule authoring contracts
+
+Schedule JSON retains additive metadata, including unknown fields on service blocks,
+hours rows, policies, exceptions, and spaces. This is an intentional compatibility
+policy: unknown optional field names (including typos) are not rejected. Known
+scheduling fields and the complete reference graph are validated before serving.
+Defaults accept only inline policies or template names. Space break policies also
+accept `normal`, `inherit`, and aliases to explicitly authored break entries. Local
+templates replace global policies completely; aliases use their target's context.

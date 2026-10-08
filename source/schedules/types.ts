@@ -31,3 +31,9 @@ export interface Space<T, B = Schedule<T>> {
 	exceptions?: Schedule<T>['exceptions'] | undefined
 	breakSchedule?: Record<string, B> | undefined
 }
+
+/** Normalized authored JSON; strings are classified before use. */
+export type AuthoredSpace<T> = Space<T, string | Schedule<T>>
+
+/** Public output with every authored reference expanded. */
+export type ResolvedSpace<T> = Space<T>

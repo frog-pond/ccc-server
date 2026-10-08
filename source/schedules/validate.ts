@@ -1,10 +1,11 @@
 import {normalizeCalendarInterval} from './calendar.ts'
-import type {BreakCalendar, CalendarInterval, Schedule, Space} from './types.ts'
+import {classifyDefault, classifySpacePolicy} from './references.ts'
+import type {BreakCalendar, CalendarInterval, Schedule, AuthoredSpace} from './types.ts'
 
 /** Supplies an author-facing label without tying validation to files or buildings. */
 export interface ScheduleValidationInput<T> {
 	label: string
-	schedules: Space<T, string | Schedule<T>>
+	schedules: AuthoredSpace<T>
 }
 
 interface CalendarValidationContext<T> {
@@ -15,7 +16,6 @@ interface CalendarValidationContext<T> {
 
 interface ReferenceValidationContext<T> {
 	calendar: BreakCalendar<T>
-	breakKeys: Set<string>
 	label: string
 	entries: Record<string, string | Schedule<T>>
 	visiting: Set<string>
@@ -120,17 +120,6 @@ function validateSchedule<T>(policy: Schedule<T>, timezone: string, path: string
 	}
 }
 
-function hasTemplate<T>(
-	calendar: BreakCalendar<T>,
-	key: string,
-	name: string,
-	path: string,
-): boolean {
-	let entry = calendar.breaks[key]
-	if (entry === undefined) fail(path, 'unknown break key')
-	return Object.hasOwn(entry.templates ?? {}, name) || Object.hasOwn(calendar.templates ?? {}, name)
-}
-
 function validateTemplates<T>(
 	templates: Record<string, Schedule<T>>,
 	timezone: string,
@@ -156,17 +145,11 @@ function validateDefaultPolicy<T>(
 	key: string,
 	path: string,
 ): void {
-	let {calendar, breakKeys} = context
+	let {calendar} = context
 	let policy = calendar.breaks[key]?.defaultSpaceSchedule
 	if (policy === undefined) return
-	if (typeof policy !== 'string') {
-		validateSchedule(policy, calendar.timezone, path)
-		return
-	}
-	if (reservedNames.has(policy) || breakKeys.has(policy)) {
-		fail(path, 'defaults cannot use normal, inherit or break references')
-	}
-	if (!hasTemplate(calendar, key, policy, path)) fail(path, `unknown template ${policy}`)
+	let classified = classifyDefault(calendar, key, policy, path)
+	if (classified.kind === 'inline') validateSchedule(classified.policy, calendar.timezone, path)
 }
 
 function validateSpaces<T>(
@@ -202,7 +185,6 @@ function validateSpaceReferences<T>(
 	}
 	let graph: ReferenceValidationContext<T> = {
 		calendar: context.calendar,
-		breakKeys: context.breakKeys,
 		label,
 		entries,
 		visiting: new Set(),
@@ -225,36 +207,20 @@ function visitBreakPolicy<T>(
 		fail(path, 'missing authored alias target')
 	}
 	visiting.add(key)
-	if (typeof policy === 'string') {
-		validateReference(context, key, policy, trail)
-	} else {
-		validateSchedule(policy, calendar.timezone, path)
+	let classified = classifySpacePolicy(calendar, key, policy, path)
+	switch (classified.kind) {
+		case 'alias':
+			if (classified.target === key) fail(path, 'a break cannot reference itself')
+			visitBreakPolicy(context, classified.target, [...trail, key])
+			break
+		case 'inline':
+			validateSchedule(classified.policy, calendar.timezone, path)
+			break
+		case 'normal':
+		case 'inherit':
+		case 'template':
+			break
 	}
 	visiting.delete(key)
 	visited.add(key)
-}
-
-function validateReference<T>(
-	context: ReferenceValidationContext<T>,
-	key: string,
-	reference: string,
-	trail: string[],
-): void {
-	let {calendar, breakKeys, label} = context
-	let path = `${label}.breakSchedule.${key}`
-	if (reference === 'normal') return
-	if (reference === 'inherit') {
-		if (calendar.breaks[key]?.defaultSpaceSchedule === undefined) {
-			fail(path, 'inherit requires a break default')
-		}
-		return
-	}
-	if (breakKeys.has(reference)) {
-		if (reference === key) fail(path, 'a break cannot reference itself')
-		visitBreakPolicy(context, reference, [...trail, key])
-		return
-	}
-	if (!hasTemplate(calendar, key, reference, path)) {
-		fail(path, `unknown template ${reference} in ${key}'s context`)
-	}
 }
