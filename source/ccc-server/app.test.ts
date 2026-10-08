@@ -133,6 +133,32 @@ void test('all keeps cached responses separate for the same endpoint at each ins
 	assert.equal(upstream.mock.callCount(), 3)
 })
 
+void test('deleting one cache key preserves other query variants', async (t) => {
+	const upstream = t.mock.method(http, 'get', (url: string) => ({
+		json: () => Promise.resolve({source: url}),
+	}))
+	const base = await serve(t, 'all')
+	const removed = '/stolaf/v1/tools/help?edition=one&lang=en'
+	const retained = '/stolaf/v1/tools/help?edition=two&lang=en'
+	await Promise.all(
+		[removed, retained].map(async (path) => {
+			assert.equal((await fetch(`${base}${path}`)).status, 200)
+		}),
+	)
+	assert.equal(upstream.mock.callCount(), 2)
+	const query = new URLSearchParams({key: removed})
+	const deleted = await fetch(`${base}/stolaf/_cache?${query.toString()}`, {method: 'DELETE'})
+	assert.equal(deleted.status, 204)
+	assert.equal(deleted.headers.get('X-Cache-Deleted'), '1')
+	const hit = await fetch(`${base}${retained}`)
+	assert.match(hit.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
+	assert.equal(upstream.mock.callCount(), 2)
+	const miss = await fetch(`${base}${removed}`)
+	assert.equal(miss.status, 200)
+	assert.doesNotMatch(miss.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
+	assert.equal(upstream.mock.callCount(), 3)
+})
+
 void test('apps mounting the same institution share its cache', async (t) => {
 	const upstream = t.mock.method(http, 'get', (url: string) => ({
 		json: () => Promise.resolve({source: url}),
