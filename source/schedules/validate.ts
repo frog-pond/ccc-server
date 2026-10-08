@@ -70,6 +70,13 @@ export function validateSchedules<T>(
 					`overlaps ${first.key} with an equal calendar-day span`,
 				)
 			}
+			let overlaps = first.startMs < second.endMs && second.startMs < first.endMs
+			let nested =
+				(first.startMs <= second.startMs && first.endMs >= second.endMs) ||
+				(second.startMs <= first.startMs && second.endMs >= first.endMs)
+			if (overlaps && !nested) {
+				fail(`${calendarLabel}.breaks.${second.key}`, `partially overlaps ${first.key}`)
+			}
 		}
 	}
 
@@ -78,6 +85,7 @@ export function validateSchedules<T>(
 		if (schedule.length === 0) {
 			fail(`${path}.schedule`, 'a schedule must contain at least one service')
 		}
+		// Complete policies may be reused by other breaks; retain out-of-range exceptions.
 		let dates = new Set<string>()
 		for (let [index, exception] of exceptions.entries()) {
 			let exceptionPath = `${path}.exceptions[${index.toFixed(0)}]`

@@ -5,7 +5,8 @@ export interface Schedule<T> {
 }
 
 export type CalendarInterval =
-	{date: string; start?: never; end?: never} | {start: string; end: string; date?: never}
+	| {date: string; start?: undefined; end?: undefined}
+	| {start: string; end: string; date?: undefined}
 
 export interface BreakCalendar<T> {
 	timezone: string

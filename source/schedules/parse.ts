@@ -4,8 +4,9 @@ import {validateSchedules} from './validate.ts'
 
 const text = z.string().regex(/\S/u)
 const date = z.iso.date()
-const time = z.string().regex(/^1?\d:[0-5]?\d[ap]m$/u)
-const hoursRow = z.strictObject({
+const time = z.string().regex(/^(?:[1-9]|1[0-2]):[0-5]\d[ap]m$/u)
+// Retain additive upstream metadata while validating every known scheduling field.
+const hoursRow = z.looseObject({
 	days: z
 		.array(z.enum(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']))
 		.min(1)
@@ -14,7 +15,7 @@ const hoursRow = z.strictObject({
 	to: time,
 })
 const service = z
-	.strictObject({
+	.looseObject({
 		title: text,
 		notes: text.optional(),
 		isPhysicallyOpen: z.boolean().optional(),
@@ -29,10 +30,10 @@ const service = z
 
 export type ServiceBlock = z.infer<typeof service>
 const services = z.array(service).min(1)
-const exceptions = z.array(z.strictObject({date, schedule: services}))
+const exceptions = z.array(z.looseObject({date, schedule: services}))
 const policy = z.union([
 	services.transform((schedule) => ({schedule, exceptions: []})),
-	z.strictObject({schedule: services, exceptions: exceptions.default([])}),
+	z.looseObject({schedule: services, exceptions: exceptions.default([])}),
 ])
 const reference = z.union([text, policy])
 const templates = z.record(text, policy)
@@ -41,14 +42,14 @@ const breakFields = {
 	templates: templates.optional(),
 	defaultSpaceSchedule: reference.optional(),
 }
-const calendarSchema = z.strictObject({
+const calendarSchema = z.looseObject({
 	timezone: text,
 	templates: templates.optional(),
 	breaks: z.record(
 		text,
 		z.union([
-			z.strictObject({...breakFields, date}),
-			z.strictObject({...breakFields, start: date, end: date}),
+			z.looseObject({...breakFields, date, start: z.never().optional(), end: z.never().optional()}),
+			z.looseObject({...breakFields, start: date, end: date, date: z.never().optional()}),
 		]),
 	),
 })

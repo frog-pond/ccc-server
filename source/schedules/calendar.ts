@@ -23,7 +23,8 @@ export function normalizeCalendarInterval(interval: CalendarInterval, timezone: 
 	// not silently select the device's timezone.
 	if (!timezone) throw new Error('A calendar timezone is required')
 	new Intl.DateTimeFormat('en-US', {timeZone: timezone})
-	let input: {date?: string; start?: string; end?: string} = interval
+	let input: {date?: string | undefined; start?: string | undefined; end?: string | undefined} =
+		interval
 	let startDate = input.date ?? input.start
 	let endDate = input.date ?? input.end
 	if (

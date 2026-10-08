@@ -114,6 +114,52 @@ void describe('server schedule contracts', () => {
 		)
 	})
 
+	void it('accepts additive metadata throughout the authored schemas', () => {
+		let input = pair()
+		for (let path of [
+			'calendar',
+			'calendar.breaks.fall',
+			'calendar.templates.office-hours',
+			'calendar.breaks.spring.templates.office-hours',
+			'calendar.breaks.winter.defaultSpaceSchedule',
+			'spaces.0.schedule.0',
+			'spaces.0.schedule.0.hours.0',
+			'spaces.0.exceptions.0',
+			'spaces.0.breakSchedule.interim',
+		]) {
+			set(input, `${path}.futureMetadata`, {subtitle: 'New display field'})
+		}
+		let result = resolveScheduleData(input.calendar, input.spaces)
+		assert.deepEqual(must(must(result.data[0]).schedule[0])['futureMetadata'], {
+			subtitle: 'New display field',
+		})
+	})
+	void it('preserves out-of-range exceptions in reusable policies and aliases', () => {
+		let input = pair()
+		set(input, 'spaces.0.breakSchedule', {fall: 'office-hours', winter: 'fall'})
+		let resolved = resolveScheduleData(input.calendar, input.spaces).data
+		let policies = must(must(resolved[0]).breakSchedule)
+		assert.deepEqual(must(policies['winter']).exceptions, must(policies['fall']).exceptions)
+		assert.equal(must(must(policies['winter']).exceptions[0]).date, '2026-10-10')
+	})
+	for (let [start, end] of [
+		['2026-10-12', '2026-10-16'],
+		['2026-10-08', '2026-10-11'],
+	] as const) {
+		void it(`rejects partial overlaps starting ${start}`, () => {
+			let input = pair()
+			set(input, 'calendar.breaks.other', {name: 'Other', start, end})
+			assert.throws(() => parseScheduleData(input.calendar, input.spaces), /overlaps/u)
+		})
+	}
+	for (let time of ['1:00am', '9:05am', '12:00pm', '11:59pm']) {
+		void it(`accepts the twelve-hour time ${time}`, () => {
+			let input = pair()
+			set(input, 'spaces.0.schedule.0.hours.0.from', time)
+			assert.doesNotThrow(() => parseScheduleData(input.calendar, input.spaces))
+		})
+	}
+
 	const invalid: [string, string, unknown][] = [
 		['empty space name', 'spaces.0.name', ''],
 		['blank space name', 'spaces.0.name', '   '],
@@ -141,11 +187,13 @@ void describe('server schedule contracts', () => {
 			[{title: 'Hours', hours: [], isPhysicallyOpen: true}],
 		],
 		['blank notes', 'spaces.0.schedule', [{title: 'Hours', hours: [], notes: '   '}]],
-		['date on service', 'spaces.0.schedule.0.date', '2026-10-10'],
 		['empty weekdays', 'spaces.0.schedule.0.hours.0.days', []],
 		['duplicate weekdays', 'spaces.0.schedule.0.hours.0.days', ['Mo', 'Mo']],
 		['invalid weekdays', 'spaces.0.schedule.0.hours.0.days', ['Monday']],
 		['missing from time', 'spaces.0.schedule.0.hours.0.from', undefined],
+		['zero hour', 'spaces.0.schedule.0.hours.0.from', '0:00am'],
+		['24-hour time', 'spaces.0.schedule.0.hours.0.to', '19:00pm'],
+		['short minutes', 'spaces.0.schedule.0.hours.0.from', '9:5am'],
 		['invalid time', 'spaces.0.schedule.0.hours.0.from', '25:99am'],
 		['invalid timezone', 'calendar.timezone', 'Invalid/Timezone'],
 		['missing timezone', 'calendar.timezone', undefined],
