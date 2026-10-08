@@ -61,7 +61,14 @@ void test('all mounts both institutions with usable route listings and isolated 
 		}),
 	)
 	await Promise.all(
-		['/', '/ping', '/_cache'].map(async (path) => {
+		['GET', 'HEAD'].map(async (method) => {
+			const response = await fetch(`${base}/ping`, {method})
+			assert.equal(response.status, 200)
+			assert.equal(await response.text(), method === 'GET' ? 'pong' : '')
+		}),
+	)
+	await Promise.all(
+		['/', '/_cache'].map(async (path) => {
 			assert.equal((await fetch(`${base}${path}`)).status, 404)
 		}),
 	)

@@ -58,8 +58,8 @@ Each institution's endpoints and route listing live under its base URL, such as
 `/stolaf/v1/routes` and `/carleton/v1/routes`. Server utilities use the same
 institution prefixes: `/stolaf/ping`, `/carleton/ping`, `/stolaf/_cache`, and
 `/carleton/_cache`. Each cache endpoint lists and deletes only its institution's
-entries. The greetings are at `/stolaf/` and `/carleton/`; combined mode has no
-unprefixed routes. Each institution registers its utilities with `setupHelpers(api)`,
+entries. The greetings are at `/stolaf/` and `/carleton/`. A root `/ping` endpoint
+is also available for server health checks. Each institution registers its utilities with `setupHelpers(api)`,
 so they inherit the same mount as its versioned endpoints. The existing `INSTITUTION=stolaf-college` and
 `INSTITUTION=carleton-college` modes continue to serve `/v1/`.
 

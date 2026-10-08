@@ -36,6 +36,9 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 	//
 	const router = new Router<RouterState, ContextState>()
 	if (institution === 'all') {
+		router.get('/ping', (ctx) => {
+			ctx.body = 'pong'
+		})
 		const [stolaf, carleton] = await Promise.all([
 			import('../ccci-stolaf-college/index.ts'),
 			import('../ccci-carleton-college/index.ts'),
