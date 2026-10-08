@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict'
-import {test} from 'node:test'
+import {beforeEach, test} from 'node:test'
 import {createApp, InstitutionSchema} from './app.ts'
-import {api as stolafApi} from '../ccci-stolaf-college/index.ts'
-import {api as carletonApi} from '../ccci-carleton-college/index.ts'
+import {api as stolafApi, cache as stolafCache} from '../ccci-stolaf-college/index.ts'
+import {api as carletonApi, cache as carletonCache} from '../ccci-carleton-college/index.ts'
 import {http} from '../ccc-lib/http.ts'
+
+beforeEach(() => {
+	stolafCache.clear()
+	carletonCache.clear()
+})
 
 async function serve(
 	t: test.TestContext,
@@ -30,6 +35,7 @@ void test('all mounts both institutions with usable route listings and isolated 
 			assert.ok(routes.every((route) => route.path.startsWith(`/${institution}/`)))
 			assert.ok(routes.some((route) => route.displayName === 'util/html-to-md'))
 			assert.ok(routes.some((route) => route.path === `/${institution}/ping`))
+			assert.ok(routes.every((route) => !route.path.includes('(.*)')))
 			const post = await fetch(`${base}${prefix}/util/html-to-md`, {
 				method: 'POST',
 				headers: {'content-type': 'application/json'},
@@ -115,6 +121,45 @@ void test('all keeps cached responses separate for the same endpoint at each ins
 	const stolaf = await fetch(`${base}/stolaf/v1/tools/help`)
 	assert.equal(stolaf.status, 200)
 	assert.equal(upstream.mock.callCount(), 3)
+})
+
+void test('apps mounting the same institution share its cache', async (t) => {
+	const upstream = t.mock.method(http, 'get', (url: string) => ({
+		json: () => Promise.resolve({source: url}),
+	}))
+	const first = await serve(t, 'all')
+	const second = await serve(t, 'all')
+	const path = '/stolaf/v1/tools/help'
+	assert.equal((await fetch(`${first}${path}`)).status, 200)
+	const shared = await fetch(`${second}${path}`)
+	assert.match(shared.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
+	assert.equal(upstream.mock.callCount(), 1)
+	const listing = (await (await fetch(`${second}/stolaf/_cache`)).json()) as Record<string, string>
+	assert.ok(Object.hasOwn(listing, path))
+	const deleted = await fetch(`${first}/stolaf/_cache`, {method: 'DELETE'})
+	assert.equal(deleted.status, 204)
+	assert.ok(Number(deleted.headers.get('X-Cache-Deleted')) > 0)
+	const refilled = await fetch(`${second}${path}`)
+	assert.equal(refilled.status, 200)
+	assert.doesNotMatch(refilled.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
+	assert.equal(upstream.mock.callCount(), 2)
+})
+
+void test('mounting institutions preserves their configured routers', async () => {
+	const snapshot = () =>
+		[stolafApi, carletonApi].map((api) =>
+			api.stack.map((layer) => ({
+				path: layer.path,
+				methods: [...layer.methods],
+				handlers: [...layer.stack],
+			})),
+		)
+	const original = snapshot()
+	await createApp('all')
+	await createApp('all')
+	await createApp('stolaf-college')
+	await createApp('carleton-college')
+	assert.deepEqual(snapshot(), original)
 })
 
 void test('institution selection accepts all and rejects unknown values', () => {

@@ -4,28 +4,14 @@ import {withBodyParsers} from '@koa/body-parsers'
 import Router from '@koa/router'
 import Koa from 'koa'
 import {z} from 'zod'
-import * as Sentry from '@sentry/node'
 import type {ContextState, RouterState} from './context.ts'
 import {accessLog} from '../ccc-koa/access-log.ts'
 import {BEHIND_NGINX} from '../ccc-koa/behind-proxy.ts'
 import {ignoreClientHangUps} from '../ccc-koa/client-abort.ts'
 import {conditionalGet} from '../ccc-koa/conditional-get.ts'
 import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
-import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
-import QuickLRU from 'quick-lru'
-import {HELPER_CACHE} from './helpers.ts'
-import {ONE_DAY} from '../ccc-lib/constants.ts'
-import {STORED_HEADERS} from '../ccc-lib/stored-headers.ts'
-import {parsePercent, percentChance, recordFlagInSentry} from '../ccc-lib/feature-flags.ts'
 
 export const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college', 'all'])
-
-/// The route a request matched, as the router's template (`/v1/food/named/:name`),
-/// so a metric gets one series per route rather than one per URL.
-function routeOf(ctx: Koa.ExtendableContext): string {
-	let route: unknown = (ctx as {_matchedRoute?: unknown})._matchedRoute
-	return typeof route === 'string' ? route : 'unknown'
-}
 
 export async function createApp(institution: z.infer<typeof InstitutionSchema>) {
 	const app = new Koa(BEHIND_NGINX)
@@ -71,57 +57,6 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 
 	// parse request bodies
 	withBodyParsers(app)
-
-	// add cached response support at the Koa level
-	// (individual route handlers can use ctx.cache to set caching parameters)
-	let cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
-	app.context[HELPER_CACHE] = cache
-	setInterval(() => {
-		Sentry.metrics.gauge('cache.entries', cache.size)
-	}, 60_000).unref()
-	app.use(
-		cachable({
-			statusName: 'ccc-server',
-			storedHeaders: STORED_HEADERS,
-			expiresIn: (key) => cache.expiresIn(key),
-			// for this percentage of bursts of concurrent misses for a key, share
-			// one upstream fetch among the burst
-			shareFetch: percentChance(
-				parsePercent('CACHE_FILL_DEDUPE_PERCENT', process.env['CACHE_FILL_DEDUPE_PERCENT']),
-			),
-			onBurst: (_ctx, shared) => {
-				recordFlagInSentry('cache-fill-dedupe', shared)
-				Sentry.metrics.count('cache.burst', 1, {attributes: {shared}})
-			},
-			onLookup: (ctx, hit) => {
-				Sentry.metrics.count('cache.lookup', 1, {
-					attributes: {result: hit ? 'hit' : 'miss', route: routeOf(ctx)},
-				})
-			},
-			onFillEnd: (ctx, outcome, waiters) => {
-				let attributes = {outcome, route: routeOf(ctx)}
-				Sentry.metrics.count('cache.fill', 1, {attributes})
-				Sentry.metrics.distribution('cache.fill.waiters', waiters, {attributes})
-			},
-			// A list a route fetched, counted once per fetch: a scraper whose upstream
-			// changes shape tends not to throw but to read nothing, so it shows here
-			// as a route whose count drops to zero and stays there.
-			onStore: (ctx, body) => {
-				if (!Array.isArray(body)) return
-				Sentry.metrics.gauge('route.items', body.length, {attributes: {route: routeOf(ctx)}})
-			},
-			get(key) {
-				return cache.get(key)
-			},
-			set(key, value, maxAge = ONE_DAY) {
-				if (value === undefined) {
-					cache.delete(key)
-					return
-				}
-				cache.set(key, value, {maxAge})
-			},
-		}),
-	)
 
 	// hook in the router
 	app.use(router.routes())

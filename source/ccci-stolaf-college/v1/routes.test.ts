@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
-import {test} from 'node:test'
+import {beforeEach, test} from 'node:test'
 import Koa from 'koa'
-import {noop} from 'lodash-es'
 import {withBodyParsers} from '@koa/body-parsers'
-import {api} from '../index.ts'
-import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
-import {STORED_HEADERS} from '../../ccc-lib/stored-headers.ts'
+import {api, cache} from '../index.ts'
 import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
+
+beforeEach(() => {
+	cache.clear()
+})
 
 /// The routes the app is pointed at; each must exist, or the app's
 /// request for it 404s.
@@ -28,28 +29,15 @@ for (const route of ROUTES) {
 	})
 }
 
-/// The v1 routes behind a bare app. The server's caching is stubbed out, unless
-/// `realCache` asks for the real middleware, keyed as the server keys it.
-async function serve(
-	t: test.TestContext,
-	{realCache = false, onLookup}: {realCache?: boolean; onLookup?: () => void} = {},
-) {
-	let app = new Koa()
-	if (realCache) {
-		ctxCacheControl(app)
-		let store = new Map<string, CacheObject>()
-		app.use(
-			cachable({
-				get: (key) => store.get(key),
-				set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
-				statusName: 'test-cache',
-				storedHeaders: STORED_HEADERS,
-				...(onLookup && {onLookup}),
-			}),
-		)
-	} else {
-		app.context['cacheControl'] = noop
-		app.context['cached'] = () => false
+/// The institution router includes its response cache middleware.
+async function serve(t: test.TestContext, {onLookup}: {onLookup?: () => void} = {}) {
+	let app = ctxCacheControl(new Koa())
+	if (onLookup) {
+		const get = cache.get.bind(cache)
+		t.mock.method(cache, 'get', (key: string) => {
+			onLookup()
+			return get(key)
+		})
 	}
 	withBodyParsers(app)
 	app.use(api.routes())
@@ -218,7 +206,7 @@ async function searchStreams(t: test.TestContext, search: string) {
 }
 
 void test('/streams/search is cached per query, so a new search is never answered with an old one', async (t) => {
-	let base = await serve(t, {realCache: true})
+	let base = await serve(t)
 	let asked = fakeStreams(t)
 	let titleOf = async (query: string) => {
 		let response = await fetch(`${base}/v1/streams/search?query=${query}`)
@@ -348,7 +336,6 @@ void test('/streams/search for upcoming streams keeps a default end that already
 void test('/streams/search refuses a bad request before asking the cache', async (t) => {
 	let lookups = 0
 	let base = await serve(t, {
-		realCache: true,
 		onLookup: () => {
 			lookups += 1
 		},
@@ -528,7 +515,7 @@ for (let [search, expected] of [
 }
 
 void test('/streams/search gives its Link header again when the page is served from the cache', async (t) => {
-	let base = await serve(t, {realCache: true})
+	let base = await serve(t)
 	let asked = fakeStreams(t, {available: 231})
 	let get = async () => {
 		let response = await fetch(`${base}/v1/streams/search?query=choir&count=50&offset=50`)

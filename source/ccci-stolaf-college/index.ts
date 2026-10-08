@@ -1,4 +1,8 @@
 import Router from '@koa/router'
+import QuickLRU from 'quick-lru'
+import type {CacheObject} from '../ccc-koa/cache.ts'
+import {ONE_DAY} from '../ccc-lib/constants.ts'
+import {responseCache} from '../ccc-server/response-cache.ts'
 import {setupHelpers} from '../ccc-server/helpers.ts'
 import * as appData from './v1/app-data.ts'
 import * as athletics from './v1/athletics.ts'
@@ -29,7 +33,9 @@ import * as images from '../ccc-lib/images.ts'
 import type {Context, ContextState, RouterState} from '../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>()
-setupHelpers(api)
+const cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
+api.use(responseCache(cache, {institution: 'stolaf-college'}))
+setupHelpers(api, cache, {institution: 'stolaf-college'})
 
 // food
 api.get('/v1/food/item/:itemId', menus.bonAppNutrition)
@@ -173,6 +179,7 @@ api.get('/v1/routes', (ctx: Context) => {
 	const mountPrefix = ctx.path.replace(/\/v1\/routes\/?$/i, '')
 	const leadingVersionRegex = /^\/v[0-9]+(?:\.[0-9]+)*\//
 	ctx.body = api.stack
+		.filter((layer) => layer.methods.length > 0)
 		.map((layer) => ({
 			path: `${mountPrefix}${layer.path.toString()}`,
 			displayName: layer.path.toString().replace(leadingVersionRegex, ''),
@@ -181,4 +188,4 @@ api.get('/v1/routes', (ctx: Context) => {
 		.toSorted((a, b) => a.path.localeCompare(b.path))
 })
 
-export {api}
+export {api, cache}

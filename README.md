@@ -59,8 +59,12 @@ Each institution's endpoints and route listing live under its base URL, such as
 institution prefixes: `/stolaf/ping`, `/carleton/ping`, `/stolaf/_cache`, and
 `/carleton/_cache`. Each cache endpoint lists and deletes only its institution's
 entries. The greetings are at `/stolaf/` and `/carleton/`. A root `/ping` endpoint
-is also available for server health checks. Each institution registers its utilities with `setupHelpers(api)`,
-so they inherit the same mount as its versioned endpoints. The existing `INSTITUTION=stolaf-college` and
+is also available for server health checks. Each institution exports a fully
+configured `api` router with its helpers and response cache. Caches are owned by
+the institution modules and shared by apps mounting the same institution in one
+process. Each cache holds up to 10,000 entries; keys include the full request URL,
+including institution prefixes and query strings.
+The existing `INSTITUTION=stolaf-college` and
 `INSTITUTION=carleton-college` modes continue to serve `/v1/`.
 
 ### Local Network Discovery (mDNS)
