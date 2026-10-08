@@ -49,8 +49,7 @@ export function setupHelpers(
 		if (requestedKeys.length) {
 			for (const key of requestedKeys) {
 				for (const store of stores) {
-					let deleted = store.delete(key)
-					found += typeof deleted === 'number' ? deleted : Number(deleted)
+					found += Number(store.delete(key))
 				}
 			}
 		} else {

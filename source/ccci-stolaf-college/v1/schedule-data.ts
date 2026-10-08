@@ -1,10 +1,12 @@
 import {z} from 'zod'
 import {getJson} from '../../ccc-lib/http.ts'
 import {resolveScheduleResponses} from '../../schedules/resolve.ts'
-import {createScheduleStore} from './schedule-store.ts'
+import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
 import type {CacheAdmin} from '../../ccc-server/helpers.ts'
+
+export type ScheduleResponses = ReturnType<typeof resolveScheduleResponses>
 
 const envelope = z.object({data: z.unknown()})
 
@@ -76,6 +78,94 @@ export function scheduleCacheAdmin(ctx: Pick<Context, 'app' | 'path'>): CacheAdm
 		},
 		get size() {
 			return store.expiresIn() !== undefined ? keys.length : 0
+		},
+	}
+}
+
+interface SuccessfulSnapshot {
+	responses: ScheduleResponses
+	freshUntil: number
+	retainUntil: number
+}
+
+interface StoreState {
+	lastGood?: SuccessfulSnapshot
+	failure?: {error: Error; retryAt: number}
+	pending?: Promise<void>
+}
+
+interface SnapshotRead {
+	responses: ScheduleResponses
+	status: 'HIT' | 'MISS' | 'STALE'
+	freshUntil: number
+}
+
+/** Scheduling policy only: load must return a completely validated response pair. */
+export function createScheduleStore({
+	load,
+	now,
+}: {
+	load: () => Promise<ScheduleResponses>
+	now: () => number
+}) {
+	let state: StoreState = {}
+
+	async function refresh(current: StoreState): Promise<void> {
+		try {
+			let responses = await load()
+			let time = now()
+			current.lastGood = {responses, freshUntil: time + ONE_HOUR, retainUntil: time + ONE_DAY}
+			delete current.failure
+		} catch (error) {
+			let time = now()
+			let failure =
+				error instanceof Error ? error : new Error('Schedule refresh failed', {cause: error})
+			current.failure = {error: failure, retryAt: time + ONE_MINUTE}
+			if (!current.lastGood || current.lastGood.retainUntil <= time) {
+				delete current.lastGood
+				throw failure
+			}
+			console.warn('Schedule refresh failed; serving the last validated snapshot', failure)
+		}
+	}
+
+	return {
+		async read(): Promise<SnapshotRead> {
+			// clear() replaces state; an old refresh can only update its detached state object.
+			let current = state
+			let refreshAt = current.failure?.retryAt ?? current.lastGood?.freshUntil
+			let hit = refreshAt !== undefined && refreshAt > now()
+			if (!hit) {
+				current.pending ??= refresh(current).finally(() => {
+					delete current.pending
+				})
+				await current.pending
+			}
+			let snapshot = current.lastGood
+			let time = now()
+			if (!snapshot || snapshot.retainUntil <= time) {
+				throw current.failure?.error ?? new Error('Schedule snapshot retention expired')
+			}
+			return {
+				responses: snapshot.responses,
+				freshUntil: snapshot.freshUntil,
+				status: snapshot.freshUntil <= time ? 'STALE' : hit ? 'HIT' : 'MISS',
+			}
+		},
+		clear(): void {
+			state = {}
+		},
+		/** Undefined means empty; zero means an existing entry is due for refresh. */
+		expiresIn(): number | undefined {
+			let refreshAt = state.failure?.retryAt ?? state.lastGood?.freshUntil
+			if (refreshAt === undefined) return state.pending ? 0 : undefined
+			let time = now()
+			let retainUntil = state.lastGood?.retainUntil
+			let deadline =
+				retainUntil !== undefined && retainUntil > time
+					? Math.min(refreshAt, retainUntil)
+					: refreshAt
+			return Math.max(0, deadline - time)
 		},
 	}
 }

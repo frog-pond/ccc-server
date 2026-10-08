@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
-import {createScheduleStore, type ScheduleResponses} from './schedule-store.ts'
+import {createScheduleStore, type ScheduleResponses} from './schedule-data.ts'
 
 function responses(name: string): ScheduleResponses {
 	return {
