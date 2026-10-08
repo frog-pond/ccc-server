@@ -13,6 +13,7 @@ import {conditionalGet} from '../ccc-koa/conditional-get.ts'
 import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
 import {cachable, type CacheObject} from '../ccc-koa/cache.ts'
 import QuickLRU from 'quick-lru'
+import {HELPER_CACHE} from './helpers.ts'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
 import {STORED_HEADERS} from '../ccc-lib/stored-headers.ts'
 import {parsePercent, percentChance, recordFlagInSentry} from '../ccc-lib/feature-flags.ts'
@@ -48,14 +49,6 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 		router.use(api.routes())
 	}
 
-	router.get('/', (ctx) => {
-		ctx.body = 'Hello world!'
-	})
-
-	router.get('/ping', (ctx) => {
-		ctx.body = 'pong'
-	})
-
 	//
 	// attach middleware
 	//
@@ -79,6 +72,7 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 	// add cached response support at the Koa level
 	// (individual route handlers can use ctx.cache to set caching parameters)
 	let cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
+	app.context[HELPER_CACHE] = cache
 	setInterval(() => {
 		Sentry.metrics.gauge('cache.entries', cache.size)
 	}, 60_000).unref()
@@ -125,34 +119,6 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 			},
 		}),
 	)
-
-	router.get('/_cache', (ctx) => {
-		if (ctx.cached(10000)) return
-		let result = new Map()
-		for (const key of cache.keys()) {
-			result.set(key, Math.floor((cache.expiresIn(key) ?? 0) / 1000).toFixed(0))
-		}
-		ctx.body = Object.fromEntries(result.entries())
-	})
-
-	router.delete('/_cache', (ctx) => {
-		let keys = ctx.URL.searchParams.getAll('key')
-		if (keys.length) {
-			let found = 0
-			for (let key of keys) {
-				let didDelete = cache.delete(key)
-				if (didDelete) found++
-			}
-			ctx.response.set('X-Cache-Deleted', found.toFixed(0))
-			Sentry.metrics.count('cache.evicted', found, {attributes: {scope: 'keys'}})
-		} else {
-			let size = cache.size
-			cache.clear()
-			ctx.response.set('X-Cache-Deleted', size.toFixed(0))
-			Sentry.metrics.count('cache.evicted', size, {attributes: {scope: 'all'}})
-		}
-		ctx.status = 204
-	})
 
 	// hook in the router
 	app.use(router.routes())

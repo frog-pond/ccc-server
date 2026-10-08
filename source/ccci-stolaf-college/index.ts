@@ -1,4 +1,5 @@
 import Router from '@koa/router'
+import {setupHelpers} from '../ccc-server/helpers.ts'
 import * as appData from './v1/app-data.ts'
 import * as athletics from './v1/athletics.ts'
 import * as calendar from './v1/calendar.ts'
@@ -28,6 +29,7 @@ import * as images from '../ccc-lib/images.ts'
 import type {Context, ContextState, RouterState} from '../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>()
+setupHelpers(api)
 
 // food
 api.get('/v1/food/item/:itemId', menus.bonAppNutrition)

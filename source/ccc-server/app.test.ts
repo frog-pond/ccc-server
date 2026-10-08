@@ -27,8 +27,9 @@ void test('all mounts both institutions with usable route listings and isolated 
 			assert.equal(response.status, 200)
 			const routes = (await response.json()) as {path: string; displayName: string}[]
 			assert.ok(routes.length > 0)
-			assert.ok(routes.every((route) => route.path.startsWith(`${prefix}/`)))
+			assert.ok(routes.every((route) => route.path.startsWith(`/${institution}/`)))
 			assert.ok(routes.some((route) => route.displayName === 'util/html-to-md'))
+			assert.ok(routes.some((route) => route.path === `/${institution}/ping`))
 			const post = await fetch(`${base}${prefix}/util/html-to-md`, {
 				method: 'POST',
 				headers: {'content-type': 'application/json'},
@@ -47,7 +48,24 @@ void test('all mounts both institutions with usable route listings and isolated 
 			assert.equal((await fetch(`${base}${path}`)).status, 404)
 		}),
 	)
-	assert.equal(await (await fetch(`${base}/ping`)).text(), 'pong')
+	await Promise.all(
+		['/stolaf', '/carleton'].map(async (prefix) => {
+			assert.equal(await (await fetch(`${base}${prefix}/`)).text(), 'Hello world!')
+			await Promise.all(
+				['GET', 'HEAD'].map(async (method) => {
+					const response = await fetch(`${base}${prefix}/ping`, {method})
+					assert.equal(response.status, 200)
+					assert.equal(await response.text(), method === 'GET' ? 'pong' : '')
+				}),
+			)
+		}),
+	)
+	await Promise.all(
+		['/', '/ping', '/_cache'].map(async (path) => {
+			assert.equal((await fetch(`${base}${path}`)).status, 404)
+		}),
+	)
+	assert.equal((await fetch(`${base}/_cache`, {method: 'DELETE'})).status, 404)
 })
 
 void test('all keeps cached responses separate for the same endpoint at each institution', async (t) => {
@@ -70,10 +88,26 @@ void test('all keeps cached responses separate for the same endpoint at each ins
 	)
 	assert.notDeepEqual(bodies[0], bodies[1])
 	assert.equal(upstream.mock.callCount(), 2)
-	const cache = (await (await fetch(`${base}/_cache`)).json()) as Record<string, number>
-	assert.ok(Object.hasOwn(cache, '/stolaf/v1/tools/help'))
-	assert.ok(Object.hasOwn(cache, '/carleton/v1/tools/help'))
-	assert.equal((await fetch(`${base}/_cache`, {method: 'DELETE'})).status, 204)
+	await Promise.all(
+		['stolaf', 'carleton'].map(async (name) => {
+			const cache = (await (await fetch(`${base}/${name}/_cache`)).json()) as Record<string, number>
+			assert.ok(Object.hasOwn(cache, `/${name}/v1/tools/help`))
+			assert.ok(Object.keys(cache).every((key) => key.startsWith(`/${name}/`)))
+		}),
+	)
+	const crossDelete = await fetch(`${base}/stolaf/_cache?key=/carleton/v1/tools/help`, {
+		method: 'DELETE',
+	})
+	assert.equal(crossDelete.status, 204)
+	assert.equal(crossDelete.headers.get('X-Cache-Deleted'), '0')
+	const deleted = await fetch(`${base}/stolaf/_cache`, {method: 'DELETE'})
+	assert.equal(deleted.status, 204)
+	assert.ok(Number(deleted.headers.get('X-Cache-Deleted')) > 0)
+	const carleton = await fetch(`${base}/carleton/v1/tools/help`)
+	assert.match(carleton.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
+	const stolaf = await fetch(`${base}/stolaf/v1/tools/help`)
+	assert.equal(stolaf.status, 200)
+	assert.equal(upstream.mock.callCount(), 3)
 })
 
 void test('institution selection accepts all and rejects unknown values', () => {
@@ -85,10 +119,15 @@ for (const institution of ['stolaf-college', 'carleton-college'] as const) {
 	void test(`${institution} keeps unprefixed routes after creating an all app`, async (t) => {
 		await createApp('all')
 		const base = await serve(t, institution)
+		assert.equal(await (await fetch(`${base}/ping`)).text(), 'pong')
+		assert.equal(await (await fetch(`${base}/`)).text(), 'Hello world!')
+		assert.equal((await fetch(`${base}/_cache`)).status, 200)
+		assert.equal((await fetch(`${base}/_cache`, {method: 'DELETE'})).status, 204)
 		const response = await fetch(`${base}/v1/routes`)
 		assert.equal(response.status, 200)
 		const routes = (await response.json()) as {path: string}[]
-		assert.ok(routes.every((route) => route.path.startsWith('/v1/')))
+		assert.ok(routes.every((route) => !/^\/(stolaf|carleton)\//.test(route.path)))
+		assert.ok(routes.some((route) => route.path === '/ping'))
 		assert.equal((await fetch(`${base}/stolaf/v1/routes`)).status, 404)
 		assert.equal((await fetch(`${base}/carleton/v1/routes`)).status, 404)
 	})
