@@ -26,7 +26,7 @@ function upstream(t: TestContext, beforeResponse?: () => Promise<void>) {
 	])
 	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL, init?: RequestInit) => {
 		let url = input instanceof Request ? input.url : String(input)
-		if (!url.startsWith('https://stodevx.github.io/')) return send(input, init)
+		if (new URL(url).origin !== GH_PAGES('breaks.json').origin) return send(input, init)
 		requests.push(url)
 		let response = responses.get(url)
 		if (response instanceof Error) return Promise.reject(response)
@@ -48,7 +48,6 @@ async function serve(t: TestContext, onRequest?: () => void) {
 	let store = new Map<string, {value: CacheObject; expires: number}>()
 	app.use(
 		cachable({
-			setCachedHeader: true,
 			get(key, maxAge) {
 				assert.equal(maxAge, ONE_HOUR)
 				let entry = store.get(key)
@@ -262,6 +261,7 @@ void test('fallback stops 24 hours after the last successful snapshot, without e
 		}),
 	)
 	responses.set(GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')}))
+	advance(ONE_MINUTE)
 	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
 })
 
@@ -359,9 +359,9 @@ for (let [name, file, response, routes] of [
 	],
 ] as const) {
 	for (let route of routes) {
-		void test(`${route} fails the whole response for ${name} and does not cache the failure`, async (t) => {
-			let {base, store} = await serve(t)
-			let {send, responses} = upstream(t)
+		void test(`${route} throttles ${name} without caching an error response`, async (t) => {
+			let {base, store, advance} = await serve(t)
+			let {send, responses, requests} = upstream(t)
 			let original = responses.get(GH_PAGES(file).href)
 			assert.ok(original)
 			responses.set(GH_PAGES(file).href, response)
@@ -370,6 +370,11 @@ for (let [name, file, response, routes] of [
 			assert.equal(store.size, 0)
 			assert.equal(await failed.text(), 'Internal Server Error')
 			responses.set(GH_PAGES(file).href, original)
+			advance(ONE_MINUTE - 1)
+			let otherRoute = route === '/v1/breaks' ? '/v1/spaces/hours' : '/v1/breaks'
+			assert.equal((await send(`${base}${otherRoute}`)).status, 500)
+			assert.equal(requests.length, 2)
+			advance(1)
 			let recovered = await send(`${base}${route}`)
 			assert.equal(recovered.status, 200)
 			assert.deepEqual(
