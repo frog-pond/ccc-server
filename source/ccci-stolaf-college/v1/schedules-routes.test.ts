@@ -1,15 +1,20 @@
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {test, type TestContext} from 'node:test'
+import {beforeEach, test, type TestContext} from 'node:test'
 import Koa from 'koa'
 import {noop} from 'lodash-es'
-import {api} from '../index.ts'
-import {api as carletonApi} from '../../ccci-carleton-college/index.ts'
-import {cachable, type CacheObject} from '../../ccc-koa/cache.ts'
+import {api, cache as stolafCache} from '../index.ts'
+import {createApp} from '../../ccc-server/app.ts'
+import {api as carletonApi, cache as carletonCache} from '../../ccci-carleton-college/index.ts'
 import {ctxCacheControl} from '../../ccc-koa/ctx-cache-control.ts'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {parseScheduleData} from '../../schedules/parse.ts'
 import {GH_PAGES} from './gh-pages.ts'
+
+beforeEach(() => {
+	stolafCache.clear()
+	carletonCache.clear()
+})
 
 function fixture(name: string): unknown {
 	return JSON.parse(
@@ -38,35 +43,18 @@ function upstream(t: TestContext, beforeResponse?: () => Promise<void>) {
 	return {send, requests, responses}
 }
 
-/** Use the server's actual cache middleware, with a controllable store expiry. */
-async function serve(t: TestContext, onRequest?: () => void) {
-	let app = new Koa()
+/** Use the institution's actual router and cache, with controllable time. */
+async function serve(t: TestContext, onRequest?: () => void, combined = false) {
+	let app = combined ? await createApp('all') : new Koa()
 	app.silent = true
 	ctxCacheControl(app)
 	let now = 0
 	t.mock.method(Date, 'now', () => now)
-	let store = new Map<string, {value: CacheObject; expires: number}>()
-	app.use(
-		cachable({
-			get(key, maxAge) {
-				assert.equal(maxAge, ONE_HOUR)
-				let entry = store.get(key)
-				return entry && entry.expires > now ? entry.value : undefined
-			},
-			set(key, value, maxAge) {
-				if (value === undefined) store.delete(key)
-				else {
-					assert.equal(maxAge, ONE_HOUR)
-					store.set(key, {value, expires: now + ONE_HOUR})
-				}
-			},
-		}),
-	)
 	app.use(async (_ctx, next) => {
 		onRequest?.()
 		await next()
 	})
-	app.use(api.routes())
+	if (!combined) app.use(api.routes())
 	let server = app.listen(0)
 	t.after(() => server.close())
 	await new Promise((resolve) => server.once('listening', resolve))
@@ -74,7 +62,7 @@ async function serve(t: TestContext, onRequest?: () => void) {
 	if (!address || typeof address === 'string') throw new Error('no port')
 	return {
 		base: `http://localhost:${address.port.toFixed(0)}`,
-		store,
+		store: stolafCache,
 		advance: (duration: number) => {
 			now += duration
 		},
@@ -263,6 +251,77 @@ void test('fallback stops 24 hours after the last successful snapshot, without e
 	responses.set(GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')}))
 	advance(ONE_MINUTE)
 	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
+})
+
+for (let key of [undefined, '/v1/spaces/hours', '/v1/breaks']) {
+	void test(`cache administration invalidates the shared snapshot for ${key ?? 'all entries'}`, async (t) => {
+		let {base} = await serve(t)
+		let {send, requests, responses} = upstream(t)
+		assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
+		let listing = await send(`${base}/_cache?before=refresh`)
+		let entries = (await listing.json()) as Record<string, string>
+		assert.equal(entries['/v1/spaces/hours'], '3600')
+		assert.equal(entries['/v1/breaks'], '3600')
+		let updated = updatedInputs()
+		responses.set(GH_PAGES('breaks.json').href, Response.json({data: updated.calendar}))
+		responses.set(GH_PAGES('building-hours.json').href, Response.json({data: updated.spaces}))
+		let query = key ? `?key=${encodeURIComponent(key)}` : ''
+		let cleared = await send(`${base}/_cache${query}`, {method: 'DELETE'})
+		assert.equal(cleared.status, 204)
+		assert.ok(Number(cleared.headers.get('x-cache-deleted')) > 0)
+		let refreshed = await send(`${base}/v1/breaks`)
+		let body = (await refreshed.json()) as {data: {breaks: Record<string, unknown>}}
+		assert.ok(Object.hasOwn(body.data.breaks, 'autumn'))
+		assert.equal(Object.hasOwn(body.data.breaks, 'fall'), false)
+		assert.equal(requests.length, 4)
+		assert.equal((await send(`${base}/v1/spaces/hours`)).headers.get('x-cached-response'), 'HIT')
+		assert.equal(requests.length, 4)
+	})
+}
+
+void test('cache administration can clear a failed cold snapshot retry window', async (t) => {
+	let {base} = await serve(t)
+	let {send, requests, responses} = upstream(t)
+	responses.set(GH_PAGES('breaks.json').href, Response.json(badCalendar))
+	assert.equal((await send(`${base}/v1/breaks`)).status, 500)
+	responses.set(GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')}))
+	await send(`${base}/_cache`, {method: 'DELETE'})
+	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
+	assert.equal(requests.length, 4)
+})
+
+void test('combined cache administration lists prefixed keys and preserves institution isolation', async (t) => {
+	let {base} = await serve(t, undefined, true)
+	let {send, requests} = upstream(t)
+	assert.equal((await send(`${base}/stolaf/v1/breaks`)).status, 200)
+	let listing = await send(`${base}/stolaf/_cache`)
+	let entries = (await listing.json()) as Record<string, string>
+	assert.equal(entries['/stolaf/v1/breaks'], '3600')
+	assert.equal(entries['/stolaf/v1/spaces/hours'], '3600')
+	await send(`${base}/carleton/_cache`, {method: 'DELETE'})
+	await send(`${base}/stolaf/_cache?key=/unrelated`, {method: 'DELETE'})
+	assert.equal((await send(`${base}/stolaf/v1/breaks`)).headers.get('x-cached-response'), 'HIT')
+	assert.equal(requests.length, 2)
+	await send(`${base}/stolaf/_cache?key=/stolaf/v1/breaks`, {method: 'DELETE'})
+	assert.equal((await send(`${base}/stolaf/v1/spaces/hours`)).status, 200)
+	assert.equal(requests.length, 4)
+})
+
+void test('an evicted in-flight refresh cannot repopulate the snapshot cache', async (t) => {
+	let {base} = await serve(t)
+	let gate = Promise.withResolvers<undefined>()
+	let started = Promise.withResolvers<undefined>()
+	let {send, requests} = upstream(t, () => {
+		if (requests.length === 2) started.resolve(undefined)
+		return gate.promise
+	})
+	let pending = send(`${base}/v1/breaks`)
+	await started.promise
+	await send(`${base}/_cache`, {method: 'DELETE'})
+	gate.resolve(undefined)
+	assert.equal((await pending).status, 200)
+	assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
+	assert.equal(requests.length, 4)
 })
 
 void test('concurrent requests to both routes share one in-flight upstream pair', async (t) => {

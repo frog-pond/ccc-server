@@ -4,6 +4,7 @@ import type {CacheObject} from '../ccc-koa/cache.ts'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
 import {responseCache} from '../ccc-server/response-cache.ts'
 import {setupHelpers} from '../ccc-server/helpers.ts'
+import {scheduleCacheAdmin} from './v1/schedule-data.ts'
 import * as appData from './v1/app-data.ts'
 import * as athletics from './v1/athletics.ts'
 import * as breaks from './v1/breaks.ts'
@@ -36,7 +37,7 @@ import type {Context, ContextState, RouterState} from '../ccc-server/context.ts'
 const api = new Router<RouterState, ContextState>()
 const cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
 api.use(responseCache(cache, {institution: 'stolaf-college'}))
-setupHelpers(api, cache, {institution: 'stolaf-college'})
+setupHelpers(api, cache, {institution: 'stolaf-college', additionalCache: scheduleCacheAdmin})
 
 // food
 api.get('/v1/food/item/:itemId', menus.bonAppNutrition)

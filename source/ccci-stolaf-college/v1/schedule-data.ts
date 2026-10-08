@@ -4,6 +4,7 @@ import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {resolveScheduleResponses} from '../../schedules/resolve.ts'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
+import type {CacheAdmin} from '../../ccc-server/helpers.ts'
 
 const envelope = z.object({data: z.unknown()})
 
@@ -31,6 +32,35 @@ interface SnapshotCache {
 
 // Scope snapshots to a server instance, rather than independently to route URLs.
 const caches = new WeakMap<Context['app'], SnapshotCache>()
+
+/** Expose the shared pair under both route keys, including the combined-server prefix. */
+export function scheduleCacheAdmin(ctx: Pick<Context, 'app' | 'path'>): CacheAdmin {
+	let prefix = ctx.path.replace(/\/_cache\/?$/iu, '')
+	let keys = [`${prefix}/v1/spaces/hours`, `${prefix}/v1/breaks`]
+	return {
+		*keys() {
+			if (caches.has(ctx.app)) yield* keys
+		},
+		expiresIn(key) {
+			if (!keys.includes(key)) return undefined
+			let cache = caches.get(ctx.app)
+			if (!cache) return undefined
+			let expiresAt = cache.current?.expiresAt ?? cache.failure?.retryAt ?? Date.now()
+			return Math.max(0, expiresAt - Date.now())
+		},
+		delete(key) {
+			// Either endpoint invalidates the complete pair so their versions stay matched.
+			return keys.includes(key) && caches.delete(ctx.app)
+		},
+		clear() {
+			// Detach in-flight refreshes too; they must not repopulate an evicted cache.
+			caches.delete(ctx.app)
+		},
+		get size() {
+			return caches.has(ctx.app) ? keys.length : 0
+		},
+	}
+}
 
 async function refresh(cache: SnapshotCache): Promise<Snapshot> {
 	try {
