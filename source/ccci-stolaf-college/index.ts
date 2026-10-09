@@ -166,10 +166,10 @@ api.get('/v1/printing/color-printers', printing.colorPrinters)
 api.get('/v1/reports/stav', reports.stavMealtimeReport)
 
 // utilities
-// POST, since the HTML comes in the request body, which fetch will not send
-// with a GET; the GET stays for any caller that managed it anyway.
-api.post('/v1/util/html-to-md', util.htmlToMarkdownPost)
-api.get('/v1/util/html-to-md', util.htmlToMarkdown)
+// QUERY: a read whose input, the HTML, comes in the request body -- which
+// fetch will not send with a GET, and which a POST would wrongly mark as a
+// change to the server.
+api.register('/v1/util/html-to-md', ['QUERY'], util.htmlToMarkdown)
 
 // athletics
 api.get('/v1/athletics/scores', athletics.scores)

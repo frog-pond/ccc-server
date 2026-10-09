@@ -46,13 +46,13 @@ void test('all mounts both institutions with usable route listings and isolated 
 					.map((layer) => `/${institution}${layer.path.toString()}`),
 			)
 			assert.ok(routes.every((route) => !middlewarePaths.has(route.path)))
-			const post = await fetch(`${base}${prefix}/util/html-to-md`, {
-				method: 'POST',
+			const converted = await fetch(`${base}${prefix}/util/html-to-md`, {
+				method: 'QUERY',
 				headers: {'content-type': 'application/json'},
 				body: JSON.stringify({text: '<b>hi</b>'}),
 			})
-			assert.equal(post.status, 200)
-			assert.equal(await post.text(), '**hi**')
+			assert.equal(converted.status, 200)
+			assert.equal(await converted.text(), '**hi**')
 			const head = await fetch(`${base}${prefix}/routes`, {method: 'HEAD'})
 			assert.equal(head.status, 200)
 			const invalidMethod = await fetch(`${base}${prefix}/routes`, {method: 'POST'})
@@ -458,9 +458,8 @@ void test('route listings describe a JSON body, and its example converts', async
 	const inputsOf = (method: string) =>
 		routes.find((route) => route.path === '/v1/util/html-to-md' && route.methods.includes(method))
 			?.inputs
-	// a GET carries no body from fetch, so only the POST describes one
-	assert.deepEqual(inputsOf('GET'), [])
-	const [text] = inputsOf('POST') ?? []
+	// QUERY: a read that carries a body, which a GET cannot from fetch
+	const [text] = inputsOf('QUERY') ?? []
 	assert.deepEqual(text, {
 		name: 'text',
 		in: 'body',
@@ -468,7 +467,7 @@ void test('route listings describe a JSON body, and its example converts', async
 		examples: ['<p>Hello, <b>Oles</b></p>'],
 	})
 	const response = await fetch(`${base}/v1/util/html-to-md`, {
-		method: 'POST',
+		method: 'QUERY',
 		headers: {'content-type': 'application/json'},
 		body: JSON.stringify({text: text.examples[0]}),
 	})
@@ -492,7 +491,7 @@ void test('route listings name each method a path answers, without the implied H
 							.filter((route) => route.path === `${prefix}${path}`)
 							.map((route) => route.methods)
 					assert.deepEqual(methodsAt('/_cache'), [['DELETE'], ['GET']])
-					assert.deepEqual(methodsAt('/v1/util/html-to-md'), [['GET'], ['POST']])
+					assert.deepEqual(methodsAt('/v1/util/html-to-md'), [['QUERY']])
 					assert.deepEqual(methodsAt('/ping'), [['GET']])
 					assert.ok(routes.every((route) => !route.methods.includes('HEAD')))
 				}),
