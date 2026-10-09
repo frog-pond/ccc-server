@@ -5,7 +5,8 @@ import type {Context} from './context.ts'
 /** One thing a route reads from its request, as the sitemap describes it. */
 export interface RouteInput {
 	name: string
-	in: 'path' | 'query'
+	/** Where it goes: the path, the query string, or a field of a JSON body. */
+	in: 'path' | 'query' | 'body'
 	required: boolean
 	/** The complete set of accepted values. Present only for true enums. */
 	values?: {value: string; label?: string}[]
@@ -83,7 +84,8 @@ export function fromSchema(schema: z.ZodType): InputDeclarations {
 
 /**
  * A layer's inputs: each path param, required whatever was declared, with its
- * declaration merged on; then any other declared name, as a query input.
+ * declaration merged on; then any other declared name, as a body field when
+ * declared as one and otherwise as a query input.
  */
 export function listInputs(paramNames: string[], declared: InputDeclarations = {}): RouteInput[] {
 	const path = paramNames.map((name): RouteInput => ({
@@ -92,13 +94,13 @@ export function listInputs(paramNames: string[], declared: InputDeclarations = {
 		in: 'path',
 		required: true,
 	}))
-	const query = Object.entries(declared)
+	const rest = Object.entries(declared)
 		.filter(([name]) => !paramNames.includes(name))
 		.map(([name, declaration]): RouteInput => ({
 			...declaration,
 			name,
-			in: 'query',
+			in: declaration.in === 'body' ? 'body' : 'query',
 			required: declaration.required ?? false,
 		}))
-	return [...path, ...query]
+	return [...path, ...rest]
 }

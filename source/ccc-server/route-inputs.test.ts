@@ -83,3 +83,9 @@ void test('listInputs lists declared names outside the path as query inputs, opt
 		{name: 'key', in: 'query', required: false},
 	])
 })
+
+void test('listInputs keeps an input declared as a field of the request body', () => {
+	assert.deepEqual(listInputs([], {text: {...examples('<b>hi</b>'), in: 'body', required: true}}), [
+		{name: 'text', in: 'body', required: true, examples: ['<b>hi</b>']},
+	])
+})

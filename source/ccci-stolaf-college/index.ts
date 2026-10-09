@@ -168,7 +168,7 @@ api.get('/v1/reports/stav', reports.stavMealtimeReport)
 // utilities
 // POST, since the HTML comes in the request body, which fetch will not send
 // with a GET; the GET stays for any caller that managed it anyway.
-api.post('/v1/util/html-to-md', util.htmlToMarkdown)
+api.post('/v1/util/html-to-md', util.htmlToMarkdownPost)
 api.get('/v1/util/html-to-md', util.htmlToMarkdown)
 
 // athletics

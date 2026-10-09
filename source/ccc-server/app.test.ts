@@ -448,6 +448,34 @@ void test('route listings pair each input with values that open something real',
 	assert.equal(named('/v1/streams/search', 'count')?.format, 'integer')
 })
 
+void test('route listings describe a JSON body, and its example converts', async (t) => {
+	const base = await serve(t, 'stolaf-college')
+	const routes = (await (await fetch(`${base}/v1/routes`)).json()) as {
+		path: string
+		methods: string[]
+		inputs: {name: string; in: string; required: boolean; examples?: string[]}[]
+	}[]
+	const inputsOf = (method: string) =>
+		routes.find((route) => route.path === '/v1/util/html-to-md' && route.methods.includes(method))
+			?.inputs
+	// a GET carries no body from fetch, so only the POST describes one
+	assert.deepEqual(inputsOf('GET'), [])
+	const [text] = inputsOf('POST') ?? []
+	assert.deepEqual(text, {
+		name: 'text',
+		in: 'body',
+		required: true,
+		examples: ['<p>Hello, <b>Oles</b></p>'],
+	})
+	const response = await fetch(`${base}/v1/util/html-to-md`, {
+		method: 'POST',
+		headers: {'content-type': 'application/json'},
+		body: JSON.stringify({text: text.examples[0]}),
+	})
+	assert.equal(response.status, 200)
+	assert.equal(await response.text(), 'Hello, **Oles**')
+})
+
 void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
