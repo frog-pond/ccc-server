@@ -268,3 +268,70 @@ END:VCALENDAR`
 		['This evening', 'Tonight'],
 	)
 })
+
+/// Carleton's feeds give every time as a floating local time
+/// (`DTSTART:20261009T190000`) and name the zone only once, for the whole
+/// calendar. Read as the server's own zone, a 7pm Carleton event landed at
+/// 19:00 UTC: five hours early, and gone from the list by early evening.
+void test('ical reads floating times in the calendar’s zone', async (t) => {
+	const sampleIcal = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//EN
+X-WR-TIMEZONE:America/Chicago
+BEGIN:VEVENT
+UID:floating@example.com
+SUMMARY:SUMO Movie
+DTSTART:20261009T190000
+DTEND:20261009T210000
+END:VEVENT
+END:VCALENDAR`
+
+	const url = `data:text/calendar,${encodeURIComponent(sampleIcal)}`
+	const events = await ical(url, {}, moment('2026-10-09T23:00:00Z'))
+
+	t.assert.deepEqual(
+		events.map((e) => [e.startTime, e.endTime]),
+		[['2026-10-10T00:00:00.000Z', '2026-10-10T02:00:00.000Z']],
+	)
+})
+
+void test('ical reads a time in the zone its TZID names', async (t) => {
+	const sampleIcal = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//EN
+X-WR-TIMEZONE:America/Chicago
+BEGIN:VEVENT
+UID:zoned@example.com
+SUMMARY:Zoned
+DTSTART;TZID=America/New_York:20261009T190000
+DTEND;TZID=America/New_York:20261009T200000
+END:VEVENT
+END:VCALENDAR`
+
+	const url = `data:text/calendar,${encodeURIComponent(sampleIcal)}`
+	const events = await ical(url, {}, moment('2026-10-09T12:00:00Z'))
+
+	t.assert.equal(events[0]?.startTime, '2026-10-09T23:00:00.000Z')
+})
+
+void test('ical leaves all-day dates at UTC midnight', async (t) => {
+	const sampleIcal = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//EN
+X-WR-TIMEZONE:America/Chicago
+BEGIN:VEVENT
+UID:allday@example.com
+SUMMARY:All day
+DTSTART;VALUE=DATE:20261012
+DTEND;VALUE=DATE:20261013
+END:VEVENT
+END:VCALENDAR`
+
+	const url = `data:text/calendar,${encodeURIComponent(sampleIcal)}`
+	const events = await ical(url, {}, moment('2026-10-09T12:00:00Z'))
+
+	t.assert.deepEqual(
+		events.map((e) => [e.startTime, e.endTime]),
+		[['2026-10-12T00:00:00.000Z', '2026-10-13T00:00:00.000Z']],
+	)
+})
