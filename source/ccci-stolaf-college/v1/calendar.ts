@@ -6,18 +6,9 @@ import {deprecatedEvents} from '../../calendar/deprecated.ts'
 import {UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
-import {examples} from '../../ccc-server/route-inputs.ts'
 
 export const getGoogleCalendar = googleCalendar
 export const getInternetCalendar = ical
-
-/// KRLX's Google calendar: the named route reads it, and it is the example a
-/// caller of `calendar/google` is offered.
-export const KRLX_CALENDAR_ID = 'krlxradio88.1@gmail.com'
-/// Northfield's events feed: the named route reads it, and it is the example a
-/// caller of `calendar/ics` is offered.
-export const NORTHFIELD_ICS_URL =
-	'https://www.northfieldmn.gov/common/modules/iCalendar/iCalendar.aspx?catID=41&feed=calendar'
 
 export async function google(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
@@ -27,7 +18,6 @@ export async function google(ctx: Context) {
 	ctx.assert(calendarId, 400, '?id is required')
 	ctx.body = await getGoogleCalendar(calendarId)
 }
-google.inputs = {id: {...examples(KRLX_CALENDAR_ID), required: true}}
 
 export async function ics(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
@@ -38,7 +28,6 @@ export async function ics(ctx: Context) {
 	ctx.assert(URL.canParse(calendarUrl), 400, '?url must be a URL')
 	ctx.body = await getInternetCalendar(new URL(calendarUrl))
 }
-ics.inputs = {url: {...examples(NORTHFIELD_ICS_URL), required: true}}
 
 /// The imported Google calendar behind this route was deleted upstream. The app
 /// reads The Events Calendar directly now.
@@ -56,14 +45,16 @@ export async function northfield(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = await getInternetCalendar(NORTHFIELD_ICS_URL)
+	ctx.body = await getInternetCalendar(
+		'https://www.northfieldmn.gov/common/modules/iCalendar/iCalendar.aspx?catID=41&feed=calendar',
+	)
 }
 
 export async function krlx(ctx: Context) {
 	ctx.cacheControl(ONE_MINUTE)
 	if (ctx.cached(ONE_MINUTE)) return
 
-	ctx.body = await getGoogleCalendar(KRLX_CALENDAR_ID)
+	ctx.body = await getGoogleCalendar('krlxradio88.1@gmail.com')
 }
 
 /// KSTO's Google Calendar stopped at spring 2019. The station's current

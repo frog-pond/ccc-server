@@ -3,7 +3,6 @@ import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import * as bonapp from '../../menus-bonapp/index.ts'
 import {GH_PAGES} from './gh-pages.ts'
 import type {Context} from '../../ccc-server/context.ts'
-import {oneOf} from '../../ccc-server/route-inputs.ts'
 
 const pauseMenuUrl = GH_PAGES('pause-menu.json')
 const GET_DAY = getJson
@@ -58,7 +57,6 @@ export async function bonAppMenu(ctx: Context) {
 	)
 	ctx.body = await getMenu(CAFE_URLS[CAFE_ID_TO_URL[cafeId]])
 }
-bonAppMenu.inputs = {cafeId: oneOf(CAFE_ID_TO_URL)}
 
 export async function bonAppCafe(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
@@ -72,7 +70,6 @@ export async function bonAppCafe(ctx: Context) {
 	)
 	ctx.body = await getInfo(CAFE_URLS[CAFE_ID_TO_URL[cafeId]])
 }
-bonAppCafe.inputs = {cafeId: oneOf(CAFE_ID_TO_URL)}
 
 export async function bonAppNutrition(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)

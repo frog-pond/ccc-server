@@ -2,7 +2,6 @@ import {Buffer} from 'node:buffer'
 import {TOTAL_TIMEOUT, http} from './http.ts'
 import {ONE_DAY} from './constants.ts'
 import type {Context} from '../ccc-server/context.ts'
-import {oneOf} from '../ccc-server/route-inputs.ts'
 
 /**
  * The folders of the app repo's `images/` that its `bundle-data` task publishes
@@ -65,6 +64,3 @@ export async function image(ctx: Context) {
 	ctx.type = 'image/webp'
 	ctx.body = Buffer.from(await response.arrayBuffer())
 }
-/// Only the group is declared: which names exist depends on the group, and
-/// the published names live with the app's images, not here.
-image.inputs = {group: oneOf(IMAGE_GROUPS)}

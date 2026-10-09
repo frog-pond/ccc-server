@@ -4,7 +4,6 @@ import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {http} from '../../ccc-lib/http.ts'
 import {WORDPRESS_PAGING_HEADERS} from '../../ccc-lib/stored-headers.ts'
 import type {Context} from '../../ccc-server/context.ts'
-import {examples, oneOf, type DeclaredHandler} from '../../ccc-server/route-inputs.ts'
 
 /// The Olaf Messenger's WordPress REST API, which this module serves the app
 /// a cached copy of, in WordPress's own shape.
@@ -319,16 +318,4 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 	}
 }
 
-/// A post the Messenger has published, so an item request has one to open.
-export const EXAMPLE_POST_ID = '37207'
-
-export const wordpress: DeclaredHandler = makeWordpressRoute()
-wordpress.inputs = {resource: oneOf(RESOURCES)}
-
-/// The same route for one item, declared on its own: only some resources have
-/// items, and an item's id is a whole number.
-export const wordpressItem: DeclaredHandler = (ctx, next) => wordpress(ctx, next)
-wordpressItem.inputs = {
-	resource: oneOf(Object.fromEntries(Object.entries(RESOURCES).filter(([, entry]) => entry.item))),
-	id: {...examples(EXAMPLE_POST_ID), format: 'integer'},
-}
+export const wordpress = makeWordpressRoute()
