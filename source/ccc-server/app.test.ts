@@ -334,17 +334,27 @@ void test('every listed value and example is accepted by its route', async (t) =
 							.filter((input) => input.in === 'query' && (input.required || input === varied))
 							.map((input) => [input.name, valueOf(input)]),
 					)
-					return query.size ? `${path}?${query}` : path
+					// a value made up for an input the route gave none for may name
+					// something that does not exist, so only a 400 counts against it
+					const guessed = route.inputs.some(
+						(input) =>
+							input !== varied &&
+							(input.in === 'path' || input.required) &&
+							!input.values &&
+							!input.examples,
+					)
+					return {request: query.size ? `${path}?${query}` : path, guessed}
 				}),
 			),
 		)
 	assert.ok(requests.length > 20)
 
 	await Promise.all(
-		requests.map(async (request) => {
+		requests.map(async ({request, guessed}) => {
 			const response = await fetch(`${base}${request}`)
+			const refused = guessed ? [400] : [400, 404]
 			assert.ok(
-				![400, 404].includes(response.status),
+				!refused.includes(response.status),
 				`${request} answered ${String(response.status)}`,
 			)
 		}),
@@ -422,8 +432,12 @@ void test('route listings pair each input with values that open something real',
 	const named = (path: string, name: string) =>
 		routes.find((route) => route.path === path)?.inputs.find((input) => input.name === name)
 
-	// a form starts at each input's first value, and the example image is a webcam's
-	assert.equal(named('/v1/images/:group/:name', 'group')?.values?.[0]?.value, 'webcams')
+	// which names exist depends on the group, so no one name is offered for all of them
+	assert.deepEqual(named('/v1/images/:group/:name', 'name'), {
+		name: 'name',
+		in: 'path',
+		required: true,
+	})
 	assert.deepEqual(named('/v1/news/mess/wp/v2/:resource/:id', 'id'), {
 		name: 'id',
 		in: 'path',
