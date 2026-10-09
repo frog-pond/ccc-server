@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
+  "engines": {
+    "npm": ">=12"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "typegen": "wrangler types",

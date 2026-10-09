@@ -23,6 +23,10 @@ callers use `fetchSource(env, source, params)`.
 
 ## Commands
 
+Needs npm 12 (`npm install --global npm@12`): npm 10's resolver crashes on
+Vitest's peer dependencies. npm 12 also blocks dependency install scripts by
+default, and none are needed here, so none are approved.
+
 ```sh
 npm ci
 npm test            # vitest, running inside workerd

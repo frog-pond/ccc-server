@@ -40,6 +40,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup mise
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      # npm 10's resolver crashes on vitest's peer dependencies; npm 12 does not
+      - run: npm install --global npm@12.2.0
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
