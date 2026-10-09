@@ -354,6 +354,55 @@ void test('every listed value and example is accepted by its route', async (t) =
 	}
 })
 
+void test('route listings describe query inputs from their schemas and named routes', async (t) => {
+	const base = await serve(t, 'stolaf-college')
+	const routes = (await (await fetch(`${base}/v1/routes`)).json()) as {
+		path: string
+		methods: string[]
+		inputs: {
+			name: string
+			in: string
+			required: boolean
+			values?: {value: string}[]
+			examples?: string[]
+			format?: string
+		}[]
+	}[]
+	const inputsOf = (path: string, method = 'GET') =>
+		routes.find((route) => route.path === path && route.methods.includes(method))?.inputs ?? []
+	const named = (path: string, name: string, method?: string) =>
+		inputsOf(path, method).find((input) => input.name === name)
+
+	assert.deepEqual(named('/v1/streams/upcoming', 'sort'), {
+		name: 'sort',
+		in: 'query',
+		required: false,
+		values: [{value: 'ascending'}, {value: 'descending'}],
+		examples: ['ascending'],
+	})
+	assert.deepEqual(named('/v1/streams/upcoming', 'dateFrom'), {
+		name: 'dateFrom',
+		in: 'query',
+		required: false,
+		format: 'date',
+	})
+	assert.equal(named('/v1/streams/search', 'query')?.required, true)
+	assert.equal(named('/v1/streams/search', 'count')?.required, false)
+	assert.deepEqual(named('/v1/calendar/google', 'id'), {
+		name: 'id',
+		in: 'query',
+		required: true,
+		examples: ['krlxradio88.1@gmail.com'],
+	})
+	assert.equal(named('/v1/calendar/ics', 'url')?.required, true)
+	assert.deepEqual(named('/v1/news/rss', 'url')?.examples, ['https://content.krlx.org/feed/'])
+	assert.deepEqual(named('/v1/news/wpjson', 'url')?.examples, [
+		'https://www.olafmessenger.com/wp-json/wp/v2/posts/',
+	])
+	assert.deepEqual(named('/_cache', 'key', 'DELETE'), {name: 'key', in: 'query', required: false})
+	assert.deepEqual(inputsOf('/_cache', 'GET'), [])
+})
+
 void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {

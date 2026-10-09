@@ -34,7 +34,8 @@ export function setupHelpers(
 		ctx.body = Object.fromEntries(result.entries())
 	})
 
-	api.delete('/_cache', (ctx) => {
+	/// Clears the whole cache, or only the entries named by `?key=`.
+	function clearCache(ctx: Context) {
 		let requestedKeys = ctx.URL.searchParams.getAll('key')
 		let found = 0
 		if (requestedKeys.length) {
@@ -50,7 +51,9 @@ export function setupHelpers(
 			attributes: {institution, scope: requestedKeys.length ? 'keys' : 'all'},
 		})
 		ctx.status = 204
-	})
+	}
+	clearCache.inputs = {key: {}}
+	api.delete('/_cache', clearCache)
 }
 
 /// The sitemap: every route on an institution router, one entry per layer, so

@@ -3,6 +3,7 @@ import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import moment from 'moment-timezone'
 import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
+import {fromSchema} from '../../ccc-server/route-inputs.ts'
 
 const StreamEntry = z.object({
 	starttime: z.string(),
@@ -135,6 +136,7 @@ export async function upcoming(ctx: Context) {
 	})
 	ctx.body = (await getStreams(params)).streams
 }
+upcoming.inputs = fromSchema(GetStreamsParamsSchema)
 
 export async function archived(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
@@ -155,6 +157,7 @@ export async function archived(ctx: Context) {
 
 	ctx.body = (await getStreams(params)).streams
 }
+archived.inputs = fromSchema(GetStreamsParamsSchema)
 
 /// The `Link` header (RFC 8288) for a page of results: `first` and `prev` when
 /// it isn't the first, `next` and `last` when more follow. Each keeps the
@@ -269,3 +272,4 @@ export async function search(ctx: Context) {
 	if (link) ctx.set('Link', link)
 	ctx.body = streams
 }
+search.inputs = fromSchema(SearchStreamsParamsSchema)
