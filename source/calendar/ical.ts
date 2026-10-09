@@ -25,7 +25,9 @@ function instant(time: InternetCalendar.Time, calendarZone: string | undefined) 
 	if (time.isDate || time.zone.tzid === 'UTC') {
 		return moment.utc(wallClock)
 	}
-	let zone = knownZone(time.timezone) ?? calendarZone
+	// a TZID with a VTIMEZONE in the feed is resolved into `zone`; one without
+	// stays as the name in `timezone`
+	let zone = knownZone(time.timezone) ?? knownZone(time.zone.tzid) ?? calendarZone
 	return zone ? moment.tz(wallClock, zone) : moment.utc(wallClock)
 }
 
