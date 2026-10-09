@@ -63,6 +63,9 @@ export function routeListing(api: Router<RouterState, ContextState>) {
 	return (ctx: Context) => {
 		const mountPrefix = ctx.path.replace(/\/v1\/routes\/?$/i, '')
 		const leadingVersionRegex = /^\/v[0-9]+(?:\.[0-9]+)*\//
+		// The listing changes with each deploy; without this a client's URL cache
+		// may judge an old copy fresh and never ask. The ETag keeps asking cheap.
+		ctx.cacheControl('no-cache')
 		ctx.body = api.stack
 			.filter((layer) => layer.methods.length > 0)
 			.map((layer) => ({

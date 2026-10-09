@@ -403,6 +403,16 @@ void test('route listings describe query inputs from their schemas and named rou
 	assert.deepEqual(inputsOf('/_cache', 'GET'), [])
 })
 
+/// The sitemap changes with each deploy. Sent without caching headers, a client
+/// such as iOS's URL cache judges it fresh on its own and keeps showing an old
+/// one; `no-cache` makes it ask again, which the ETag keeps cheap.
+void test('route listings tell clients to check with the server before reusing them', async (t) => {
+	const base = await serve(t, 'stolaf-college')
+	const response = await fetch(`${base}/v1/routes`)
+	assert.equal(response.headers.get('cache-control'), 'no-cache')
+	assert.ok(response.headers.get('etag'))
+})
+
 void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
