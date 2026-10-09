@@ -1,9 +1,9 @@
 import {googleCalendar} from '../../calendar/google.ts'
 import {ical} from '../../calendar/ical.ts'
+import {carletonCalendar} from '../../calendar/carleton-images.ts'
 import {deprecatedEvents} from '../../calendar/deprecated.ts'
 import {RETIRED_TITLE} from '../../ccc-lib/deprecated.ts'
 import {ONE_DAY, ONE_MINUTE} from '../../ccc-lib/constants.ts'
-import moment from 'moment'
 import type {Context} from '../../ccc-server/context.ts'
 
 export const getGoogleCalendar = googleCalendar
@@ -33,8 +33,7 @@ export async function carleton(ctx: Context) {
 	if (ctx.cached(ONE_MINUTE)) return
 
 	let url = 'https://www.carleton.edu/calendar/?loadFeed=calendar&stamp=1714843628'
-	let maxEndDate = moment().add(1, 'month')
-	ctx.body = await getInternetCalendar(url, {maxEndDate})
+	ctx.body = await carletonCalendar(url, 'https://www.carleton.edu/calendar/')
 }
 
 /// The Cave still runs, but its site moved to WordPress and took the calendar
@@ -90,8 +89,7 @@ export async function convos(ctx: Context) {
 	if (ctx.cached(ONE_MINUTE)) return
 
 	let url = 'https://www.carleton.edu/convocations/calendar/?loadFeed=calendar&stamp=1714843936'
-	let maxEndDate = moment().add(1, 'month')
-	ctx.body = await getInternetCalendar(url, {maxEndDate})
+	ctx.body = await carletonCalendar(url, 'https://www.carleton.edu/convocations/calendar/')
 }
 
 export async function sumo(ctx: Context) {
@@ -100,6 +98,5 @@ export async function sumo(ctx: Context) {
 
 	let url =
 		'https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar&stamp=1714840383'
-	let maxEndDate = moment().add(1, 'month')
-	ctx.body = await getInternetCalendar(url, {maxEndDate})
+	ctx.body = await carletonCalendar(url, 'https://www.carleton.edu/student/orgs/sumo/schedule/')
 }
