@@ -258,6 +258,18 @@ void test('endpoints can add dotted and major versions alongside v1 in single an
 	assert.equal(upstream.mock.callCount(), 4)
 })
 
+void test('route listings give every path param as a required input, declared or not', async (t) => {
+	const base = await serve(t, 'stolaf-college')
+	const routes = (await (await fetch(`${base}/v1/routes`)).json()) as {
+		path: string
+		inputs: {name: string; in: string; required: boolean}[]
+	}[]
+	const item = routes.find((route) => route.path === '/v1/food/item/:itemId')
+	assert.deepEqual(item?.inputs, [{name: 'itemId', in: 'path', required: true}])
+	const ping = routes.find((route) => route.path === '/ping')
+	assert.deepEqual(ping?.inputs, [])
+})
+
 void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {

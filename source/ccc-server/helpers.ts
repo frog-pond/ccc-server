@@ -1,6 +1,7 @@
 import type Router from '@koa/router'
 import * as Sentry from '@sentry/node'
 import type {Context, ContextState, RouterState} from './context.ts'
+import {listInputs, type DeclaredHandler} from './route-inputs.ts'
 
 export interface CacheAdmin {
 	keys(): IterableIterator<string>
@@ -66,6 +67,11 @@ export function routeListing(api: Router<RouterState, ContextState>) {
 				displayName: layer.path.toString().replace(leadingVersionRegex, ''),
 				methods: layer.methods.filter((method) => method !== 'HEAD'),
 				params: layer.paramNames.map((param) => param.name),
+				inputs: listInputs(
+					layer.paramNames.map((param) => param.name),
+					// the route's own handler is the last function on the layer
+					(layer.stack.at(-1) as DeclaredHandler | undefined)?.inputs,
+				),
 			}))
 			.toSorted(
 				(a, b) => a.path.localeCompare(b.path) || a.methods.join().localeCompare(b.methods.join()),
