@@ -144,7 +144,7 @@ api.get('/v1/news/named/krlx', news.krlx)
 
 // the Olaf Messenger's WordPress API, cached, for the app's Messenger reader
 api.get('/v1/news/mess/wp/v2/:resource', mess.wordpress)
-api.get('/v1/news/mess/wp/v2/:resource/:id', mess.wordpress)
+api.get('/v1/news/mess/wp/v2/:resource/:id', mess.wordpressItem)
 
 // hours
 api.get('/v1/spaces/hours', hours.buildingHours)

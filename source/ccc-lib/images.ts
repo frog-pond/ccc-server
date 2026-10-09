@@ -2,6 +2,7 @@ import {Buffer} from 'node:buffer'
 import {TOTAL_TIMEOUT, http} from './http.ts'
 import {ONE_DAY} from './constants.ts'
 import type {Context} from '../ccc-server/context.ts'
+import {examples, oneOf} from '../ccc-server/route-inputs.ts'
 
 /**
  * The folders of the app repo's `images/` that its `bundle-data` task publishes
@@ -64,3 +65,5 @@ export async function image(ctx: Context) {
 	ctx.type = 'image/webp'
 	ctx.body = Buffer.from(await response.arrayBuffer())
 }
+/// `eastquad.webp` is a published webcam image, so the example opens one.
+image.inputs = {group: oneOf(IMAGE_GROUPS), name: examples('eastquad.webp')}

@@ -270,6 +270,90 @@ void test('route listings give every path param as a required input, declared or
 	assert.deepEqual(ping?.inputs, [])
 })
 
+void test('route listings offer every accepted cafe id, labelled with its cafe', async (t) => {
+	const base = await serve(t, 'stolaf-college')
+	const routes = (await (await fetch(`${base}/v1/routes`)).json()) as {
+		path: string
+		inputs: {name: string; values?: {value: string; label?: string}[]}[]
+	}[]
+	for (const path of ['/v1/food/menu/:cafeId', '/v1/food/cafe/:cafeId']) {
+		const cafeId = routes.find((route) => route.path === path)?.inputs[0]
+		assert.deepEqual(cafeId?.values, [
+			{value: '34', label: 'sayles'},
+			{value: '35', label: 'burton'},
+			{value: '36', label: 'ldc'},
+			{value: '261', label: 'stav'},
+			{value: '262', label: 'cage'},
+			{value: '263', label: 'kingsRoom'},
+			{value: '458', label: 'weitz'},
+		])
+	}
+})
+
+/// Every value a route lists as accepted, sent to that route, is accepted: a
+/// listing that drifted from its handler's validation fails here. Upstream is
+/// stubbed to fail, so a handler past its validation fails on the stub -- as a
+/// 500 carrying the stub's message, or as the handler's own 502 ("could not be
+/// reached") -- and Koa logs it. Those logs are captured and checked to be
+/// only that.
+void test('every listed value and example is accepted by its route', async (t) => {
+	t.mock.method(http, 'get', () => {
+		throw new Error('stubbed upstream')
+	})
+	const logged = t.mock.method(console, 'error', () => undefined)
+	const base = await serve(t, 'stolaf-college')
+	const routes = (await (await fetch(`${base}/v1/routes`)).json()) as {
+		path: string
+		methods: string[]
+		inputs: {
+			name: string
+			in: 'path' | 'query'
+			required: boolean
+			values?: {value: string}[]
+			examples?: string[]
+		}[]
+	}[]
+	const filler = (input: (typeof routes)[number]['inputs'][number]) =>
+		input.values?.[0]?.value ?? input.examples?.[0] ?? 'test'
+
+	const requests = routes
+		.filter((route) => route.methods.includes('GET'))
+		.flatMap((route) =>
+			route.inputs.flatMap((varied) =>
+				[...(varied.values?.map((v) => v.value) ?? []), ...(varied.examples ?? [])].map((value) => {
+					const valueOf = (input: (typeof route.inputs)[number]) =>
+						input === varied ? value : filler(input)
+					const path = route.inputs
+						.filter((input) => input.in === 'path')
+						.reduce(
+							(p, input) => p.replace(`:${input.name}`, encodeURIComponent(valueOf(input))),
+							route.path,
+						)
+					const query = new URLSearchParams(
+						route.inputs
+							.filter((input) => input.in === 'query' && (input.required || input === varied))
+							.map((input) => [input.name, valueOf(input)]),
+					)
+					return query.size ? `${path}?${query}` : path
+				}),
+			),
+		)
+	assert.ok(requests.length > 20)
+
+	await Promise.all(
+		requests.map(async (request) => {
+			const response = await fetch(`${base}${request}`)
+			assert.ok(
+				![400, 404].includes(response.status),
+				`${request} answered ${String(response.status)}`,
+			)
+		}),
+	)
+	for (const call of logged.mock.calls) {
+		assert.match(call.arguments.join(' '), /stubbed upstream|could not be reached/u)
+	}
+})
+
 void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
