@@ -3,7 +3,7 @@ import QuickLRU from 'quick-lru'
 import type {CacheObject} from '../ccc-koa/cache.ts'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
 import {responseCache} from '../ccc-server/response-cache.ts'
-import {setupHelpers} from '../ccc-server/helpers.ts'
+import {routeListing, setupHelpers} from '../ccc-server/helpers.ts'
 import * as appData from './v1/app-data.ts'
 import * as athletics from './v1/athletics.ts'
 import * as calendar from './v1/calendar.ts'
@@ -30,7 +30,7 @@ import * as transit from './v1/transit.ts'
 import * as util from './v1/util.ts'
 import * as webcams from './v1/webcams.ts'
 import * as images from '../ccc-lib/images.ts'
-import type {Context, ContextState, RouterState} from '../ccc-server/context.ts'
+import type {ContextState, RouterState} from '../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>()
 const cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
@@ -175,17 +175,6 @@ api.get('/v1/util/html-to-md', util.htmlToMarkdown)
 api.get('/v1/athletics/scores', athletics.scores)
 
 // sitemap
-api.get('/v1/routes', (ctx: Context) => {
-	const mountPrefix = ctx.path.replace(/\/v1\/routes\/?$/i, '')
-	const leadingVersionRegex = /^\/v[0-9]+(?:\.[0-9]+)*\//
-	ctx.body = api.stack
-		.filter((layer) => layer.methods.length > 0)
-		.map((layer) => ({
-			path: `${mountPrefix}${layer.path.toString()}`,
-			displayName: layer.path.toString().replace(leadingVersionRegex, ''),
-			params: layer.paramNames.map((param) => param.name),
-		}))
-		.toSorted((a, b) => a.path.localeCompare(b.path))
-})
+api.get('/v1/routes', routeListing(api))
 
 export {api, cache}

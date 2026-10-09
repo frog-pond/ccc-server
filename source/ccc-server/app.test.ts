@@ -258,6 +258,31 @@ void test('endpoints can add dotted and major versions alongside v1 in single an
 	assert.equal(upstream.mock.callCount(), 4)
 })
 
+void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
+	await Promise.all(
+		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
+			const base = await serve(t, mode)
+			const prefixes = mode === 'all' ? ['/stolaf', '/carleton'] : ['']
+			await Promise.all(
+				prefixes.map(async (prefix) => {
+					const routes = (await (await fetch(`${base}${prefix}/v1/routes`)).json()) as {
+						path: string
+						methods: string[]
+					}[]
+					const methodsAt = (path: string) =>
+						routes
+							.filter((route) => route.path === `${prefix}${path}`)
+							.map((route) => route.methods)
+					assert.deepEqual(methodsAt('/_cache'), [['DELETE'], ['GET']])
+					assert.deepEqual(methodsAt('/v1/util/html-to-md'), [['GET'], ['POST']])
+					assert.deepEqual(methodsAt('/ping'), [['GET']])
+					assert.ok(routes.every((route) => !route.methods.includes('HEAD')))
+				}),
+			)
+		}),
+	)
+})
+
 void test('mixed-case route listings return usable paths in single and combined modes', async (t) => {
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
