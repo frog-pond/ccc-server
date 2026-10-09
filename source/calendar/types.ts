@@ -16,5 +16,9 @@ export const EventSchema = z.object({
 	isOngoing: z.boolean(),
 	links: z.array(z.unknown()),
 	config: EventConfigSchema,
+	/// The event's picture, where its source has one. Absent, never empty.
+	image: z.optional(z.url()),
 	metadata: z.optional(z.unknown()),
 })
+
+export type EventType = z.infer<typeof EventSchema>
