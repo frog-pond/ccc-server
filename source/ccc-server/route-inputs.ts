@@ -32,7 +32,9 @@ export function oneOf(
 	table: Readonly<Record<string, unknown>> | ReadonlySet<string>,
 ): InputDeclaration {
 	if (table instanceof Set) {
-		return {values: [...table].map((value) => ({value}))}
+		// `instanceof` narrows to `Set<any>`; the parameter's type says what it holds
+		const members: ReadonlySet<string> = table
+		return {values: [...members].map((value) => ({value}))}
 	}
 	return {
 		values: Object.entries(table).map(([value, entry]) =>
@@ -46,10 +48,11 @@ export function examples(...values: string[]): InputDeclaration {
 	return {examples: values}
 }
 
+/** A JSON Schema property as zod writes one for a query field, whose values are scalars. */
 interface JsonProperty {
-	enum?: unknown[]
+	enum?: (string | number | boolean)[]
 	format?: string
-	default?: unknown
+	default?: string | number | boolean
 }
 
 /**
