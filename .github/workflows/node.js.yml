@@ -33,6 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # lets the flakiness.io reporter upload test results via GitHub OIDC
+      id-token: write
     defaults:
       run:
         working-directory: workers
@@ -44,7 +46,11 @@ jobs:
       - run: npm install --global npm@12.2.0
       - run: npm ci
       - run: npm run typecheck
+      # bundles the worker the way a deploy would, without deploying it
+      - run: npm run build
       - run: npm test
+        env:
+          FLAKINESS_PROJECT: frogpond/ccc-server
 
   smoke-test-stolaf:
     runs-on: ubuntu-latest
