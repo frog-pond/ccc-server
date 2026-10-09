@@ -53,6 +53,7 @@ const wholeNumber = (min: number, max = Number.MAX_SAFE_INTEGER) =>
 		.regex(/^(0|[1-9]\d*)$/, 'must be a whole number')
 		.transform(Number)
 		.pipe(z.number().int().min(min).max(max))
+		.meta({format: 'integer'})
 
 // Search by `query` (required: upstream answers a blank one with everything).
 // `class` is which streams to look at; `dateFrom` and `dateTo` limit the range

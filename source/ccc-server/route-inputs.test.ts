@@ -50,6 +50,23 @@ void test('fromSchema reads query inputs from a zod object as a client would sen
 	})
 })
 
+void test('fromSchema marks whole-number inputs as integers, whether zod or a meta says so', () => {
+	const schema = z.object({
+		count: z
+			.string()
+			.regex(/^\d+$/)
+			.transform(Number)
+			.pipe(z.number().int())
+			.meta({format: 'integer'})
+			.optional(),
+		page: z.number().int().optional(),
+	})
+	assert.deepEqual(fromSchema(schema), {
+		count: {in: 'query', required: false, format: 'integer'},
+		page: {in: 'query', required: false, format: 'integer'},
+	})
+})
+
 void test('listInputs makes every path param a required input, declared or not', () => {
 	assert.deepEqual(listInputs(['itemId']), [{name: 'itemId', in: 'path', required: true}])
 })

@@ -413,6 +413,27 @@ void test('route listings tell clients to check with the server before reusing t
 	assert.ok(response.headers.get('etag'))
 })
 
+void test('route listings pair each input with values that open something real', async (t) => {
+	const base = await serve(t, 'stolaf-college')
+	const routes = (await (await fetch(`${base}/v1/routes`)).json()) as {
+		path: string
+		inputs: {name: string; values?: {value: string}[]; examples?: string[]; format?: string}[]
+	}[]
+	const named = (path: string, name: string) =>
+		routes.find((route) => route.path === path)?.inputs.find((input) => input.name === name)
+
+	// a form starts at each input's first value, and the example image is a webcam's
+	assert.equal(named('/v1/images/:group/:name', 'group')?.values?.[0]?.value, 'webcams')
+	assert.deepEqual(named('/v1/news/mess/wp/v2/:resource/:id', 'id'), {
+		name: 'id',
+		in: 'path',
+		required: true,
+		format: 'integer',
+		examples: ['37207'],
+	})
+	assert.equal(named('/v1/streams/search', 'count')?.format, 'integer')
+})
+
 void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
 	await Promise.all(
 		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {

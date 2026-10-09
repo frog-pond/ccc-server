@@ -319,6 +319,9 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 	}
 }
 
+/// A post the Messenger has published, so an item request has one to open.
+export const EXAMPLE_POST_ID = '37207'
+
 export const wordpress: DeclaredHandler = makeWordpressRoute()
 wordpress.inputs = {resource: oneOf(RESOURCES)}
 
@@ -327,5 +330,5 @@ wordpress.inputs = {resource: oneOf(RESOURCES)}
 export const wordpressItem: DeclaredHandler = (ctx, next) => wordpress(ctx, next)
 wordpressItem.inputs = {
 	resource: oneOf(Object.fromEntries(Object.entries(RESOURCES).filter(([, entry]) => entry.item))),
-	id: examples('1'),
+	id: {...examples(EXAMPLE_POST_ID), format: 'integer'},
 }

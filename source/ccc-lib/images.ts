@@ -65,5 +65,9 @@ export async function image(ctx: Context) {
 	ctx.type = 'image/webp'
 	ctx.body = Buffer.from(await response.arrayBuffer())
 }
-/// `eastquad.webp` is a published webcam image, so the example opens one.
-image.inputs = {group: oneOf(IMAGE_GROUPS), name: examples('eastquad.webp')}
+/// `eastquad.webp` is a published webcam image, and a form starts at each
+/// input's first value, so `webcams` leads the groups: together they open one.
+image.inputs = {
+	group: oneOf(new Set(['webcams', ...IMAGE_GROUPS])),
+	name: examples('eastquad.webp'),
+}

@@ -11,8 +11,8 @@ export interface RouteInput {
 	values?: {value: string; label?: string}[]
 	/** Known-good values for a free-form input. */
 	examples?: string[]
-	/** A hint for entry. */
-	format?: 'date'
+	/** A hint for entry: a calendar date, or a whole number. */
+	format?: 'date' | 'integer'
 }
 
 /** What a handler says about one input; the name and anything inferable are filled in by `listInputs`. */
@@ -50,6 +50,7 @@ export function examples(...values: string[]): InputDeclaration {
 
 /** A JSON Schema property as zod writes one for a query field, whose values are scalars. */
 interface JsonProperty {
+	type?: string
 	enum?: (string | number | boolean)[]
 	format?: string
 	default?: string | number | boolean
@@ -71,6 +72,9 @@ export function fromSchema(schema: z.ZodType): InputDeclarations {
 			const input: InputDeclaration = {in: 'query', required: required.has(name)}
 			if (property.enum) input.values = property.enum.map((value) => ({value: String(value)}))
 			if (property.format === 'date') input.format = 'date'
+			// zod writes `integer` for `z.number().int()`; a field read from a string
+			// says so itself, with `.meta({format: 'integer'})`
+			if (property.type === 'integer' || property.format === 'integer') input.format = 'integer'
 			if (property.default !== undefined) input.examples = [String(property.default)]
 			return [name, input]
 		}),
