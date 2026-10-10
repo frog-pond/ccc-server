@@ -86,6 +86,8 @@ const SHARED: Record<string, Calendar> = {
 	// schedule is published each week.
 	'ksto-schedule': fromWeeklySchedule('https://stolaf.dev/AAO-React-Native/ksto-schedule.json'),
 	'krlx-schedule': fromGoogle('krlxradio88.1@gmail.com'),
+	// St. Olaf's own calendar, on The Events Calendar (Tribe).
+	stolaf: fromTec('https://wp.stolaf.edu/calendar/wp-json/tribe/events/v1/events'),
 	'upcoming-convos': CONVOS,
 	'sumo-schedule': fromCarleton('/student/orgs/sumo/schedule/'),
 }
@@ -95,13 +97,7 @@ export const STOLAF_CALENDARS: Record<string, Calendar> = {
 	...SHARED,
 	// The events St. Olaf's student organizations post to Presence.
 	'student-orgs': fromPresence('https://api.presence.io/stolaf/v1/events'),
-	// The college's own calendar, on The Events Calendar (Tribe).
-	stolaf: fromTec('https://wp.stolaf.edu/calendar/wp-json/tribe/events/v1/events'),
 }
 
 /// Carleton's calendars.
-export const CARLETON_CALENDARS: Record<string, Calendar> = {
-	...SHARED,
-	// The Google calendar this mirrored St. Olaf's events through was deleted.
-	stolaf: notice(RETIRED_TITLE, 'St. Olaf events are no longer published to Carleton.', DAY),
-}
+export const CARLETON_CALENDARS: Record<string, Calendar> = {...SHARED}

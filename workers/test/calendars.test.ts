@@ -272,14 +272,6 @@ describe.each(['edu.stolaf', 'edu.carleton'])('%s calendars', (campus) => {
 })
 
 describe('the calendars that differ by campus', () => {
-	test("Carleton's copy of it is retired, kept a day", async () => {
-		let response = await get('/edu.carleton/calendar/stolaf')
-		expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
-		expect(await response.json()).toMatchObject([
-			{title: 'No longer updated', description: expect.stringContaining('St. Olaf')},
-		])
-	})
-
 	test('the convocations list is where Carleton serves it', async () => {
 		let convos = CONVOS_PAGE
 		serve({
@@ -305,6 +297,7 @@ describe("St. Olaf's own calendars", () => {
 		startDateTimeUtc: '2030-10-12T15:30:00Z',
 		endDateTimeUtc: '2030-10-14T21:00:00Z',
 		// fields Presence sends that are not read
+		contactName: 'Grace Sundell',
 		contactEmail: 'someone@stolaf.edu',
 		rsvpAnswer: -1,
 		...over,
@@ -351,7 +344,12 @@ describe("St. Olaf's own calendars", () => {
 				location: '',
 				isOngoing: false,
 				links: ['https://stolaf.presence.io/event/bare'],
-				metadata: {uid: 'abc', organization: 'Oles Under the Sun (OUTS)'},
+				metadata: {
+					uid: 'abc',
+					organization: 'Oles Under the Sun (OUTS)',
+					contactName: 'Grace Sundell',
+					contactEmail: 'someone@stolaf.edu',
+				},
 				config: {startTime: true, endTime: true, subtitle: 'location'},
 			})
 			expect(events[1]).toMatchObject({
@@ -364,8 +362,13 @@ describe("St. Olaf's own calendars", () => {
 				image:
 					'https://stolaf-cdn.presence.io/event-photos/09ddef77-5009-4348-8540-c9bfc6ade6bc/photo.jpeg?v=0',
 			})
-			// the organisers' contact details have nowhere to go
-			expect(JSON.stringify(events)).not.toContain('someone@stolaf.edu')
+			// the organizers' contact stays with the event
+			expect(events[1]?.['metadata']).toEqual({
+				uid: 'abc',
+				organization: 'Oles Under the Sun (OUTS)',
+				contactName: 'Grace Sundell',
+				contactEmail: 'someone@stolaf.edu',
+			})
 		})
 
 		test('events that cannot be read are errors only when none can', async () => {
@@ -384,7 +387,7 @@ describe("St. Olaf's own calendars", () => {
 		})
 	})
 
-	describe('stolaf', () => {
+	describe.each(['edu.stolaf', 'edu.carleton'])('stolaf on %s', (campus) => {
 		const tecEvent = (over: object = {}) => ({
 			id: 1,
 			title: 'Lion&#8217;s Pause &#038; Friends',
@@ -432,7 +435,7 @@ describe("St. Olaf's own calendars", () => {
 
 		test('is the college calendar, read across its pages and shaped', async () => {
 			servePages()
-			let response = await get('/edu.stolaf/calendar/stolaf')
+			let response = await get(`/${campus}/calendar/stolaf`)
 			expect(response.status).toBe(200)
 			expect(response.headers.get('cache-control')).toBe('public, max-age=60')
 			let events = (await response.json()) as Record<string, unknown>[]
@@ -464,7 +467,7 @@ describe("St. Olaf's own calendars", () => {
 
 		test('asks for the next month in campus dates, fifty at a time, and follows the next page', async () => {
 			servePages()
-			await get('/edu.stolaf/calendar/stolaf')
+			await get(`/${campus}/calendar/stolaf`)
 			let asked = fetchSpy.mock.calls.map(([i]) => String(i))
 			expect(asked).toHaveLength(2)
 			let first = new URL(asked[0] ?? '')
@@ -491,7 +494,7 @@ describe("St. Olaf's own calendars", () => {
 					),
 				),
 			)
-			let response = await get('/edu.stolaf/calendar/stolaf')
+			let response = await get(`/${campus}/calendar/stolaf`)
 			expect(response.status).toBe(502)
 			expect(fetchSpy.mock.calls.map(([i]) => new URL(String(i)).hostname)).not.toContain(
 				'elsewhere.example',
@@ -504,13 +507,13 @@ describe("St. Olaf's own calendars", () => {
 					answer(JSON.stringify({events: [tecEvent()], next_rest_url: NEXT}), 'application/json'),
 				),
 			)
-			expect((await get('/edu.stolaf/calendar/stolaf')).status).toBe(502)
+			expect((await get(`/${campus}/calendar/stolaf`)).status).toBe(502)
 			expect(fetchSpy).toHaveBeenCalledTimes(10)
 		})
 
 		test('a page that fails with nothing stored is a 502', async () => {
 			servePages(() => answer('boom', 'text/plain', 503))
-			let response = await get('/edu.stolaf/calendar/stolaf')
+			let response = await get(`/${campus}/calendar/stolaf`)
 			expect(response.status).toBe(502)
 			expect(await response.json()).toMatchObject({message: expect.stringContaining('503')})
 		})
@@ -521,7 +524,7 @@ describe("St. Olaf's own calendars", () => {
 					answer(JSON.stringify({events: [{title: 'No dates'}]}), 'application/json'),
 				),
 			)
-			expect((await get('/edu.stolaf/calendar/stolaf')).status).toBe(502)
+			expect((await get(`/${campus}/calendar/stolaf`)).status).toBe(502)
 		})
 	})
 

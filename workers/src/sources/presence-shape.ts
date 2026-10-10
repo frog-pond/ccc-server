@@ -6,12 +6,14 @@ import {textFromHtml} from '../../../source/ccc-lib/dom.ts'
 
 /// Presence's public API is the one its own web app reads: for St. Olaf,
 /// `https://api.presence.io/stolaf/v1/events`. Only the fields the calendar can
-/// show are modelled; RSVP counts and contact details have nowhere to go in an
-/// event. This reads it the way AAO-React-Native's own Presence parser does.
+/// show are modelled, with the organizers' contact in the event's metadata; RSVP
+/// counts have nowhere to go in an event. This reads it the way AAO-React-Native's own Presence parser does.
 const PresenceEventSchema = z.object({
 	eventNoSqlId: z.string().optional(),
 	eventName: z.string(),
 	organizationName: z.string(),
+	contactName: z.string().optional(),
+	contactEmail: z.string().optional(),
 	uri: z.string(),
 	description: z.string().default(''),
 	location: z.string().default(''),
@@ -55,7 +57,13 @@ function convertEvent(event: PresenceEvent, now: moment.Moment): EventType {
 		// otherwise list it twice
 		links: [...new Set([...getUrls(description), `${EVENT_PAGE}${event.uri}`])],
 		...(image && {image}),
-		metadata: {uid: event.eventNoSqlId, organization: event.organizationName},
+		metadata: {
+			uid: event.eventNoSqlId,
+			organization: event.organizationName,
+			// who to ask about the event, where the organizers gave a contact
+			...(event.contactName && {contactName: event.contactName}),
+			...(event.contactEmail && {contactEmail: event.contactEmail}),
+		},
 		config: {startTime: true, endTime: true, subtitle: 'location'},
 	})
 }

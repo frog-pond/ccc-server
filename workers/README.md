@@ -73,18 +73,17 @@ names its source.
   and `sumo-schedule` (Carleton's calendars, with the pictures their pages show),
   `northfield` (an iCal feed), `krlx-schedule` (a Google calendar), `ksto-schedule` (the weekly schedule
   AAO-React-Native publishes, `ksto-schedule.json`), `stolaf`, and the retired
-  `the-cave` and `oleville`. `stolaf` differs by campus's table: St. Olaf's is
-  below, and Carleton's is a retired notice kept a day. A retired calendar is a single
+  `the-cave` and `oleville`. `stolaf` is described below. A retired calendar is a single
   notice event, kept a day. The others are fresh for a minute and kept a day if the
   site fails; a 502, kept a minute, if nothing has ever been stored. Shaped by
   `source/calendar/*-shape.ts`, shared with the Node server.
-- `GET /calendar/stolaf` (St. Olaf) is the college calendar, on The Events
+- `GET /calendar/stolaf` is the college calendar, on The Events
   Calendar (Tribe) at `wp.stolaf.edu/calendar`: the next month in campus dates,
   read across the feed's pages (fifty at a time, at most ten pages; a longer feed
   is an error rather than a short calendar). `GET /calendar/student-orgs` (St.
   Olaf) is the events student organizations post to Presence
   (`api.presence.io/stolaf/v1/events`), those on now or still to come, with
-  cover images; it is kept five minutes, the list being large. Both read events
+  cover images and the organizers' contact (name and email) in `metadata`; it is kept five minutes, the list being large. Both read events
   the way AAO-React-Native's own parsers do, and an event that cannot be read is
   skipped unless none can.
 - `GET /convos/upcoming` (Carleton only): the same list as `upcoming-convos`.
