@@ -1,10 +1,11 @@
 import {env} from 'cloudflare:workers'
-import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, test, type MockInstance} from 'vitest'
 import {fetchSource} from '../src/client.ts'
 import {clock} from '../src/clock.ts'
 import {registry} from '../src/registry.ts'
 import '../src/worker.ts'
 import {bonappPage, parseBonappPage} from '../src/sources/bonapp.ts'
+import {spyOnFetch} from './spy.ts'
 import stavHall from './fixtures/stav-hall.html?raw'
 
 const MINUTE = 60_000
@@ -34,7 +35,7 @@ describe('parseBonappPage', () => {
 })
 
 describe('bonappPage source', () => {
-	let fetchSpy: ReturnType<typeof vi.spyOn<typeof globalThis, 'fetch'>>
+	let fetchSpy: MockInstance<typeof fetch>
 	let now = 0
 	let url = ''
 	let elsewhere = ''
@@ -45,7 +46,7 @@ describe('bonappPage source', () => {
 		// storage is not reset between tests, so each test gets its own café url
 		url = `${STAV}?test=${crypto.randomUUID()}`
 		elsewhere = `https://example.com/cafe/stav-hall/?test=${crypto.randomUUID()}`
-		fetchSpy = vi.spyOn(globalThis, 'fetch')
+		fetchSpy = spyOnFetch()
 		fetchSpy.mockImplementation(() => Promise.resolve(page(stavHall)))
 	})
 
