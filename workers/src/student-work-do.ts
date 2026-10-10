@@ -99,7 +99,6 @@ export class StudentWorkDO extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env)
 		ctx.storage.sql.exec(`
-			DROP TABLE IF EXISTS posting;
 			CREATE TABLE IF NOT EXISTS postings (
 				id TEXT PRIMARY KEY,
 				board TEXT NOT NULL,
@@ -126,6 +125,14 @@ export class StudentWorkDO extends DurableObject<Env> {
 				last_read INTEGER NOT NULL
 			);
 			INSERT OR IGNORE INTO state (id, last_read) VALUES (1, 0);`)
+		// an earlier layout's rows: read the board afresh into the current one
+		let earlier = ctx.storage.sql
+			.exec("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'posting'")
+			.toArray()
+		if (earlier.length > 0) {
+			ctx.storage.sql.exec('DROP TABLE posting')
+			ctx.storage.sql.exec('UPDATE state SET board_fetched_at = NULL WHERE id = 1')
+		}
 	}
 
 	#state(): StateRow {
