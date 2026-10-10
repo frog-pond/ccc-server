@@ -27,8 +27,9 @@ jobs:
         env:
           FLAKINESS_PROJECT: frogpond/ccc-server
 
-  # The Cloudflare Workers / Durable Objects code in workers/ has its own
-  # package, and runs its tests inside workerd.
+  # The Cloudflare Workers / Durable Objects code in workers/ is an npm
+  # workspace of the root package, so it can import from source/, and runs its
+  # tests inside workerd.
   workers:
     runs-on: ubuntu-latest
     permissions:
@@ -44,7 +45,9 @@ jobs:
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
       # npm 10's resolver crashes on vitest's peer dependencies; npm 12 does not
       - run: npm install --global npm@12.2.0
+      # one install at the root covers both packages
       - run: npm ci
+        working-directory: .
       - run: npm run typecheck
       # bundles the worker the way a deploy would, without deploying it
       - run: npm run build

@@ -5,6 +5,9 @@
   "author": "Frog Pond Labs, LLC",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "workspaces": [
+    "workers"
+  ],
   "prettier": {
     "printWidth": 100,
     "useTabs": true,
