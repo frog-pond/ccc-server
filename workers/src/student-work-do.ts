@@ -33,6 +33,7 @@ import {
 	type PostingDescription,
 	type PostingDetail,
 } from './student-work-shape.ts'
+import {upstream} from './upstream.ts'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -100,7 +101,7 @@ async function getJson(url: string): Promise<unknown> {
 	if (parsed.protocol !== 'https:' || parsed.origin !== ORACLE_ORIGIN) {
 		throw new Error(`${parsed.origin} is not Oracle Recruiting`)
 	}
-	let response = await fetch(url, {redirect: 'manual'})
+	let response = await upstream(url)
 	let where = `${parsed.origin}${parsed.pathname}`
 	if (response.status === 403 || response.status === 429) {
 		throw new Refused(`Oracle Recruiting refused (${String(response.status)}) ${where}`)

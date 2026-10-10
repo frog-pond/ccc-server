@@ -2,6 +2,7 @@ import {feedItemsFromRss} from '../../../source/feeds/rss-shape.ts'
 import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {SOURCE_TTL} from '../lifetimes.ts'
+import {upstream} from '../upstream.ts'
 
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
@@ -29,7 +30,7 @@ export const rssNews = defineSource({
 			throw new Error(`${url} is not an RSS feed this reads`)
 		}
 		// the host was checked above, so a redirect to another is not followed
-		let response = await fetch(url, {redirect: 'manual'})
+		let response = await upstream(url)
 		if (!response.ok) {
 			throw new Error(`The feed responded ${String(response.status)} for ${url}`)
 		}

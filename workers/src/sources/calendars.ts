@@ -18,6 +18,7 @@ import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {eventsFromPresence} from './presence-shape.ts'
 import {TecPageSchema, eventsFromTec} from './tec-shape.ts'
+import {upstream} from '../upstream.ts'
 
 const MINUTE = 60 * 1000
 const DAY = 24 * 60 * MINUTE
@@ -39,7 +40,7 @@ async function fetchFrom(hosts: ReadonlySet<string>, url: string, init: RequestI
 	if (parsed.protocol !== 'https:' || !hosts.has(parsed.hostname)) {
 		throw new Error(`${named} is not a calendar this reads`)
 	}
-	let response = await fetch(url, {...init, redirect: 'manual'})
+	let response = await upstream(url, init)
 	if (!response.ok) {
 		throw new Error(`The calendar responded ${String(response.status)} for ${named}`)
 	}

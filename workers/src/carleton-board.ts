@@ -12,6 +12,7 @@ import {
 } from '../../source/student-work/carleton-shape.ts'
 import {searchWords} from '../../source/student-work/posting-shape.ts'
 import {ftsQuery} from './student-work-shape.ts'
+import {upstream} from './upstream.ts'
 
 /// Carleton's student jobs as rows in the StudentWorkDO named for Carleton: what
 /// the object does for this board, apart from when it does it.
@@ -58,7 +59,7 @@ async function page(n: number): Promise<{posts: CarletonJobPost[]; pages: number
 	let url = carletonJobsUrl(n)
 	let parsed = new URL(url)
 	if (parsed.origin !== CARLETON_JOBS_ORIGIN) throw new Error(`${parsed.origin} is not Carleton`)
-	let response = await fetch(url, {redirect: 'manual'})
+	let response = await upstream(url)
 	let where = `${parsed.origin}${parsed.pathname}`
 	if (!response.ok) {
 		throw new Error(`Carleton Student Employment responded ${String(response.status)} for ${where}`)
