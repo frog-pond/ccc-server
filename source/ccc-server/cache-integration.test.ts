@@ -3,7 +3,7 @@ import {beforeEach, test} from 'node:test'
 import * as Sentry from '@sentry/node'
 import {http} from '../ccc-lib/http.ts'
 
-// DELETE /_cache needs the admin key.
+// /_cache needs the admin key.
 process.env['ADMIN_KEY'] = 'test-admin-key'
 const ADMIN = {authorization: 'Bearer test-admin-key'}
 

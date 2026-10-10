@@ -12,7 +12,7 @@ import {ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {parseScheduleData} from '../../schedules/parse.ts'
 import {GH_PAGES} from './gh-pages.ts'
 
-// DELETE /_cache needs the admin key.
+// /_cache needs the admin key.
 process.env['ADMIN_KEY'] = 'test-admin-key'
 const ADMIN = {authorization: 'Bearer test-admin-key'}
 
@@ -279,7 +279,7 @@ for (let keys of [
 		let {base} = await serve(t)
 		let {send, requests, responses} = upstream(t)
 		assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
-		let listing = await send(`${base}/_cache?before=refresh`)
+		let listing = await send(`${base}/_cache?before=refresh`, {headers: ADMIN})
 		let entries = (await listing.json()) as Record<string, string>
 		assert.equal(entries['/v1/spaces/hours'], '3600')
 		assert.equal(entries['/v1/breaks'], '3600')
@@ -332,7 +332,7 @@ void test('combined cache administration lists prefixed keys and preserves insti
 	let {base} = await serve(t, undefined, true)
 	let {send, requests} = upstream(t)
 	assert.equal((await send(`${base}/stolaf/v1/breaks`)).status, 200)
-	let listing = await send(`${base}/stolaf/_cache`)
+	let listing = await send(`${base}/stolaf/_cache`, {headers: ADMIN})
 	let entries = (await listing.json()) as Record<string, string>
 	assert.equal(entries['/stolaf/v1/breaks'], '3600')
 	assert.equal(entries['/stolaf/v1/spaces/hours'], '3600')
