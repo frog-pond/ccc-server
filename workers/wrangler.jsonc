@@ -7,4 +7,5 @@
 		"bindings": [{"name": "SOURCE", "class_name": "SourceDO"}],
 	},
 	"migrations": [{"tag": "v1", "new_sqlite_classes": ["SourceDO"]}],
+    "previews": {}
 }
