@@ -65,7 +65,8 @@ export const bonappPage = defineSource({
 		if (parsed.protocol !== 'https:' || !BONAPP_HOST.test(parsed.hostname)) {
 			throw new Error(`${url} is not a BonApp café page`)
 		}
-		let response = await fetch(url)
+		// the host was checked above, so a redirect to another is not followed
+		let response = await fetch(url, {redirect: 'manual'})
 		if (!response.ok) {
 			throw new Error(`BonApp responded ${String(response.status)} for ${url}`)
 		}

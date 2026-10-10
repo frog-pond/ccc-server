@@ -25,7 +25,8 @@ export const wpNews = defineSource({
 		if (parsed.protocol !== 'https:' || !WORDPRESS_HOSTS.has(parsed.hostname)) {
 			throw new Error(`${url} is not a WordPress feed this reads`)
 		}
-		let response = await fetch(url)
+		// the host was checked above, so a redirect to another is not followed
+		let response = await fetch(url, {redirect: 'manual'})
 		if (!response.ok) {
 			throw new Error(`WordPress responded ${String(response.status)} for ${url}`)
 		}
