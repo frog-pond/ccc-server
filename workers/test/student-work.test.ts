@@ -282,8 +282,8 @@ describe('GET /edu.stolaf/student-work/postings', () => {
 		expect(calls('https://example.com')).toHaveLength(0)
 	})
 
-	test('is not a route on a campus without the board', async () => {
-		expect((await get('/edu.carleton/student-work/postings')).status).toBe(404)
+	test('is not read for a campus with another board', async () => {
+		expect((await get('/edu.carleton/student-work/units')).status).toBe(404)
 		expect(calls(BOARD)).toHaveLength(0)
 	})
 })

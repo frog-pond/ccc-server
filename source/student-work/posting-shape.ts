@@ -75,6 +75,15 @@ export interface DescriptionField {
 	value: string
 }
 
+/// Which labels a description reader names, and which it leaves out of the
+/// body: each board's template has its own.
+export interface DescriptionLabels<P extends string> {
+	/// lowercased labels worth a name of their own, to that name
+	promoted: Readonly<Record<string, P>>
+	/// lowercased labels on every posting, or accounting: left out of the body
+	dropped: ReadonlySet<string>
+}
+
 /// The labels worth a name of their own.
 const PROMOTED = {
 	'department name': 'department',
@@ -141,7 +150,8 @@ function labelOf(run: Node[]): DescriptionField | undefined {
 		.filter((part) => part !== '')
 		.join(' ')
 	let colon = whole.indexOf(':')
-	if (colon === -1 || colon >= heading.length) return undefined
+	// the colon is in the bold text, or straight after it ("<b>Label</b>: value")
+	if (colon === -1 || whole.slice(heading.length, colon).trim() !== '') return undefined
 
 	return {
 		label: whole.slice(0, colon).trim().replace(LEADING_NUMERAL, '').trim(),
@@ -210,20 +220,30 @@ function markdownOf(html: string): string {
 	return turndown.turndown(htmlFragment(html)).trim()
 }
 
-export interface Description {
+export interface Description<P extends string = PromotedField> {
 	/// every labelled line, in order
 	fields: DescriptionField[]
 	/// the labelled lines the app shows on their own, by name; absent when the
 	/// posting leaves one blank
-	promoted: Partial<Record<PromotedField, string>>
+	promoted: Partial<Record<P, string>>
 	/// the rest of the description, as Markdown: what is neither promoted nor
 	/// on every posting
 	markdown: string
 }
 
+const STOLAF_LABELS: DescriptionLabels<PromotedField> = {promoted: PROMOTED, dropped: DROPPED}
+
+/// A St. Olaf posting's description, read with its template's labels.
 export function readDescription(html: string): Description {
+	return readDescriptionWith(html, STOLAF_LABELS)
+}
+
+export function readDescriptionWith<P extends string>(
+	html: string,
+	labels: DescriptionLabels<P>,
+): Description<P> {
 	let fields: DescriptionField[] = []
-	let promoted: Description['promoted'] = {}
+	let promoted: Description<P>['promoted'] = {}
 	let kept: string[] = []
 
 	for (let run of runsOf(htmlFragment(html))) {
@@ -231,9 +251,9 @@ export function readDescription(html: string): Description {
 		if (labelled) {
 			fields.push(labelled)
 			let normalised = normaliseLabel(labelled.label)
-			if (DROPPED.has(normalised)) continue
-			let name = Object.hasOwn(PROMOTED, normalised)
-				? PROMOTED[normalised as keyof typeof PROMOTED]
+			if (labels.dropped.has(normalised)) continue
+			let name = Object.hasOwn(labels.promoted, normalised)
+				? labels.promoted[normalised]
 				: undefined
 			if (name) {
 				if (labelled.value && promoted[name] === undefined) promoted[name] = labelled.value

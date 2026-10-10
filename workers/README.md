@@ -114,6 +114,20 @@ names its source.
   Node server's `/v1/student-work/units` keeps (`groupUnits` in
   `source/student-work/areas.ts`). A posting whose detail has not been read is
   left out.
+- `GET /student-work/postings` (Carleton): the jobs on Carleton's Student
+  Employment WordPress site (`/student-employment/post-jobs`), newest first, as
+  `{updatedAt, count, postings}`, without the archived ones. Each posting has its
+  `title`, page `url`, `postedAt` and `modifiedAt`, its `categories`, whether it
+  is available `duringTerm` and `duringBreak`, whether it is `offCampus`
+  (community-based work-study), the labelled lines the posting forms use
+  (`department`, `dateOpen` and `opensOn` as `YYYY-MM-DD`, `availability`,
+  `classification`, `wage`, `supervisor`, `employer`, `workLocation`, `active`),
+  and every link in it. Query parameters narrow the list: `when` (`term`,
+  `break`), `off_campus` (`true`, `false`), `posted_since` (`YYYY-MM-DD`), and `q`,
+  `title` and `sort` as above. With a handful of jobs, the filters run in the
+  Worker over the stored list. Cacheable for an hour; a 502, kept a minute, if
+  the site has never been read. `GET /student-work/postings/:id` adds the
+  `description` as above, and is a 404 for a job not listed.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
   A 502 means BonApp failed with nothing stored. This is a look at the source,
@@ -134,6 +148,10 @@ names its source.
   `stolaf.dev`, `wp.stolaf.edu`, `api.presence.io`). The Google source reads the Calendar API with the worker's
   `GOOGLE_CALENDAR_API_KEY` secret, which has to be set on the worker (and on its
   Previews); without it those calendars are a 502.
+- `carleton-student-work` (`src/sources/carleton-student-work.ts`): Carleton's
+  student jobs, every page of the WordPress posts (at most ten), shaped by
+  `source/student-work/carleton-shape.ts`. Fresh for an hour and kept a day;
+  only `www.carleton.edu` is fetched, and a redirect is not followed.
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
   validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
   and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
