@@ -5,6 +5,10 @@ import {api as stolafApi, cache as stolafCache} from '../ccci-stolaf-college/ind
 import {api as carletonApi, cache as carletonCache} from '../ccci-carleton-college/index.ts'
 import {http} from '../ccc-lib/http.ts'
 
+// /_cache needs the admin key.
+process.env['ADMIN_KEY'] = 'test-admin-key'
+const ADMIN = {authorization: 'Bearer test-admin-key'}
+
 beforeEach(() => {
 	stolafCache.clear()
 	carletonCache.clear()
@@ -85,10 +89,10 @@ void test('all mounts both institutions with usable route listings and isolated 
 	)
 	await Promise.all(
 		['/', '/_cache'].map(async (path) => {
-			assert.equal((await fetch(`${base}${path}`)).status, 404)
+			assert.equal((await fetch(`${base}${path}`, {headers: ADMIN})).status, 404)
 		}),
 	)
-	assert.equal((await fetch(`${base}/_cache`, {method: 'DELETE'})).status, 404)
+	assert.equal((await fetch(`${base}/_cache`, {method: 'DELETE', headers: ADMIN})).status, 404)
 })
 
 void test('all keeps cached responses separate for the same endpoint at each institution', async (t) => {
@@ -113,17 +117,20 @@ void test('all keeps cached responses separate for the same endpoint at each ins
 	assert.equal(upstream.mock.callCount(), 2)
 	await Promise.all(
 		['stolaf', 'carleton'].map(async (name) => {
-			const cache = (await (await fetch(`${base}/${name}/_cache`)).json()) as Record<string, string>
+			const cache = (await (
+				await fetch(`${base}/${name}/_cache`, {headers: ADMIN})
+			).json()) as Record<string, string>
 			assert.ok(Object.hasOwn(cache, `/${name}/v1/tools/help`))
 			assert.ok(Object.keys(cache).every((key) => key.startsWith(`/${name}/`)))
 		}),
 	)
 	const crossDelete = await fetch(`${base}/stolaf/_cache?key=/carleton/v1/tools/help`, {
 		method: 'DELETE',
+		headers: ADMIN,
 	})
 	assert.equal(crossDelete.status, 204)
 	assert.equal(crossDelete.headers.get('X-Cache-Deleted'), '0')
-	const deleted = await fetch(`${base}/stolaf/_cache`, {method: 'DELETE'})
+	const deleted = await fetch(`${base}/stolaf/_cache`, {method: 'DELETE', headers: ADMIN})
 	assert.equal(deleted.status, 204)
 	assert.ok(Number(deleted.headers.get('X-Cache-Deleted')) > 0)
 	const carleton = await fetch(`${base}/carleton/v1/tools/help`)
@@ -147,7 +154,10 @@ void test('deleting one cache key preserves other query variants', async (t) => 
 	)
 	assert.equal(upstream.mock.callCount(), 2)
 	const query = new URLSearchParams({key: removed})
-	const deleted = await fetch(`${base}/stolaf/_cache?${query.toString()}`, {method: 'DELETE'})
+	const deleted = await fetch(`${base}/stolaf/_cache?${query.toString()}`, {
+		method: 'DELETE',
+		headers: ADMIN,
+	})
 	assert.equal(deleted.status, 204)
 	assert.equal(deleted.headers.get('X-Cache-Deleted'), '1')
 	const hit = await fetch(`${base}${retained}`)
@@ -157,6 +167,84 @@ void test('deleting one cache key preserves other query variants', async (t) => 
 	assert.equal(miss.status, 200)
 	assert.doesNotMatch(miss.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
 	assert.equal(upstream.mock.callCount(), 3)
+})
+
+void test('cache administration needs the admin key', async (t) => {
+	t.mock.method(http, 'get', (url: string) => ({
+		json: () => Promise.resolve({source: url}),
+	}))
+	const base = await serve(t, 'all')
+	const path = '/stolaf/v1/tools/help'
+	assert.equal((await fetch(`${base}${path}`)).status, 200)
+	const attempt = (headers: Record<string, string>, method = 'DELETE') =>
+		fetch(`${base}/stolaf/_cache`, {method, headers})
+	await Promise.all(
+		[
+			{},
+			{authorization: 'Bearer wrong-key'},
+			{authorization: 'Basic test-admin-key'},
+			{authorization: 'test-admin-key'},
+			{'x-admin-key': 'test-admin-key'},
+		].flatMap((headers) =>
+			['GET', 'HEAD', 'DELETE'].map(async (method) => {
+				const refused = await attempt(headers, method)
+				assert.equal(refused.status, 404)
+				assert.equal(refused.headers.get('X-Cache-Deleted'), null)
+			}),
+		),
+	)
+	t.after(() => {
+		process.env['ADMIN_KEY'] = 'test-admin-key'
+	})
+	delete process.env['ADMIN_KEY']
+	assert.equal((await attempt(ADMIN)).status, 404)
+	assert.equal((await attempt(ADMIN, 'GET')).status, 404)
+	process.env['ADMIN_KEY'] = ''
+	assert.equal((await attempt({authorization: 'Bearer '})).status, 404)
+	process.env['ADMIN_KEY'] = 'test-admin-key'
+	const hit = await fetch(`${base}${path}`)
+	assert.match(hit.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
+	const listing = await attempt(ADMIN, 'GET')
+	assert.equal(listing.status, 200)
+	assert.ok(Object.hasOwn((await listing.json()) as object, path))
+	const deleted = await attempt({authorization: 'bearer test-admin-key'})
+	assert.equal(deleted.status, 204)
+	assert.equal(deleted.headers.get('X-Cache-Deleted'), '1')
+})
+
+void test('a cache listing after a keyed deletion shows only what is left', async (t) => {
+	t.mock.method(http, 'get', (url: string) => ({
+		json: () => Promise.resolve({source: url}),
+	}))
+	const base = await serve(t, 'all')
+	const removed = '/stolaf/v1/tools/help?edition=one'
+	const retained = '/stolaf/v1/tools/help?edition=two'
+	const elsewhere = '/carleton/v1/tools/help?edition=one'
+	await Promise.all(
+		[removed, retained, elsewhere].map(async (path) => {
+			assert.equal((await fetch(`${base}${path}`)).status, 200)
+		}),
+	)
+	const list = async (institution: string) => {
+		const response = await fetch(`${base}/${institution}/_cache`, {headers: ADMIN})
+		assert.equal(response.status, 200)
+		assert.equal(response.headers.get('Cache-Status'), null)
+		return Object.keys((await response.json()) as Record<string, string>)
+	}
+	const before = await list('stolaf')
+	assert.ok(before.includes(removed))
+	assert.ok(before.includes(retained))
+	const query = new URLSearchParams({key: removed})
+	const deleted = await fetch(`${base}/stolaf/_cache?${query.toString()}`, {
+		method: 'DELETE',
+		headers: ADMIN,
+	})
+	assert.equal(deleted.headers.get('X-Cache-Deleted'), '1')
+	const after = await list('stolaf')
+	assert.ok(!after.includes(removed))
+	assert.ok(after.includes(retained))
+	assert.ok(after.every((key) => !key.includes('/_cache')))
+	assert.ok((await list('carleton')).includes(elsewhere))
 })
 
 void test('apps mounting the same institution share its cache', async (t) => {
@@ -170,9 +258,11 @@ void test('apps mounting the same institution share its cache', async (t) => {
 	const shared = await fetch(`${second}${path}`)
 	assert.match(shared.headers.get('Cache-Status') ?? '', /^ccc-server; hit(?:;|$)/)
 	assert.equal(upstream.mock.callCount(), 1)
-	const listing = (await (await fetch(`${second}/stolaf/_cache`)).json()) as Record<string, string>
+	const listing = (await (
+		await fetch(`${second}/stolaf/_cache`, {headers: ADMIN})
+	).json()) as Record<string, string>
 	assert.ok(Object.hasOwn(listing, path))
-	const deleted = await fetch(`${first}/stolaf/_cache`, {method: 'DELETE'})
+	const deleted = await fetch(`${first}/stolaf/_cache`, {method: 'DELETE', headers: ADMIN})
 	assert.equal(deleted.status, 204)
 	assert.ok(Number(deleted.headers.get('X-Cache-Deleted')) > 0)
 	const refilled = await fetch(`${second}${path}`)
@@ -192,8 +282,8 @@ for (const institution of ['stolaf-college', 'carleton-college'] as const) {
 		const base = await serve(t, institution)
 		assert.equal(await (await fetch(`${base}/ping`)).text(), 'pong')
 		assert.equal(await (await fetch(`${base}/`)).text(), 'Hello world!')
-		assert.equal((await fetch(`${base}/_cache`)).status, 200)
-		assert.equal((await fetch(`${base}/_cache`, {method: 'DELETE'})).status, 204)
+		assert.equal((await fetch(`${base}/_cache`, {headers: ADMIN})).status, 200)
+		assert.equal((await fetch(`${base}/_cache`, {method: 'DELETE', headers: ADMIN})).status, 204)
 		const response = await fetch(`${base}/v1/routes`)
 		assert.equal(response.status, 200)
 		const routes = (await response.json()) as {path: string}[]

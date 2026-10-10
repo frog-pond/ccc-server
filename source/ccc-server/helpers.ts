@@ -1,5 +1,6 @@
 import type Router from '@koa/router'
 import * as Sentry from '@sentry/node'
+import {hasAdminKey} from './admin-auth.ts'
 import type {Context, ContextState, RouterState} from './context.ts'
 
 export interface CacheAdmin {
@@ -31,8 +32,18 @@ export function setupHelpers(
 		ctx.body = 'pong'
 	})
 
-	api.get('/_cache', (ctx) => {
-		if (ctx.cached(10000)) return
+	// Cache administration needs the admin key; anyone else gets the same 404 as
+	// an unknown path.
+	const requireAdminKey = async (ctx: Context, next: () => Promise<unknown>) => {
+		if (!hasAdminKey(ctx)) {
+			ctx.status = 404
+			return
+		}
+		await next()
+	}
+
+	// Not cached, so a listing right after a deletion shows what is left.
+	api.get('/_cache', requireAdminKey, (ctx) => {
 		let result = new Map()
 		for (const store of additionalCache ? [cache, additionalCache(ctx)] : [cache]) {
 			for (const key of store.keys()) {
@@ -42,7 +53,7 @@ export function setupHelpers(
 		ctx.body = Object.fromEntries(result.entries())
 	})
 
-	api.delete('/_cache', (ctx) => {
+	api.delete('/_cache', requireAdminKey, (ctx) => {
 		let requestedKeys = ctx.URL.searchParams.getAll('key')
 		let found = 0
 		let stores = additionalCache ? [cache, additionalCache(ctx)] : [cache]

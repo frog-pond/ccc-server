@@ -12,6 +12,10 @@ import {ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {parseScheduleData} from '../../schedules/parse.ts'
 import {GH_PAGES} from './gh-pages.ts'
 
+// /_cache needs the admin key.
+process.env['ADMIN_KEY'] = 'test-admin-key'
+const ADMIN = {authorization: 'Bearer test-admin-key'}
+
 beforeEach(() => {
 	stolafCache.clear()
 	carletonCache.clear()
@@ -275,7 +279,7 @@ for (let keys of [
 		let {base} = await serve(t)
 		let {send, requests, responses} = upstream(t)
 		assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
-		let listing = await send(`${base}/_cache?before=refresh`)
+		let listing = await send(`${base}/_cache?before=refresh`, {headers: ADMIN})
 		let entries = (await listing.json()) as Record<string, string>
 		assert.equal(entries['/v1/spaces/hours'], '3600')
 		assert.equal(entries['/v1/breaks'], '3600')
@@ -285,12 +289,12 @@ for (let keys of [
 		let query = keys.length
 			? `?${new URLSearchParams(keys.map((key) => ['key', key])).toString()}`
 			: ''
-		let cleared = await send(`${base}/_cache${query}`, {method: 'DELETE'})
+		let cleared = await send(`${base}/_cache${query}`, {method: 'DELETE', headers: ADMIN})
 		assert.equal(cleared.status, 204)
-		// Delete-all also removes the ordinary response-cache entry for the listing above.
-		let expectedCount = keys.length ? 2 : 3
+		// The listing above stored no entry of its own, so delete-all finds the same two.
+		let expectedCount = 2
 		assert.equal(cleared.headers.get('x-cache-deleted'), String(expectedCount))
-		let repeated = await send(`${base}/_cache${query}`, {method: 'DELETE'})
+		let repeated = await send(`${base}/_cache${query}`, {method: 'DELETE', headers: ADMIN})
 		assert.equal(repeated.headers.get('x-cache-deleted'), '0')
 		assert.equal(metrics.length, 2)
 		assert.partialDeepStrictEqual(metrics, [
@@ -319,7 +323,7 @@ void test('cache administration can clear a failed cold snapshot retry window', 
 	responses.set(GH_PAGES('breaks.json').href, Response.json(malformedCalendar))
 	assert.equal((await send(`${base}/v1/breaks`)).status, 500)
 	responses.set(GH_PAGES('breaks.json').href, Response.json({data: fixture('calendar')}))
-	await send(`${base}/_cache`, {method: 'DELETE'})
+	await send(`${base}/_cache`, {method: 'DELETE', headers: ADMIN})
 	assert.equal((await send(`${base}/v1/breaks`)).status, 200)
 	assert.equal(requests.length, 4)
 })
@@ -328,15 +332,15 @@ void test('combined cache administration lists prefixed keys and preserves insti
 	let {base} = await serve(t, undefined, true)
 	let {send, requests} = upstream(t)
 	assert.equal((await send(`${base}/stolaf/v1/breaks`)).status, 200)
-	let listing = await send(`${base}/stolaf/_cache`)
+	let listing = await send(`${base}/stolaf/_cache`, {headers: ADMIN})
 	let entries = (await listing.json()) as Record<string, string>
 	assert.equal(entries['/stolaf/v1/breaks'], '3600')
 	assert.equal(entries['/stolaf/v1/spaces/hours'], '3600')
-	await send(`${base}/carleton/_cache`, {method: 'DELETE'})
-	await send(`${base}/stolaf/_cache?key=/unrelated`, {method: 'DELETE'})
+	await send(`${base}/carleton/_cache`, {method: 'DELETE', headers: ADMIN})
+	await send(`${base}/stolaf/_cache?key=/unrelated`, {method: 'DELETE', headers: ADMIN})
 	assert.equal((await send(`${base}/stolaf/v1/breaks`)).headers.get('x-cached-response'), 'HIT')
 	assert.equal(requests.length, 2)
-	await send(`${base}/stolaf/_cache?key=/stolaf/v1/breaks`, {method: 'DELETE'})
+	await send(`${base}/stolaf/_cache?key=/stolaf/v1/breaks`, {method: 'DELETE', headers: ADMIN})
 	assert.equal((await send(`${base}/stolaf/v1/spaces/hours`)).status, 200)
 	assert.equal(requests.length, 4)
 })
@@ -351,7 +355,7 @@ void test('an evicted in-flight refresh cannot repopulate the snapshot cache', a
 	})
 	let pending = send(`${base}/v1/breaks`)
 	await started.promise
-	await send(`${base}/_cache`, {method: 'DELETE'})
+	await send(`${base}/_cache`, {method: 'DELETE', headers: ADMIN})
 	gate.resolve(undefined)
 	assert.equal((await pending).status, 200)
 	assert.equal((await send(`${base}/v1/spaces/hours`)).status, 200)
