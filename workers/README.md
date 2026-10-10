@@ -46,6 +46,11 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
   400; BonApp failing with nothing stored is a 200 with a stand-in). They share
   `menuFrom` and `cafeFrom` (`source/menus-bonapp/shape.ts`) with the Node
   server. Successes are cacheable for an hour, stand-ins for a minute.
+- `GET /v1/food/item/:itemId`: one item with its nutrition, as the menu has it,
+  found in the café pages the Worker holds (every café is asked, each from its
+  own object). The Node route forwards to BonApp's legacy items API, which now
+  refuses unauthenticated requests, so it fails. 404 if no café has the item;
+  502 if it was not found but a café could not be read.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
   A 502 means BonApp failed with nothing stored. This is a look at the source,

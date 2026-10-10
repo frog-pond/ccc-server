@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {test} from 'node:test'
 import {extractBamco} from './extract-bamco.ts'
-import {cafeFrom, menuFrom} from './shape.ts'
+import {cafeFrom, itemFrom, menuFrom} from './shape.ts'
 import {CafeInfoResponseSchema, CafeMenuResponseSchema} from './types.ts'
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
 
@@ -49,4 +49,22 @@ void test('an empty list of icons, as BonApp sends when there are none, is no ic
 	if (page === null) throw new Error('the fixture is a closed café')
 	let menu = menuFrom({...page, cor_icons: []}, DATE)
 	t.assert.deepEqual(menu.cor_icons, {})
+})
+
+const goldenItems = (golden('stav-hall.menu.json') as {items: Record<string, unknown>}).items
+
+void test('finds one item, cleaned the way the menu has it', (t) => {
+	let [id] = Object.keys(goldenItems)
+	if (id === undefined) throw new Error('the fixture has no items')
+	t.assert.deepEqual(JSON.parse(JSON.stringify(itemFrom(page, id))), goldenItems[id])
+})
+
+void test('an item the page does not have is undefined', (t) => {
+	t.assert.equal(itemFrom(page, '1'), undefined)
+	t.assert.equal(itemFrom(page, 'toString'), undefined)
+})
+
+void test('a closed café has no items', (t) => {
+	let [id] = Object.keys(goldenItems)
+	t.assert.equal(itemFrom(null, id ?? ''), undefined)
 })

@@ -5,6 +5,7 @@ import {
 	CafeMenuItemSchema,
 	CafeMenuResponseSchema,
 	type CafeInfoResponseType,
+	type CafeMenuItemType,
 	type CafeMenuResponseType,
 } from './types.ts'
 import type {BamcoPageContents} from './types-bonapp.ts'
@@ -207,4 +208,18 @@ export function menuFrom(bamco: BamcoPageContents | null, date: string): CafeMen
 			},
 		],
 	})
+}
+
+/// One item from a page, cleaned as the menu has it, with its nutrition; `null`
+/// (closed) and an id the page does not have are `undefined`.
+export function itemFrom(
+	bamco: BamcoPageContents | null,
+	id: string,
+): CafeMenuItemType | undefined {
+	if (bamco === null || !Object.hasOwn(bamco.menu_items, id)) {
+		return undefined
+	}
+
+	let item = bamco.menu_items[id]
+	return item === undefined ? undefined : CafeMenuItemSchema.parse(cleanMenuItem(item))
 }
