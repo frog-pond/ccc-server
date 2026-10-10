@@ -99,9 +99,12 @@ names its source.
   comma-separated) are alternatives, and parameters narrow together: `area`
   (slug), `unit` (five digits, or `none`), `level` (`entry`, `experienced`,
   `lead`, `none`), `term` (`academic-year`, `fall`, `spring`, `summer`, `none`),
-  `posted_since` (`YYYY-MM-DD`), and `q` (every word starts a word of the
-  display title, ignoring case and accents). An unknown parameter or value is a
-  400. Cacheable for an hour; a 502, kept a minute, if Oracle has never been
+  `posted_since` (`YYYY-MM-DD`), `q` (every word starts a word of the title or
+  the description, ignoring case and accents), `title` (the same, in the title
+  a student sees only), and `sort` (`newest`, the default, or `relevance`, best
+  match for `q` or `title` first, a title match counting more). The filters and
+  searches run as SQL in the object (FTS5 for the searches), and only the
+  postings that match leave it. An unknown parameter or value is a 400. Cacheable for an hour; a 502, kept a minute, if Oracle has never been
   read, or if `area` is asked for and the areas file cannot be read.
 - `GET /student-work/postings/:id`: one posting, as above, with its
   `description`: `markdown` (what is neither one of the named fields nor on every
@@ -137,7 +140,8 @@ names its source.
 
 - `StudentWorkDO` (`src/student-work-do.ts`): not a source but its own Durable
   Object (binding `STUDENT_WORK`), holding the St. Olaf Oracle Recruiting board
-  as one SQLite row per posting. Its alarm reads the board every four hours plus
+  as one SQLite row per posting, with the columns the routes filter on and an
+  FTS5 index of each posting's title and description. Its alarm reads the board every four hours plus
   up to thirty minutes of random jitter; postings no longer listed are dropped.
   A posting's detail is read when it is new, an hour after a read that found no
   unit, and a day after the last read, at most forty a run and four at a time; a

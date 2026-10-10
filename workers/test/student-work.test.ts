@@ -187,11 +187,18 @@ describe('GET /edu.stolaf/student-work/postings', () => {
 			['?term=summer', ['2799']],
 			['?term=academic-year', ['2841', '2903', '2770']],
 			['?posted_since=2030-10-01', ['2841', '2903']],
-			['?q=athletic', ['2841', '2799']],
-			['?q=ATHLETIC%20events', ['2841']],
+			['?title=athletic', ['2841', '2799']],
+			['?title=ATHLETIC%20events', ['2841']],
 			// the term prefix and pay code are not part of the title searched
-			['?q=ay', []],
-			['?q=co-op', ['2903']],
+			['?title=ay', []],
+			['?title=co-op', ['2903']],
+			// the search reaches descriptions, and their labelled lines
+			['?q=videographers', ['2841']],
+			['?q=ice%20arena', ['2841']],
+			['?q=game%20operations', ['2841']],
+			['?q=videog', ['2841']],
+			['?title=videographers', []],
+			['?q=athletic&title=training', ['2799']],
 			['?area=athletics&level=entry', ['2841']],
 		])('%s', async (query, expected) => {
 			let body = await list(query)
@@ -207,12 +214,24 @@ describe('GET /edu.stolaf/student-work/postings', () => {
 			['?posted_since=yesterday', /posted_since must be YYYY-MM-DD/],
 			['?posted_since=2030-01-01&posted_since=2030-02-01', /posted_since can be given once/],
 			[`?q=${'a'.repeat(101)}`, /q must be at most 100 characters/],
+			['?title=a&title=b', /title can be given once/],
+			['?sort=oldest', /sort must be newest or relevance/],
 			[`?term=${Array(21).fill('fall').join(',')}`, /too many values for term/],
 		])('%s is a 400', async (query, message) => {
 			let response = await get(`/edu.stolaf/student-work/postings${query}`)
 			expect(response.status).toBe(400)
 			expect((await response.json<{message: string}>()).message).toMatch(message)
 			expect(calls(BOARD)).toHaveLength(0)
+		})
+
+		test('sort=relevance puts a title match ahead of a description match', async () => {
+			let newest = ids(await list('?q=athletic'))
+			let ranked = ids(await list('?q=athletic&sort=relevance'))
+			expect(new Set(ranked)).toEqual(new Set(newest))
+			let titled = new Set(['2841', '2799'])
+			let firstOther = ranked.findIndex((id) => !titled.has(id))
+			expect(ranked.slice(0, 2).every((id) => titled.has(id))).toBe(true)
+			expect(firstOther === -1 || firstOther >= 2).toBe(true)
 		})
 
 		test('an area filter with the areas file down is a 502', async () => {
@@ -339,6 +358,8 @@ describe('refreshing', () => {
 		let body = await list()
 		expect(ids(body)).toEqual(['3100', '2841', '2903', '2799'])
 		expect(body.updatedAt).toBe(new Date(now).toISOString())
+		// nor is a dropped posting found by a search
+		expect(ids(await list('?title=residence'))).toEqual([])
 	})
 
 	test('a day on, every detail is read again', async () => {
