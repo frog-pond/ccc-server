@@ -90,3 +90,9 @@ inherit its bindings, so `previews` repeats the `SOURCE` binding; a test checks
 the two match. This package's scripts and `vitest.config.ts` point at it with
 `-c ../wrangler.jsonc`. The root `npm run build` is the Node server's `tsc`; this package's own is
 `npm run build` here.
+
+Cloudflare installs and builds from `workers/`, where npm installs only this
+workspace's dependencies, so a package imported from `source/` has to be declared
+in `workers/package.json` too. The `workers-standalone-build` CI job installs and
+builds that way, because the `workers` job installs from the root and cannot see
+a missing one.

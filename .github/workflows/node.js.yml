@@ -55,6 +55,27 @@ jobs:
         env:
           FLAKINESS_PROJECT: frogpond/ccc-server
 
+  # Cloudflare Workers Builds installs and builds from workers/, where npm
+  # installs only that workspace's dependencies. A package the worker imports
+  # from source/ but does not declare in workers/package.json then fails to
+  # resolve there, which the job above cannot see: it installs from the root, so
+  # every package is present. This installs and builds the way Cloudflare does,
+  # with the npm that ships with node (as Cloudflare's build uses).
+  workers-standalone-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: workers
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup mise
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      # from workers/, not the root: only this workspace's dependencies come
+      - run: npm ci
+      - run: npm run build
+
   smoke-test-stolaf:
     runs-on: ubuntu-latest
     needs: checks
