@@ -1,5 +1,6 @@
 import type Router from '@koa/router'
 import * as Sentry from '@sentry/node'
+import {hasAdminKey} from './admin-auth.ts'
 import type {Context, ContextState, RouterState} from './context.ts'
 
 export interface CacheAdmin {
@@ -42,7 +43,12 @@ export function setupHelpers(
 		ctx.body = Object.fromEntries(result.entries())
 	})
 
+	// Deleting needs the admin key; anyone else gets the same 404 as an unknown path.
 	api.delete('/_cache', (ctx) => {
+		if (!hasAdminKey(ctx)) {
+			ctx.status = 404
+			return
+		}
 		let requestedKeys = ctx.URL.searchParams.getAll('key')
 		let found = 0
 		let stores = additionalCache ? [cache, additionalCache(ctx)] : [cache]

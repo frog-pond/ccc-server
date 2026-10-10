@@ -3,6 +3,10 @@ import {beforeEach, test} from 'node:test'
 import * as Sentry from '@sentry/node'
 import {http} from '../ccc-lib/http.ts'
 
+// DELETE /_cache needs the admin key.
+process.env['ADMIN_KEY'] = 'test-admin-key'
+const ADMIN = {authorization: 'Bearer test-admin-key'}
+
 // Institution middleware captures the rollout setting when its module loads.
 // This test file runs in its own Node test worker, with sharing always enabled.
 async function loadInstitutions() {
@@ -115,7 +119,10 @@ for (const institution of ['stolaf', 'carleton'] as const) {
 				{value: 1, attributes: {...labels, outcome: 'stored'}},
 			])
 			assert.partialDeepStrictEqual(emitted('route.items'), [{value: 1, attributes: labels}])
-			const deleted = await fetch(`${base}/${institution}/_cache`, {method: 'DELETE'})
+			const deleted = await fetch(`${base}/${institution}/_cache`, {
+				method: 'DELETE',
+				headers: ADMIN,
+			})
 			assert.equal(deleted.status, 204)
 			assert.partialDeepStrictEqual(emitted('cache.evicted'), [
 				{value: 1, attributes: {institution: `${institution}-college`, scope: 'all'}},

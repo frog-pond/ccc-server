@@ -97,6 +97,19 @@ mise run build
 mise run start:prod
 ```
 
+### Cache administration
+
+`GET /_cache` lists the response cache. `DELETE /_cache` clears it, or only the
+keys given as `?key=…`, and needs the admin key: set `ADMIN_KEY` in `.env` and
+send it as a bearer token.
+
+```sh
+curl -X DELETE -H "Authorization: Bearer $ADMIN_KEY" https://stolaf.api.frogpond.tech/_cache
+```
+
+Without `ADMIN_KEY` set, or without a matching token, `DELETE /_cache` answers
+404 as if it didn't exist.
+
 ## Endpoint versioning
 
 Each institution's `index.ts` registers complete versioned paths on an unprefixed
