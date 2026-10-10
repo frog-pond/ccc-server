@@ -1,5 +1,6 @@
-import {exports} from 'cloudflare:workers'
+import {env, exports} from 'cloudflare:workers'
 import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} from 'vitest'
+import {CAFES} from '../src/cafes.ts'
 import {clock} from '../src/clock.ts'
 import {CafeInfoResponseSchema, CafeMenuResponseSchema} from '../../source/menus-bonapp/types.ts'
 import {spyOnFetch} from './spy.ts'
@@ -15,10 +16,18 @@ const page = (html: string, status = 200) =>
 let fetchSpy: MockInstance<typeof fetch>
 let errorSpy: {mockRestore: () => void}
 
-// storage is not reset between tests, so each test reads a café of its own
-beforeEach(() => {
-	// the real time: a refresh alarm set from a clock in the past would be due at once
-	clock.now = () => Date.now()
+// noon on the campus day of 15 January 2030: far from campus midnight, which
+// caps how long a response is kept (the real time fails every night in the last
+// hour before it), and ahead of now, so a refresh alarm is not due while a test runs
+const NOON = Date.parse('2030-01-15T18:00:00Z')
+const CAMPUS_DAY = '2030-01-15'
+
+// storage is not reset between tests, so each starts by emptying the cafés
+beforeEach(async () => {
+	clock.now = () => NOON
+	for (let url of Object.values(CAFES)) {
+		await env.SOURCE.getByName(`bonapp-page:${url}`).purge()
+	}
 	fetchSpy = spyOnFetch()
 	// the route logs the failures these tests make on purpose
 	errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -51,8 +60,7 @@ describe('GET /edu.stolaf/food/menu/:cafeId', () => {
 
 	test('is dated by the campus calendar', async () => {
 		let body = await (await get('/edu.stolaf/food/menu/262')).json<{days: {date: string}[]}>()
-		let campus = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Chicago'}).format(new Date())
-		expect(dateOf(body)).toBe(campus)
+		expect(dateOf(body)).toBe(CAMPUS_DAY)
 	})
 
 	test('is cacheable for an hour, and read from BonApp once', async () => {
