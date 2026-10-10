@@ -1,9 +1,16 @@
 import {deprecatedEvents} from '../../source/calendar/deprecated.ts'
 import type {EventType} from '../../source/calendar/types.ts'
-import {RETIRED_TITLE, UNAVAILABLE_TITLE} from '../../source/ccc-lib/deprecated.ts'
+import {RETIRED_TITLE} from '../../source/ccc-lib/deprecated.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
-import {carletonCalendar, googleCalendar, ical, weeklySchedule} from './sources/calendars.ts'
+import {
+	carletonCalendar,
+	googleCalendar,
+	ical,
+	presence,
+	tec,
+	weeklySchedule,
+} from './sources/calendars.ts'
 
 const MINUTE = 60
 const DAY = 24 * 60 * MINUTE
@@ -23,6 +30,13 @@ const fromGoogle = (calendarId: string) =>
 
 const fromWeeklySchedule = (url: string) =>
 	live(async (env) => (await fetchSource(env, weeklySchedule, {url})).value)
+
+const fromTec = (url: string) => live(async (env) => (await fetchSource(env, tec, {url})).value)
+
+const fromPresence = (url: string): Calendar => ({
+	read: async (env) => (await fetchSource(env, presence, {url})).value,
+	maxAge: 5 * MINUTE,
+})
 
 /// One of Carleton's calendars, with the pictures its page shows.
 const fromCarleton = (path: string) =>
@@ -79,12 +93,10 @@ const SHARED: Record<string, Calendar> = {
 /// St. Olaf's calendars.
 export const STOLAF_CALENDARS: Record<string, Calendar> = {
 	...SHARED,
-	// The imported Google calendar behind this route was deleted upstream.
-	stolaf: notice(
-		UNAVAILABLE_TITLE,
-		"The calendar can't be loaded right now. Open this event for details.",
-		MINUTE,
-	),
+	// The events St. Olaf's student organizations post to Presence.
+	'student-orgs': fromPresence('https://api.presence.io/stolaf/v1/events'),
+	// The college's own calendar, on The Events Calendar (Tribe).
+	stolaf: fromTec('https://wp.stolaf.edu/calendar/wp-json/tribe/events/v1/events'),
 }
 
 /// Carleton's calendars.

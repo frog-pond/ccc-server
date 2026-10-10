@@ -3,7 +3,14 @@ import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} fr
 import {fetchSource} from '../src/client.ts'
 import {clock} from '../src/clock.ts'
 import {registry} from '../src/registry.ts'
-import {carletonCalendar, googleCalendar, ical, weeklySchedule} from '../src/sources/calendars.ts'
+import {
+	carletonCalendar,
+	googleCalendar,
+	ical,
+	presence,
+	tec,
+	weeklySchedule,
+} from '../src/sources/calendars.ts'
 import {spyOnFetch} from './spy.ts'
 import sumoFeed from './fixtures/carleton-sumo.ics?raw'
 import sumoPage from './fixtures/carleton-sumo-schedule.html?raw'
@@ -23,6 +30,8 @@ const SUMO_FEED =
 const SUMO_PAGE = 'https://www.carleton.edu/student/orgs/sumo/schedule/'
 const CONVOS_PAGE = 'https://www.carleton.edu/convocations/calendar/'
 const CONVOS_FEED = `${CONVOS_PAGE}?loadFeed=calendar&stamp=1714843936`
+const PRESENCE = 'https://api.presence.io/stolaf/v1/events'
+const TEC = 'https://wp.stolaf.edu/calendar/wp-json/tribe/events/v1/events'
 const NORTHFIELD =
 	'https://www.northfieldmn.gov/common/modules/iCalendar/iCalendar.aspx?catID=41&feed=calendar'
 const KSTO_SCHEDULE = 'https://stolaf.dev/AAO-React-Native/ksto-schedule.json'
@@ -35,6 +44,8 @@ const SOURCES = [
 	`${carletonCalendar.name}:${SUMO_FEED} ${SUMO_PAGE}`,
 	`${carletonCalendar.name}:${CONVOS_FEED} ${CONVOS_PAGE}`,
 	`${ical.name}:${NORTHFIELD}`,
+	`${presence.name}:${PRESENCE}`,
+	`${tec.name}:${TEC}`,
 	`${weeklySchedule.name}:${KSTO_SCHEDULE}`,
 	`${googleCalendar.name}:krlxradio88.1@gmail.com`,
 ]
@@ -261,12 +272,6 @@ describe.each(['edu.stolaf', 'edu.carleton'])('%s calendars', (campus) => {
 })
 
 describe('the calendars that differ by campus', () => {
-	test("St. Olaf's own calendar is a notice kept a minute", async () => {
-		let response = await get('/edu.stolaf/calendar/stolaf')
-		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
-		expect(await response.json()).toMatchObject([{title: 'Temporarily unavailable'}])
-	})
-
 	test("Carleton's copy of it is retired, kept a day", async () => {
 		let response = await get('/edu.carleton/calendar/stolaf')
 		expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
@@ -286,10 +291,249 @@ describe('the calendars that differ by campus', () => {
 	})
 })
 
+describe("St. Olaf's own calendars", () => {
+	const presenceEvent = (over: object = {}) => ({
+		eventNoSqlId: 'abc',
+		uri: 'outs-fall-camping-trip',
+		eventName: 'OUTS Fall Camping Trip',
+		organizationName: 'Oles Under the Sun (OUTS)',
+		description:
+			'<p>Two nights at White Water&nbsp;State Park. See https://outs.stolaf.edu/trip</p>',
+		location: 'White Water State Park',
+		hasCoverImage: true,
+		photoUriWithVersion: 'photo.jpeg?v=0',
+		startDateTimeUtc: '2030-10-12T15:30:00Z',
+		endDateTimeUtc: '2030-10-14T21:00:00Z',
+		// fields Presence sends that are not read
+		contactEmail: 'someone@stolaf.edu',
+		rsvpAnswer: -1,
+		...over,
+	})
+
+	describe('student-orgs', () => {
+		test('is the events Presence lists that are on or still to come, soonest first', async () => {
+			serve({
+				[PRESENCE]: () =>
+					answer(
+						JSON.stringify([
+							presenceEvent(),
+							presenceEvent({
+								eventName: 'Over',
+								startDateTimeUtc: '2030-10-01T15:00:00Z',
+								endDateTimeUtc: '2030-10-01T16:00:00Z',
+							}),
+							presenceEvent({
+								uri: 'bare',
+								eventName: 'Bare',
+								description: undefined,
+								location: undefined,
+								hasCoverImage: false,
+								photoUriWithVersion: undefined,
+								startDateTimeUtc: '2030-10-10T15:00:00Z',
+								endDateTimeUtc: '2030-10-10T16:00:00Z',
+							}),
+							presenceEvent({eventName: 'Not an event', startDateTimeUtc: undefined}),
+						]),
+						'application/json',
+					),
+			})
+			let response = await get('/edu.stolaf/calendar/student-orgs')
+			expect(response.status).toBe(200)
+			expect(response.headers.get('cache-control')).toBe('public, max-age=300')
+			let events = (await response.json()) as Record<string, unknown>[]
+			expect(events.map((e) => e['title'])).toEqual(['Bare', 'OUTS Fall Camping Trip'])
+			expect(events[0]).toEqual({
+				dataSource: 'presence',
+				startTime: '2030-10-10T15:00:00.000Z',
+				endTime: '2030-10-10T16:00:00.000Z',
+				title: 'Bare',
+				description: '',
+				location: '',
+				isOngoing: false,
+				links: ['https://stolaf.presence.io/event/bare'],
+				metadata: {uid: 'abc', organization: 'Oles Under the Sun (OUTS)'},
+				config: {startTime: true, endTime: true, subtitle: 'location'},
+			})
+			expect(events[1]).toMatchObject({
+				description: 'Two nights at White Water State Park. See https://outs.stolaf.edu/trip',
+				location: 'White Water State Park',
+				links: [
+					'https://outs.stolaf.edu/trip',
+					'https://stolaf.presence.io/event/outs-fall-camping-trip',
+				],
+				image:
+					'https://stolaf-cdn.presence.io/event-photos/09ddef77-5009-4348-8540-c9bfc6ade6bc/photo.jpeg?v=0',
+			})
+			// the organisers' contact details have nowhere to go
+			expect(JSON.stringify(events)).not.toContain('someone@stolaf.edu')
+		})
+
+		test('events that cannot be read are errors only when none can', async () => {
+			serve({[PRESENCE]: () => answer(JSON.stringify([{nope: 1}]), 'application/json')})
+			expect((await get('/edu.stolaf/calendar/student-orgs')).status).toBe(502)
+		})
+
+		test('a response that is not a list is a 502', async () => {
+			serve({[PRESENCE]: () => answer(JSON.stringify({error: 'down'}), 'application/json')})
+			expect((await get('/edu.stolaf/calendar/student-orgs')).status).toBe(502)
+		})
+
+		test('no events is an empty calendar', async () => {
+			serve({[PRESENCE]: () => answer('[]', 'application/json')})
+			expect(await (await get('/edu.stolaf/calendar/student-orgs')).json()).toEqual([])
+		})
+	})
+
+	describe('stolaf', () => {
+		const tecEvent = (over: object = {}) => ({
+			id: 1,
+			title: 'Lion&#8217;s Pause &#038; Friends',
+			description: '<p>Come by. More at https://www.stolaf.edu/pause</p>',
+			url: 'https://wp.stolaf.edu/calendar/event/pause/',
+			all_day: false,
+			utc_start_date: '2030-10-11 17:00:00',
+			utc_end_date: '2030-10-11 18:00:00',
+			venue: {venue: 'Buntrock Commons Lion&#8217;s Pause', address: 'ignored'},
+			organizer: [{organizer: 'Student Activities &#038; Programs'}],
+			categories: [{name: 'Music &#038; Arts'}],
+			...over,
+		})
+		const NEXT = `${TEC}/?per_page=50&page=2`
+
+		/// Two pages, as TEC lays them out: the first names the second.
+		function servePages(second: () => Response = () => pageTwo()) {
+			fetchSpy.mockImplementation((input) => {
+				let url = new URL(String(input))
+				if (url.hostname !== 'wp.stolaf.edu')
+					return Promise.resolve(answer('no', 'text/plain', 404))
+				return Promise.resolve(url.searchParams.get('page') === '2' ? second() : pageOne())
+			})
+		}
+		const pageOne = () =>
+			answer(
+				JSON.stringify({
+					events: [
+						tecEvent({
+							id: 2,
+							title: 'Exhibition',
+							all_day: true,
+							utc_start_date: '2030-09-11 05:00:00',
+							utc_end_date: '2030-12-07 05:59:59',
+							venue: [],
+							organizer: [],
+							categories: [],
+						}),
+					],
+					next_rest_url: NEXT,
+				}),
+				'application/json',
+			)
+		const pageTwo = () => answer(JSON.stringify({events: [tecEvent()]}), 'application/json')
+
+		test('is the college calendar, read across its pages and shaped', async () => {
+			servePages()
+			let response = await get('/edu.stolaf/calendar/stolaf')
+			expect(response.status).toBe(200)
+			expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+			let events = (await response.json()) as Record<string, unknown>[]
+			expect(events.map((e) => e['title'])).toEqual(['Exhibition', 'Lion’s Pause & Friends'])
+			expect(events[0]).toEqual({
+				dataSource: 'tribe',
+				startTime: '2030-09-11T05:00:00.000Z',
+				endTime: '2030-12-07T05:59:59.000Z',
+				title: 'Exhibition',
+				description: 'Come by. More at https://www.stolaf.edu/pause',
+				location: '',
+				isOngoing: true,
+				links: ['https://stolaf.edu/pause', 'https://wp.stolaf.edu/calendar/event/pause/'],
+				metadata: {uid: '2', categories: []},
+				// an all-day event shows no times
+				config: {startTime: false, endTime: false, subtitle: 'location'},
+			})
+			expect(events[1]).toMatchObject({
+				location: 'Buntrock Commons Lion’s Pause',
+				isOngoing: false,
+				metadata: {
+					uid: '1',
+					categories: ['Music & Arts'],
+					organization: ['Student Activities & Programs'],
+				},
+				config: {startTime: true, endTime: true, subtitle: 'location'},
+			})
+		})
+
+		test('asks for the next month in campus dates, fifty at a time, and follows the next page', async () => {
+			servePages()
+			await get('/edu.stolaf/calendar/stolaf')
+			let asked = fetchSpy.mock.calls.map(([i]) => String(i))
+			expect(asked).toHaveLength(2)
+			let first = new URL(asked[0] ?? '')
+			expect(first.origin + first.pathname).toBe(TEC)
+			// 07:00 on 9 October on campus: the day before reaches an event ending early today
+			expect(Object.fromEntries(first.searchParams)).toEqual({
+				per_page: '50',
+				ends_after: '2030-10-08',
+				starts_before: '2030-11-09',
+			})
+			expect(asked[1]).toBe(NEXT)
+			expect(fetchSpy.mock.calls.every(([, init]) => init?.redirect === 'manual')).toBe(true)
+		})
+
+		test('a next page on another host is refused, not fetched', async () => {
+			fetchSpy.mockImplementation(() =>
+				Promise.resolve(
+					answer(
+						JSON.stringify({
+							events: [tecEvent()],
+							next_rest_url: 'https://elsewhere.example/page2',
+						}),
+						'application/json',
+					),
+				),
+			)
+			let response = await get('/edu.stolaf/calendar/stolaf')
+			expect(response.status).toBe(502)
+			expect(fetchSpy.mock.calls.map(([i]) => new URL(String(i)).hostname)).not.toContain(
+				'elsewhere.example',
+			)
+		})
+
+		test('a feed that never ends is a 502, not a short calendar', async () => {
+			fetchSpy.mockImplementation(() =>
+				Promise.resolve(
+					answer(JSON.stringify({events: [tecEvent()], next_rest_url: NEXT}), 'application/json'),
+				),
+			)
+			expect((await get('/edu.stolaf/calendar/stolaf')).status).toBe(502)
+			expect(fetchSpy).toHaveBeenCalledTimes(10)
+		})
+
+		test('a page that fails with nothing stored is a 502', async () => {
+			servePages(() => answer('boom', 'text/plain', 503))
+			let response = await get('/edu.stolaf/calendar/stolaf')
+			expect(response.status).toBe(502)
+			expect(await response.json()).toMatchObject({message: expect.stringContaining('503')})
+		})
+
+		test('events that cannot be read are errors only when none can', async () => {
+			fetchSpy.mockImplementation(() =>
+				Promise.resolve(
+					answer(JSON.stringify({events: [{title: 'No dates'}]}), 'application/json'),
+				),
+			)
+			expect((await get('/edu.stolaf/calendar/stolaf')).status).toBe(502)
+		})
+	})
+
+	test('Carleton does not serve them', async () => {
+		expect((await get('/edu.carleton/calendar/student-orgs')).status).toBe(404)
+	})
+})
+
 describe('the calendar sources', () => {
 	test('are registered by the worker entry point', async () => {
 		await import('../src/worker.ts')
-		for (let source of [ical, carletonCalendar, googleCalendar, weeklySchedule]) {
+		for (let source of [ical, carletonCalendar, googleCalendar, weeklySchedule, presence, tec]) {
 			expect(registry[source.name]).toBe(source)
 		}
 	})

@@ -73,12 +73,20 @@ names its source.
   and `sumo-schedule` (Carleton's calendars, with the pictures their pages show),
   `northfield` (an iCal feed), `krlx-schedule` (a Google calendar), `ksto-schedule` (the weekly schedule
   AAO-React-Native publishes, `ksto-schedule.json`), `stolaf`, and the retired
-  `the-cave` and `oleville`. `stolaf` differs by campus's table, as on the Node
-  servers: at St. Olaf it is a "temporarily unavailable" notice kept a minute, at
-  Carleton a retired notice kept a day. A retired calendar is a single
+  `the-cave` and `oleville`. `stolaf` differs by campus's table: St. Olaf's is
+  below, and Carleton's is a retired notice kept a day. A retired calendar is a single
   notice event, kept a day. The others are fresh for a minute and kept a day if the
   site fails; a 502, kept a minute, if nothing has ever been stored. Shaped by
   `source/calendar/*-shape.ts`, shared with the Node server.
+- `GET /calendar/stolaf` (St. Olaf) is the college calendar, on The Events
+  Calendar (Tribe) at `wp.stolaf.edu/calendar`: the next month in campus dates,
+  read across the feed's pages (fifty at a time, at most ten pages; a longer feed
+  is an error rather than a short calendar). `GET /calendar/student-orgs` (St.
+  Olaf) is the events student organizations post to Presence
+  (`api.presence.io/stolaf/v1/events`), those on now or still to come, with
+  cover images; it is kept five minutes, the list being large. Both read events
+  the way AAO-React-Native's own parsers do, and an event that cannot be read is
+  skipped unless none can.
 - `GET /convos/upcoming` (Carleton only): the same list as `upcoming-convos`.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
@@ -92,11 +100,12 @@ names its source.
   load.
 - `rss-news` (`src/sources/rss-news.ts`): an RSS feed as feed items, the same
   lifetimes; only `thecarletonian.com` loads.
-- `calendar-ical`, `calendar-carleton`, `calendar-google` and
-  `calendar-weekly-schedule` (`src/sources/calendars.ts`): a calendar's events,
-  fresh for a minute and kept a day. Only the hosts the routes name load
+- `calendar-ical`, `calendar-carleton`, `calendar-google`,
+  `calendar-weekly-schedule`, `calendar-tec` and `calendar-presence`
+  (`src/sources/calendars.ts`): a calendar's events, fresh for a minute (five for
+  Presence) and kept a day. Only the hosts the routes name load
   (`www.northfieldmn.gov`, `www.carleton.edu`, `www.googleapis.com`,
-  `stolaf.dev`). The Google source reads the Calendar API with the worker's
+  `stolaf.dev`, `wp.stolaf.edu`, `api.presence.io`). The Google source reads the Calendar API with the worker's
   `GOOGLE_CALENDAR_API_KEY` secret, which has to be set on the worker (and on its
   Previews); without it those calendars are a 502.
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and

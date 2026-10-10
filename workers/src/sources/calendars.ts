@@ -15,6 +15,8 @@ import {
 import {clock} from '../clock.ts'
 import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
+import {eventsFromPresence} from './presence-shape.ts'
+import {TecPageSchema, eventsFromTec} from './tec-shape.ts'
 
 const MINUTE = 60 * 1000
 const DAY = 24 * 60 * MINUTE
@@ -139,3 +141,60 @@ export const weeklySchedule = defineSource({
 	staleIfError: DAY,
 })
 registerSource(weeklySchedule)
+
+export type PresenceParams = {url: string}
+
+/// St. Olaf's Presence events: a large list, so it is kept for five minutes
+/// rather than one.
+export const presence = defineSource({
+	name: 'calendar-presence',
+	key: ({url}: PresenceParams) => url,
+	async load({url}) {
+		let response = await fetchFrom(new Set(['api.presence.io']), url)
+		return eventsFromPresence(await response.json(), now())
+	},
+	ttl: 5 * MINUTE,
+	staleIfError: DAY,
+})
+registerSource(presence)
+
+export type TecParams = {url: string}
+
+/// The most pages of a feed this reads, at fifty events each. A feed longer than
+/// that throws rather than come back short.
+const TEC_MAX_PAGES = 10
+
+/// An Events Calendar feed's events for the next month, in campus dates, across
+/// all its pages. TEC's `start_date` filter would drop an exhibition that opened
+/// last month, so `ends_after` and `starts_before` filter on overlap instead;
+/// it rounds both up to 23:59:59 of the date given, so reaching an event that
+/// ends early today takes yesterday's date.
+export const tec = defineSource({
+	name: 'calendar-tec',
+	key: ({url}: TecParams) => url,
+	async load({url}) {
+		let at = now()
+		let today = at.clone().tz('America/Chicago')
+		let first = new URL(url)
+		first.searchParams.set('per_page', '50')
+		first.searchParams.set('ends_after', today.clone().subtract(1, 'day').format('YYYY-MM-DD'))
+		first.searchParams.set('starts_before', today.clone().add(1, 'month').format('YYYY-MM-DD'))
+
+		let events: unknown[] = []
+		let next: string | undefined = first.href
+		for (let count = 0; next; count++) {
+			if (count === TEC_MAX_PAGES) {
+				throw new Error(`The Tribe feed ran past ${String(TEC_MAX_PAGES)} pages`)
+			}
+			// each page names the next, so they are read in turn
+			let response: Response = await fetchFrom(new Set(['wp.stolaf.edu']), next)
+			let page = TecPageSchema.parse(await response.json())
+			events.push(...page.events)
+			next = page.next_rest_url
+		}
+		return eventsFromTec(events, at)
+	},
+	ttl: TTL,
+	staleIfError: DAY,
+})
+registerSource(tec)
