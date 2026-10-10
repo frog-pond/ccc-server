@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} fr
 import {GH_PAGES as CARLETON_PAGES} from '../../source/ccci-carleton-college/v1/gh-pages.ts'
 import {GH_PAGES as STOLAF_PAGES} from '../../source/ccci-stolaf-college/v1/gh-pages.ts'
 import {clock} from '../src/clock.ts'
-import {PAGES_ROUTES} from '../src/pages-routes.ts'
+import {CAMPUSES} from '../src/campuses.ts'
 import {pagesJson} from '../src/sources/pages-json.ts'
 import {spyOnFetch} from './spy.ts'
 
@@ -15,7 +15,10 @@ const json = (body: string, status = 200) =>
 let fetchSpy: MockInstance<typeof fetch>
 let errorSpy: {mockRestore: () => void}
 
-const routes = [...PAGES_ROUTES]
+// every data file, at the path it is served at
+const routes = [...CAMPUSES].flatMap(([prefix, campus]) =>
+	Object.entries(campus.files).map(([path, file]) => [`/${prefix}${path}`, file] as const),
+)
 
 // storage is not reset between tests, so each starts by emptying the files
 beforeEach(async () => {
@@ -74,35 +77,27 @@ describe.each(routes)('GET %s', (path, {url, maxAge}) => {
 })
 
 describe('the route table', () => {
-	test('routes both colleges have are under their own prefix, and not at the bare path', async () => {
-		for (let path of ['/faqs', '/contacts', '/map', '/spaces/hours']) {
-			expect(PAGES_ROUTES.has(`/edu.stolaf${path}`)).toBe(true)
-			expect(PAGES_ROUTES.has(`/edu.carleton${path}`)).toBe(true)
+	test('a bare path is a 404, and there is no /v1', async () => {
+		for (let path of ['/faqs', '/contacts', '/map', '/spaces/hours', '/v1/faqs']) {
 			expect((await get(path)).status).toBe(404)
 		}
 		expect(fetched()).toEqual([])
 	})
 
-	test('routes only one college has keep their plain path, and there is no /v1', () => {
-		expect(PAGES_ROUTES.has('/sources')).toBe(true)
-		expect(PAGES_ROUTES.has('/spaces/directory')).toBe(true)
-		expect([...PAGES_ROUTES.keys()].some((path) => path.startsWith('/v1'))).toBe(false)
-	})
-
 	test('the files are the ones the Node server fetches', () => {
+		let stolaf = CAMPUSES.get('edu.stolaf')?.files
+		let carleton = CAMPUSES.get('edu.carleton')?.files
 		let files: Record<string, [string, string]> = {
-			'/edu.stolaf/contacts': ['contact-info.json', 'contact-info.json'],
-			'/edu.stolaf/dictionary': ['dictionary.json', 'dictionary-carls.json'],
-			'/edu.stolaf/faqs': ['faqs.json', 'faqs.json'],
-			'/edu.stolaf/tools/help': ['help.json', 'help.json'],
-			'/edu.stolaf/webcams': ['webcams.json', 'webcams.json'],
-			'/edu.stolaf/spaces/hours': ['building-hours.json', 'building-hours.json'],
+			'/contacts': ['contact-info.json', 'contact-info.json'],
+			'/dictionary': ['dictionary.json', 'dictionary-carls.json'],
+			'/faqs': ['faqs.json', 'faqs.json'],
+			'/tools/help': ['help.json', 'help.json'],
+			'/webcams': ['webcams.json', 'webcams.json'],
+			'/spaces/hours': ['building-hours.json', 'building-hours.json'],
 		}
-		for (let [path, [stolaf, carleton]] of Object.entries(files)) {
-			expect(PAGES_ROUTES.get(path)?.url).toBe(STOLAF_PAGES(stolaf).href)
-			expect(PAGES_ROUTES.get(path.replace('/edu.stolaf', '/edu.carleton'))?.url).toBe(
-				CARLETON_PAGES(carleton).href,
-			)
+		for (let [path, [stolafFile, carletonFile]] of Object.entries(files)) {
+			expect(stolaf?.[path]?.url).toBe(STOLAF_PAGES(stolafFile).href)
+			expect(carleton?.[path]?.url).toBe(CARLETON_PAGES(carletonFile).href)
 		}
 		for (let [path, file] of Object.entries({
 			'/sources': 'sources.json',
@@ -113,7 +108,7 @@ describe('the route table', () => {
 			'/student-work/areas': 'student-work-areas.json',
 			'/student-work/wages': 'student-wages.json',
 		})) {
-			expect(PAGES_ROUTES.get(path)?.url).toBe(STOLAF_PAGES(file).href)
+			expect(stolaf?.[path]?.url).toBe(STOLAF_PAGES(file).href)
 		}
 	})
 

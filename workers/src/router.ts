@@ -1,14 +1,10 @@
-import type {FeedItemType} from '../../source/feeds/types.ts'
 import {CafeMenuWithError, CustomCafe, cafeFrom, menuFrom} from '../../source/menus-bonapp/shape.ts'
-import {CAFES} from './cafes.ts'
+import {CAMPUSES, type Campus, type NewsFeed} from './campuses.ts'
+import type {PagesRoute} from './pages-routes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
-import type {Source} from './define-source.ts'
-import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
-import {PAGES_ROUTES} from './pages-routes.ts'
 import {pagesJson} from './sources/pages-json.ts'
-import {CARLETONIAN_URL, rssNews} from './sources/rss-news.ts'
-import {CARLETON_NOW_URL, STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
+import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -25,16 +21,23 @@ const ONE_HOUR = 60 * 60
 const ONE_MINUTE = 60
 
 /// A café from the path, or the 400 the Node server answers an unknown one with.
-function cafeUrl(cafeId: string): string | Response {
-	let url = Object.hasOwn(CAFES, cafeId) ? CAFES[cafeId] : undefined
-	return url ?? json({message: `cafeId must be one of ${Object.keys(CAFES).join(', ')}`}, 400)
+function cafeUrl(campus: Campus, cafeId: string): string | Response {
+	let url = Object.hasOwn(campus.cafes, cafeId) ? campus.cafes[cafeId] : undefined
+	return (
+		url ?? json({message: `cafeId must be one of ${Object.keys(campus.cafes).join(', ')}`}, 400)
+	)
 }
 
 /// The apps' menu and café info for a BonApp café, in the contract the Node
 /// server's /v1/food routes keep. A failure with nothing stored is still a
 /// 200 with a stand-in, which is what the apps already know how to show.
-async function food(kind: 'menu' | 'cafe', cafeId: string, env: Env): Promise<Response> {
-	let url = cafeUrl(cafeId)
+async function food(
+	campus: Campus,
+	kind: 'menu' | 'cafe',
+	cafeId: string,
+	env: Env,
+): Promise<Response> {
+	let url = cafeUrl(campus, cafeId)
 	if (url instanceof Response) return url
 
 	try {
@@ -67,10 +70,10 @@ async function food(kind: 'menu' | 'cafe', cafeId: string, env: Env): Promise<Re
 /// A look at the BonApp source while the real routes are not built yet: what
 /// the object holds for a café, and how it was served. Not the app's menu
 /// contract.
-async function bonapp(cafeId: string, full: boolean, env: Env): Promise<Response> {
-	let url = Object.hasOwn(CAFES, cafeId) ? CAFES[cafeId] : undefined
+async function bonapp(campus: Campus, cafeId: string, full: boolean, env: Env): Promise<Response> {
+	let url = Object.hasOwn(campus.cafes, cafeId) ? campus.cafes[cafeId] : undefined
 	if (url === undefined) {
-		return json({error: `unknown café ${cafeId}`, known: Object.keys(CAFES)}, 404)
+		return json({error: `unknown café ${cafeId}`, known: Object.keys(campus.cafes)}, 404)
 	}
 
 	try {
@@ -89,11 +92,7 @@ async function bonapp(cafeId: string, full: boolean, env: Env): Promise<Response
 /// A news feed as feed items. Unlike the Node server (a stub for St. Olaf, and
 /// an empty list for a feed it cannot read), with nothing stored and the site
 /// failing this is a 502, kept briefly, not a feed.
-async function news(
-	env: Env,
-	source: Source<{url: string}, FeedItemType[]>,
-	url: string,
-): Promise<Response> {
+async function news(env: Env, {source, url}: NewsFeed): Promise<Response> {
 	try {
 		let {value} = await fetchSource(env, source, {url})
 		return json(value, 200, ONE_HOUR)
@@ -105,7 +104,7 @@ async function news(
 
 /// A data file the colleges publish, passed through as it is. A failure with
 /// nothing stored is a 502, kept briefly, as for the news feeds.
-async function dataFile(env: Env, url: string, maxAge: number): Promise<Response> {
+async function dataFile(env: Env, {url, maxAge}: PagesRoute): Promise<Response> {
 	try {
 		let {value} = await fetchSource(env, pagesJson, {url})
 		return json(value, 200, maxAge)
@@ -119,20 +118,27 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
-	if (url.pathname === '/') return json({cafes: CAFES})
+	if (url.pathname === '/') return json({campuses: [...CAMPUSES.keys()]})
 
-	let file = PAGES_ROUTES.get(url.pathname)
-	if (file) return dataFile(env, file.url, file.maxAge)
+	// every other route is under a campus: /edu.stolaf/..., /edu.carleton/...
+	let mounted = /^\/([^/]+)(\/.*)$/.exec(url.pathname)
+	let campus = mounted?.[1] ? CAMPUSES.get(mounted[1]) : undefined
+	let path = mounted?.[2]
+	if (!campus || !path) return json({error: 'not found'}, 404)
 
-	if (url.pathname === '/v1/news/named/stolaf') return news(env, wpNews, STOLAF_NEWS_URL)
-	if (url.pathname === '/v1/news/named/carleton-now') return news(env, wpNews, CARLETON_NOW_URL)
-	if (url.pathname === '/v1/news/named/carletonian') return news(env, rssNews, CARLETONIAN_URL)
+	let feed = /^\/news\/([^/]+)$/.exec(path)?.[1]
+	if (feed !== undefined && Object.hasOwn(campus.news, feed) && campus.news[feed]) {
+		return news(env, campus.news[feed])
+	}
 
-	let eating = /^\/v1\/food\/(menu|cafe)\/([^/]+)$/.exec(url.pathname)
-	if (eating?.[1] && eating[2]) return food(eating[1] as 'menu' | 'cafe', eating[2], env)
+	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
+	if (file) return dataFile(env, file)
 
-	let match = /^\/bonapp\/([^/]+)$/.exec(url.pathname)
-	if (match?.[1]) return bonapp(match[1], url.searchParams.get('full') === '1', env)
+	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(path)
+	if (eating?.[1] && eating[2]) return food(campus, eating[1] as 'menu' | 'cafe', eating[2], env)
+
+	let match = /^\/bonapp\/([^/]+)$/.exec(path)
+	if (match?.[1]) return bonapp(campus, match[1], url.searchParams.get('full') === '1', env)
 
 	return json({error: 'not found'}, 404)
 }
