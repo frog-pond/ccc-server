@@ -105,6 +105,22 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
+	// TEMPORARY egress probe for thecarletonian.com; not to be merged
+	if (url.pathname === '/probe') {
+		let target = new URL(url.searchParams.get('u') ?? '')
+		if (target.hostname !== 'thecarletonian.com') return json({message: 'no'}, 400)
+		let headers: Record<string, string> = {}
+		for (let [k, v] of url.searchParams) if (k.startsWith('h-')) headers[k.slice(2)] = v
+		let r = await fetch(target, {redirect: 'manual', headers})
+		let body = await r.text()
+		let interesting = ['content-type', 'server', 'cf-mitigated', 'location', 'cf-ray']
+		return json({
+			status: r.status,
+			headers: Object.fromEntries(interesting.map((k) => [k, r.headers.get(k)])),
+			head: body.slice(0, 200),
+			bytes: body.length,
+		})
+	}
 	if (url.pathname === '/') return json({cafes: CAFES})
 
 	if (url.pathname === '/v1/news/named/stolaf') return news(env, wpNews, STOLAF_NEWS_URL)
