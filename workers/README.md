@@ -53,6 +53,13 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
   server. Fresh for an hour, kept a day if WordPress fails; a 502 if nothing
   has ever been stored. `olafmessenger.com` is not served here: its Cloudflare
   bot challenge blocks Worker egress.
+- `GET /v1/news/named/carleton-now` and `GET /v1/news/named/carletonian`: Carleton
+  News (the `carleton.edu/news` WordPress) and The Carletonian (its RSS feed), as
+  feed items, shaped by `feedItemsFrom` and `feedItemsFromRss`
+  (`source/feeds/`), shared with the Node server. Same behavior as the St. Olaf
+  route: fresh for an hour, kept a day if the site fails, a 502 if nothing was
+  ever stored. One difference from Node: a Carletonian response that is not RSS
+  (a bot-challenge page, say) is an error, not an empty feed.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
   A 502 means BonApp failed with nothing stored. This is a look at the source,
@@ -61,7 +68,10 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
 ## Sources
 
 - `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
-  fresh for 1 hour and kept a day; only `wp.stolaf.edu` loads.
+  fresh for 1 hour and kept a day; only `wp.stolaf.edu` and `www.carleton.edu`
+  load.
+- `rss-news` (`src/sources/rss-news.ts`): an RSS feed as feed items, the same
+  lifetimes; only `thecarletonian.com` loads.
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
   validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
   and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
