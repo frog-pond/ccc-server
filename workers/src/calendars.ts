@@ -12,16 +12,12 @@ import {
 	weeklySchedule,
 } from './sources/calendars.ts'
 
-const MINUTE = 60
-const DAY = 24 * 60 * MINUTE
-
-/// A calendar the apps read: its events, and how long they are told to keep them.
+/// A calendar the apps read: its events.
 export type Calendar = {
 	read: (env: Env) => Promise<EventType[]>
-	maxAge: number
 }
 
-const live = (read: Calendar['read']): Calendar => ({read, maxAge: MINUTE})
+const live = (read: Calendar['read']): Calendar => ({read})
 
 const fromIcal = (url: string) => live(async (env) => (await fetchSource(env, ical, {url})).value)
 
@@ -33,10 +29,8 @@ const fromWeeklySchedule = (url: string) =>
 
 const fromTec = (url: string) => live(async (env) => (await fetchSource(env, tec, {url})).value)
 
-const fromPresence = (url: string): Calendar => ({
-	read: async (env) => (await fetchSource(env, presence, {url})).value,
-	maxAge: 5 * MINUTE,
-})
+const fromPresence = (url: string) =>
+	live(async (env) => (await fetchSource(env, presence, {url})).value)
 
 /// One of Carleton's calendars, with the pictures its page shows.
 const fromCarleton = (path: string) =>
@@ -59,9 +53,8 @@ const STAMPS: Record<string, string> = {
 
 /// A notice in place of a calendar that is no longer published. It is shaped
 /// for the renderers older builds already ship, so it is still events.
-const notice = (title: string, text: string, maxAge: number): Calendar => ({
+const notice = (title: string, text: string): Calendar => ({
 	read: () => Promise.resolve(deprecatedEvents(title, text, new Date(clock.now()))),
-	maxAge,
 })
 
 const NORTHFIELD =
@@ -72,9 +65,9 @@ export const CONVOS = fromCarleton('/convocations/calendar/')
 /// The Cave still runs, but its site moved to WordPress and took the calendar
 /// feed with it. The route stays and answers with a notice, because the
 /// clients calling it cannot be changed.
-const THE_CAVE = notice(RETIRED_TITLE, 'The Cave calendar is no longer published.', DAY)
+const THE_CAVE = notice(RETIRED_TITLE, 'The Cave calendar is no longer published.')
 
-const OLEVILLE = notice(RETIRED_TITLE, 'The Oleville calendar is no longer published.', DAY)
+const OLEVILLE = notice(RETIRED_TITLE, 'The Oleville calendar is no longer published.')
 
 /// Calendars that read the same wherever they are listed, by name.
 const SHARED: Record<string, Calendar> = {

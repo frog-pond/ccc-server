@@ -57,7 +57,7 @@ describe('Carleton /student-work/postings', () => {
 	test('lists the jobs newest first, without archived ones or descriptions', async () => {
 		let {response, body} = await list()
 		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		expect(body.postings.map((posting) => posting.id)).toEqual(['4069', '4063', '4060', '3732'])
 		expect(body.count).toBe(4)
 		expect(body.postings[0]).not.toHaveProperty('description')
@@ -147,6 +147,18 @@ describe('Carleton /student-work/postings', () => {
 		let {body} = await list()
 		expect(body.count).toBe(101)
 		expect(fetchSpy).toHaveBeenCalledTimes(2)
+	})
+
+	test('answers a client holding the current list with a 304', async () => {
+		let first = await get('/edu.carleton/student-work/postings?when=break')
+		let tag = first.headers.get('etag')!
+		let again = await exports.default.fetch(
+			new Request('https://worker.test/edu.carleton/student-work/postings?when=break', {
+				headers: {'If-None-Match': tag},
+			}),
+		)
+		expect(again.status).toBe(304)
+		expect(again.headers.get('cache-control')).toBe('public, max-age=600')
 	})
 
 	test('does not follow a redirect', async () => {

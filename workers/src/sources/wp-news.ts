@@ -1,6 +1,7 @@
 import {feedItemsFrom} from '../../../source/feeds/wp-json-shape.ts'
 import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
+import {SOURCE_TTL} from '../lifetimes.ts'
 import {upstream} from '../upstream.ts'
 
 const HOUR = 60 * 60 * 1000
@@ -38,7 +39,7 @@ export const wpNews = defineSource({
 		}
 		return feedItemsFrom(await response.json())
 	},
-	ttl: HOUR,
+	ttl: SOURCE_TTL,
 	staleIfError: DAY,
 })
 registerSource(wpNews)

@@ -4,6 +4,7 @@ import type {Calendar} from './calendars.ts'
 import type {PagesRoute} from './pages-routes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
+import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
 import {pagesJson} from './sources/pages-json.ts'
 import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
@@ -17,11 +18,9 @@ const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 			: {headers: {'Cache-Control': `public, max-age=${cacheSeconds.toFixed(0)}`}}),
 	})
 
-/// What the apps are told to keep a response for. A failure is kept briefly: the
-/// Node server cached its error menu for an hour, so one bad refresh outlasted
-/// BonApp coming back.
-const ONE_HOUR = 60 * 60
-const ONE_MINUTE = 60
+// A failure is kept briefly: the Node server cached its error menu for an
+// hour, so one bad refresh outlasted BonApp coming back.
+const ONE_MINUTE = ERROR_MAX_AGE
 
 /// A café from the path, or the 400 the Node server answers an unknown one with.
 function cafeUrl(campus: Campus, cafeId: string): string | Response {
@@ -49,7 +48,7 @@ async function food(
 		// is dated by the day it is made on, and not kept past that day's end
 		let now = new Date(clock.now())
 		let date = campusToday(now)
-		let keep = Math.min(ONE_HOUR, secondsUntilCampusMidnight(now))
+		let keep = Math.min(CLIENT_MAX_AGE, secondsUntilCampusMidnight(now))
 		return kind === 'menu'
 			? json(menuFrom(value, date), 200, keep)
 			: json(cafeFrom(value, date), 200, keep)
@@ -98,7 +97,7 @@ async function bonapp(campus: Campus, cafeId: string, full: boolean, env: Env): 
 async function news(env: Env, {source, url}: NewsFeed): Promise<Response> {
 	try {
 		let {value} = await fetchSource(env, source, {url})
-		return json(value, 200, ONE_HOUR)
+		return json(value, 200, CLIENT_MAX_AGE)
 	} catch (err) {
 		console.error(err, {url})
 		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
@@ -107,9 +106,9 @@ async function news(env: Env, {source, url}: NewsFeed): Promise<Response> {
 
 /// A calendar as events. With nothing stored and the source failing this is a
 /// 502, kept briefly, as for the news feeds.
-async function calendar(env: Env, {read, maxAge}: Calendar): Promise<Response> {
+async function calendar(env: Env, {read}: Calendar): Promise<Response> {
 	try {
-		return json(await read(env), 200, maxAge)
+		return json(await read(env), 200, CLIENT_MAX_AGE)
 	} catch (err) {
 		console.error(err)
 		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
@@ -118,10 +117,10 @@ async function calendar(env: Env, {read, maxAge}: Calendar): Promise<Response> {
 
 /// A data file the colleges publish, passed through as it is. A failure with
 /// nothing stored is a 502, kept briefly, as for the news feeds.
-async function dataFile(env: Env, {url, maxAge}: PagesRoute): Promise<Response> {
+async function dataFile(env: Env, {url}: PagesRoute): Promise<Response> {
 	try {
 		let {value} = await fetchSource(env, pagesJson, {url})
-		return json(value, 200, maxAge)
+		return json(value, 200, CLIENT_MAX_AGE)
 	} catch (err) {
 		console.error(err, {url})
 		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)

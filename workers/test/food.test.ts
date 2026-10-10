@@ -63,9 +63,9 @@ describe('GET /edu.stolaf/food/menu/:cafeId', () => {
 		expect(dateOf(body)).toBe(CAMPUS_DAY)
 	})
 
-	test('is cacheable for an hour, and read from BonApp once', async () => {
+	test('is cacheable for ten minutes, and read from BonApp once', async () => {
 		let first = await get('/edu.stolaf/food/menu/263')
-		expect(first.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(first.headers.get('cache-control')).toBe('public, max-age=600')
 		await get('/edu.stolaf/food/menu/263')
 		expect(bonappFetches().filter((u) => u.includes('the-kings-room'))).toHaveLength(1)
 	})
@@ -108,7 +108,7 @@ describe('GET /edu.stolaf/food/cafe/:cafeId', () => {
 		let body = await response.json<{cafe: {days: {date: string}[]}}>()
 		expect(CafeInfoResponseSchema.safeParse(body).success).toBe(true)
 		expect(body).toEqual(expected(goldenCafe, dateOf(body)))
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 	})
 
 	test('BonApp down with nothing stored is the stand-in café, briefly cacheable', async () => {

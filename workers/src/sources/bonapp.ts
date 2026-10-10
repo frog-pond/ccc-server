@@ -5,6 +5,7 @@ import {
 } from '../../../source/menus-bonapp/types-bonapp.ts'
 import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
+import {SOURCE_TTL} from '../lifetimes.ts'
 import {upstream} from '../upstream.ts'
 
 const HOUR = 60 * 60 * 1000
@@ -73,7 +74,7 @@ export const bonappPage = defineSource({
 		}
 		return parseBonappPage(await response.text())
 	},
-	ttl: HOUR,
+	ttl: SOURCE_TTL,
 	staleIfError: DAY,
 	// yesterday's menu is never fresh today, but is still better than nothing
 	epoch: campusToday,
