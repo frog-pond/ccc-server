@@ -7,7 +7,7 @@ import {
 	rulesFor,
 } from '../../../source/ccci-stolaf-college/v1/mess-shape.ts'
 import {fetchSource} from '../client.ts'
-import {defineSource} from '../define-source.ts'
+import {defineSource, type Served} from '../define-source.ts'
 import {CLIENT_MAX_AGE, ERROR_MAX_AGE, SOURCE_TTL} from '../lifetimes.ts'
 import {registerSource} from '../registry.ts'
 import {upstream} from '../upstream.ts'
@@ -118,7 +118,9 @@ const message = (text: string, status: number, cacheSeconds?: number) =>
 /// `/news/<paper>/wp/v2/<resource>[/<id>]`: a paper's WordPress API, for the
 /// requests the app makes and nothing else, with paging links on the lists the
 /// app pages through. A 4xx from the paper is passed on but not marked
-/// cacheable; with nothing stored and the paper failing this is a 502.
+/// cacheable; with nothing stored and the paper failing this is a 502. A copy
+/// standing in for a failing paper is kept only briefly, and its
+/// `Cache-Status` says it is stale.
 export async function wordpress(
 	site: WordPressSite,
 	url: URL,
@@ -131,17 +133,21 @@ export async function wordpress(
 	if ('refusal' in verdict) return message(verdict.refusal.message, verdict.refusal.status)
 
 	let path = id === undefined ? resource : `${resource}/${id}`
-	let answer: WordPressAnswer
+	let served: Served<WordPressAnswer>
 	try {
-		answer = (await fetchSource(env, wordpressApi, {site, path, query})).value
+		served = await fetchSource(env, wordpressApi, {site, path, query})
 	} catch (err) {
 		console.error(err, {path})
 		return message(`${site.paper} could not be reached for ${path}`, 502, ERROR_MAX_AGE)
 	}
 
+	let {value: answer, state} = served
 	let headers = new Headers({'Content-Type': answer.type, ...answer.headers})
 	if (answer.status === 200) {
-		headers.set('Cache-Control', `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`)
+		let fallback = state === 'stale-error'
+		let maxAge = fallback ? ERROR_MAX_AGE : CLIENT_MAX_AGE
+		headers.set('Cache-Control', `public, max-age=${maxAge.toFixed(0)}`)
+		if (fallback) headers.set('Cache-Status', 'ccc-server; hit; detail=stale')
 		let totalPages = Number(answer.headers['x-wp-totalpages'])
 		if (Object.hasOwn(verdict.rules.params, 'page') && Number.isInteger(totalPages)) {
 			let link = paginationLinks(url.pathname, query, totalPages)

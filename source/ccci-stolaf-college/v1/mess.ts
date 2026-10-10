@@ -1,5 +1,6 @@
 import {Buffer} from 'node:buffer'
 import QuickLRU from 'quick-lru'
+import * as Sentry from '@sentry/node'
 import {ONE_DAY, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {http} from '../../ccc-lib/http.ts'
 import type {Context} from '../../ccc-server/context.ts'
@@ -40,6 +41,14 @@ const BYTE_ORDER_MARK = Buffer.from([0xef, 0xbb, 0xbf])
 /// How long the paper has to answer: well inside the app's own 10 seconds, so
 /// that while the paper hangs, the last good copy reaches the reader in time.
 const UPSTREAM_TIMEOUT = 7_000
+
+/// How long a URL the paper failed to answer goes unasked: a phone in an
+/// outage retries several times over (ky's retries, times TanStack's), and
+/// each attempt would otherwise be another fetch from the paper.
+const FAILURE_MEMORY = 30_000
+
+/// How many URLs' failures are remembered at once.
+const FAILURES_KEPT = 1000
 
 /// The paper's answer, or nothing when it could not give one: a timeout, a
 /// connection that never answered, a 5xx, a refusal in `OUTAGE_STATUSES`, or
@@ -88,6 +97,9 @@ function send(ctx: Context, answer: Answer, rules: Rules): void {
 	let totalPages = Number(answer.headers['x-wp-totalpages'])
 	let paged = Object.hasOwn(rules.params, 'page')
 	if (paged && answer.status === 200 && Number.isInteger(totalPages)) {
+		// `ctx.path` never holds a prefix a proxy in front strips, so these links
+		// are right only while nginx/default.conf passes `location /` through
+		// unrewritten. Rewrite them too if that changes.
 		let link = paginationLinks(ctx.path, ctx.querystring, totalPages)
 		if (link) ctx.set('Link', link)
 	}
@@ -96,7 +108,12 @@ function send(ctx: Context, answer: Answer, rules: Rules): void {
 
 /// The Messenger's WordPress API, answered from the response cache, then the
 /// paper, then -- while the paper is failing -- the last good copy of each URL.
-export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: number} = {}) {
+/// A URL the paper just failed is not asked for again for `failureMemory`.
+export function makeWordpressRoute({
+	timeout = UPSTREAM_TIMEOUT,
+	failureMemory = FAILURE_MEMORY,
+}: {timeout?: number; failureMemory?: number} = {}) {
+	let failed = new QuickLRU<string, true>({maxSize: FAILURES_KEPT, maxAge: failureMemory})
 	let copies = new Map<Rules, QuickLRU<string, Answer>>()
 	let lastGoodFor = (rules: Rules) => {
 		let store = copies.get(rules)
@@ -130,7 +147,7 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 		}
 
 		let url = `${UPSTREAM}/${path}${ctx.querystring ? `?${ctx.querystring}` : ''}`
-		let answer = await fetchUpstream(url, timeout)
+		let answer = failed.has(key) ? undefined : await fetchUpstream(url, timeout)
 
 		if (answer) {
 			if (answer.status === 200) {
@@ -143,7 +160,9 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 			return
 		}
 
+		if (!failed.has(key)) failed.set(key, true)
 		let copy = lastGood.get(key)
+		Sentry.metrics.count('mess.fallback', 1, {attributes: {outcome: copy ? 'stale' : '502'}})
 		if (!copy) {
 			ctx.throw(502, `the Olaf Messenger could not be reached for ${path}`)
 			return
@@ -151,6 +170,7 @@ export function makeWordpressRoute({timeout = UPSTREAM_TIMEOUT}: {timeout?: numb
 		// ask the paper again soon, rather than holding the old copy for the whole ttl
 		ctx.setCacheTTL(ONE_MINUTE)
 		ctx.cacheControl(ONE_MINUTE)
+		ctx.cacheDetail('stale')
 		send(ctx, copy, verdict.rules)
 	}
 }

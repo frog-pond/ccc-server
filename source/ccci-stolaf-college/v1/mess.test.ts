@@ -175,6 +175,7 @@ function makeContext(path: string, params: {resource: string; id?: string}, quer
 			headers.set('cache-control', `public, max-age=${String(maxAge / 1000)}`)
 		}),
 		setCacheTTL: mock.fn((_maxAge: number) => undefined),
+		cacheDetail: mock.fn((_detail: string) => undefined),
 		remove(name: string) {
 			headers.delete(name.toLowerCase())
 		},
@@ -504,6 +505,7 @@ void test('wordpress', async (t) => {
 			t.assert.equal(String(raw.body), '[{"id":1}]')
 			t.assert.equal(headers.get('x-wp-totalpages'), '3')
 			t.assert.ok(headers.get('link')?.includes('rel="next"'))
+			t.assert.deepEqual(raw.cacheDetail.mock.calls[0]?.arguments, ['stale'])
 		})
 	}
 
@@ -513,17 +515,50 @@ void test('wordpress', async (t) => {
 
 		await t.assert.rejects(makeWordpressRoute()(ctx), {status: 502})
 	})
+
+	await t.test('does not ask the paper again for a URL it just failed', async (t: TestContext) => {
+		let route = makeWordpressRoute()
+		let {urls} = answerWith(t, () => Promise.resolve(new Response('down', {status: 503})))
+
+		await t.assert.rejects(route(makeContext(POSTS, {resource: 'posts'}, 'per_page=2').ctx), {
+			status: 502,
+		})
+		// the same request, spelled another way
+		await t.assert.rejects(route(makeContext(POSTS, {resource: 'posts'}, 'per_page=%32').ctx), {
+			status: 502,
+		})
+		await route(makeContext(POSTS, {resource: 'posts'}, 'per_page=3').ctx).catch(() => undefined)
+
+		t.assert.deepEqual(urls(), [
+			'https://olafmessenger.com/wp-json/wp/v2/posts?per_page=2',
+			'https://olafmessenger.com/wp-json/wp/v2/posts?per_page=3',
+		])
+	})
+
+	await t.test('asks the paper again once the failure is forgotten', async (t: TestContext) => {
+		let route = makeWordpressRoute({failureMemory: 20})
+		let down = answerWith(t, () => Promise.resolve(new Response('down', {status: 503})))
+		await route(makeContext(POSTS, {resource: 'posts'}, 'per_page=2').ctx).catch(() => undefined)
+		down.restore()
+
+		await new Promise((resolve) => setTimeout(resolve, 40))
+		answerWith(t, () => Promise.resolve(json([{id: 1}])))
+		let {ctx, raw} = makeContext(POSTS, {resource: 'posts'}, 'per_page=2')
+		await route(ctx)
+
+		t.assert.equal(String(raw.body), '[{"id":1}]')
+	})
 })
 
 /// The route behind the server's own response cache, as the app reaches it, with the paper
 /// answering `upstream()`. Requests to the test server itself go through the real fetch.
 async function serveThroughCache(t: TestContext, upstream: {answer: () => Promise<Response>}) {
 	let realFetch = globalThis.fetch
-	let upstreamCalls = 0
+	let upstreamUrls: string[] = []
 	let fetch = mock.method(globalThis, 'fetch', (input: Request | string, init?: RequestInit) => {
 		let url = input instanceof Request ? input.url : input
 		if (url.startsWith('http://localhost')) return realFetch(input, init)
-		upstreamCalls++
+		upstreamUrls.push(url)
 		return upstream.answer()
 	})
 
@@ -537,6 +572,7 @@ async function serveThroughCache(t: TestContext, upstream: {answer: () => Promis
 				value ? store.set(key, {value, maxAge}) : store.delete(key),
 			expiresIn: (key) => store.get(key)?.maxAge,
 			storedHeaders: STORED_HEADERS,
+			statusName: 'ccc-server',
 		}),
 	)
 	let router = new Router<RouterState, ContextState>({prefix: '/v1'})
@@ -556,7 +592,9 @@ async function serveThroughCache(t: TestContext, upstream: {answer: () => Promis
 	return {
 		get: (path: string) => realFetch(`http://localhost:${String(port)}${path}`),
 		/** How many times the paper was asked. */
-		upstreamCalls: () => upstreamCalls,
+		upstreamCalls: () => upstreamUrls.length,
+		/** What the paper was asked for, in order. */
+		upstreamUrls: () => upstreamUrls,
 		/** Forgets every cached response, as if each had expired. */
 		expireAll: () => {
 			store.clear()
@@ -599,7 +637,34 @@ void test('wordpress, behind the response cache', async (t) => {
 				// eslint-disable-next-line no-await-in-loop
 				t.assert.deepEqual(await response.json(), [{id: 1, name: 'News'}], attempt)
 				t.assert.equal(response.headers.get('cache-control'), 'public, max-age=60', attempt)
+				t.assert.match(response.headers.get('cache-status') ?? '', /; detail=stale$/u, attempt)
 			}
+		},
+	)
+
+	await t.test('says nothing of staleness on a fresh copy', async (t: TestContext) => {
+		let {get} = await serveThroughCache(t, {answer: () => Promise.resolve(json([{id: 1}]))})
+		let path = '/v1/news/mess/wp/v2/categories?per_page=100'
+
+		for (let attempt of ['fetched', 'cached']) {
+			// eslint-disable-next-line no-await-in-loop
+			let response = await get(path)
+			t.assert.doesNotMatch(response.headers.get('cache-status') ?? '', /stale/u, attempt)
+		}
+	})
+
+	await t.test(
+		'passes a reordered, percent-encoded query to the paper as it came',
+		async (t: TestContext) => {
+			let {get, upstreamUrls} = await serveThroughCache(t, {
+				answer: () => Promise.resolve(json([{id: 1}])),
+			})
+			let query = '%70age=2&_fields=id%2Cdate&per_page=2'
+
+			let response = await get(`/v1/news/mess/wp/v2/posts?${query}`)
+
+			t.assert.equal(response.status, 200)
+			t.assert.deepEqual(upstreamUrls(), [`https://olafmessenger.com/wp-json/wp/v2/posts?${query}`])
 		},
 	)
 

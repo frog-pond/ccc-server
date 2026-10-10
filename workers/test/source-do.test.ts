@@ -128,6 +128,17 @@ describe('upstream failure', () => {
 		expect(load).toHaveBeenCalledTimes(1)
 	})
 
+	test('within staleIfError, a value whose refresh failed is a stand-in', async () => {
+		await get()
+		load.mockRejectedValue(new Error('boom'))
+		now += HOUR + MINUTE
+
+		expect(await get()).toMatchObject({value: 'v1', state: 'stale'})
+		await runDurableObjectAlarm(stub())
+		expect(load).toHaveBeenCalledTimes(2)
+		expect(await get()).toMatchObject({value: 'v1', state: 'stale-error'})
+	})
+
 	test('past staleIfError, a failed refresh still serves the stored value', async () => {
 		await get()
 		load.mockRejectedValue(new Error('boom'))
