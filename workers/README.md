@@ -68,8 +68,22 @@ day if its host fails; student work keeps its own schedule, below.
   `wp.stolaf.edu`'s WordPress (which blocks the Node server's IP but not a
   Worker's; the Node server only has a stub for older builds). Shaped by
   `feedItemsFrom` (`source/feeds/wp-json-shape.ts`), shared with the Node
-  server. A 502 if nothing has ever been stored. `olafmessenger.com` is not served here: its Cloudflare
-  bot challenge blocks Worker egress.
+  server. A 502 if nothing has ever been stored.
+- `GET /news/mess`: The Olaf Messenger's posts (`www.olafmessenger.com`'s
+  WordPress) as feed items, read and shaped like St. Olaf news. The paper's
+  Cloudflare bot challenge currently answers the Worker with a 403, so this is
+  a 502 until the paper lets the Worker through.
+- `GET /news/mess/wp/v2/:resource` and `/news/mess/wp/v2/:resource/:id`: the
+  Messenger's WordPress REST API in WordPress's own shape, for the requests
+  the app makes and nothing else (`rulesFor` in
+  `source/ccci-stolaf-college/v1/mess-shape.ts`, shared with the Node server:
+  anything else is a 404 or 400 without asking the paper). The paper's status,
+  content type and `x-wp-total`/`x-wp-totalpages` headers are passed on, with
+  an RFC 8288 `Link` header on the lists the app pages through. Every spelling
+  of one request shares one stored copy. A 4xx from the paper is passed on
+  without a `Cache-Control`; a 5xx, a bot challenge, a redirect or a body that
+  is not JSON is an error, a 502 if nothing was ever stored. Behind the same
+  bot challenge as `/news/mess`.
 - `GET /news/carleton-now` and `GET /news/carletonian`: Carleton
   News (the `carleton.edu/news` WordPress) and The Carletonian (its RSS feed), as
   feed items, shaped by `feedItemsFrom` and `feedItemsFromRss`
@@ -153,8 +167,13 @@ day if its host fails; student work keeps its own schedule, below.
 ## Sources
 
 - `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
-  fresh for 1 hour and kept a day; only `wp.stolaf.edu` and `www.carleton.edu`
-  load.
+  fresh for 1 hour and kept a day; only `wp.stolaf.edu`, `www.carleton.edu`
+  and `www.olafmessenger.com` load.
+- `messenger-api` (`src/sources/messenger.ts`): one request to the Messenger's
+  WordPress API, its answer kept as the paper sent it (status, content type,
+  body, paging headers), the same lifetimes. Only paths and queries the app
+  makes load, and only from `olafmessenger.com`; an answer over 1.9 MB is an
+  error, as one SQLite row holds at most 2 MB.
 - `rss-news` (`src/sources/rss-news.ts`): an RSS feed as feed items, the same
   lifetimes; only `thecarletonian.com` and `content.krlx.org` load.
 - `calendar-ical`, `calendar-carleton`, `calendar-google`,

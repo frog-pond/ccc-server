@@ -143,6 +143,13 @@ export async function route(request: Request, env: Env): Promise<Response> {
 		return news(env, campus.news[feed])
 	}
 
+	let wordpress = /^\/news\/([^/]+)\/wp\/v2\/([^/]+)(?:\/([^/]+))?$/.exec(path)
+	let site = wordpress?.[1]
+	if (wordpress?.[2] && site !== undefined && Object.hasOwn(campus.wordpressNews, site)) {
+		let read = campus.wordpressNews[site]
+		if (read) return read(url, wordpress[2], wordpress[3], env)
+	}
+
 	let named = /^\/calendar\/([^/]+)$/.exec(path)?.[1]
 	if (named !== undefined && Object.hasOwn(campus.calendars, named) && campus.calendars[named]) {
 		return calendar(env, campus.calendars[named])

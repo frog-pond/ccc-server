@@ -7,7 +7,8 @@ import {clock} from './clock.ts'
 import {CARLETON_FILES, STOLAF_FILES, type PagesRoute} from './pages-routes.ts'
 import type {StudentWork} from './student-work.ts'
 import {CARLETONIAN_URL, KRLX_URL, rssNews} from './sources/rss-news.ts'
-import {CARLETON_NOW_URL, STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
+import {messenger} from './sources/messenger.ts'
+import {CARLETON_NOW_URL, MESSENGER_URL, STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
 
 /// A news feed the apps read: its items.
 export type NewsFeed = {
@@ -21,6 +22,9 @@ export type Campus = {
 	cafes: Record<string, string>
 	/// feed names, as in `/news/<name>`
 	news: Record<string, NewsFeed>
+	/// news sites the app reads in WordPress's own shape, by name, as in
+	/// `/news/<name>/wp/v2/<resource>[/<id>]`
+	wordpressNews: Record<string, typeof messenger>
 	/// calendar names, as in `/calendar/<name>`
 	calendars: Record<string, Calendar>
 	/// the convocations list, where the campus has one
@@ -52,6 +56,7 @@ const STOLAF_NEWS = fromWordPress(STOLAF_NEWS_URL)
 const CARLETON_NOW = fromWordPress(CARLETON_NOW_URL)
 const CARLETONIAN = fromRss(CARLETONIAN_URL)
 const KRLX = fromRss(KRLX_URL)
+const MESSENGER = fromWordPress(MESSENGER_URL)
 const NO_LONGER_UPDATED = notice(deprecatedWpJson)
 const NNB = notice(retiredNnb)
 
@@ -60,6 +65,7 @@ const NEWS: Record<string, NewsFeed> = {
 	stolaf: STOLAF_NEWS,
 	'carleton-now': CARLETON_NOW,
 	carletonian: CARLETONIAN,
+	mess: MESSENGER,
 	krlx: KRLX,
 	oleville: NO_LONGER_UPDATED,
 	politicole: NO_LONGER_UPDATED,
@@ -71,6 +77,7 @@ const NEWS: Record<string, NewsFeed> = {
 const STOLAF: Campus = {
 	cafes: CAFES,
 	news: NEWS,
+	wordpressNews: {mess: messenger},
 	calendars: STOLAF_CALENDARS,
 	files: STOLAF_FILES,
 	studentWork: {board: 'oracle', areasUrl: STOLAF_FILES['/student-work/areas']!.url},
@@ -79,6 +86,7 @@ const STOLAF: Campus = {
 const CARLETON: Campus = {
 	cafes: CAFES,
 	news: NEWS,
+	wordpressNews: {mess: messenger},
 	calendars: CARLETON_CALENDARS,
 	convos: CONVOS,
 	files: CARLETON_FILES,

@@ -16,9 +16,14 @@ export const STOLAF_NEWS_URL = 'https://wp.stolaf.edu/wp-json/wp/v2/posts?per_pa
 export const CARLETON_NOW_URL =
 	'https://www.carleton.edu/news/wp-json/wp/v2/posts?per_page=10&_embed=true'
 
+/// The posts the app reads for The Olaf Messenger, the way the Node server's
+/// `mess` route does.
+export const MESSENGER_URL =
+	'https://www.olafmessenger.com/wp-json/wp/v2/posts/?per_page=10&_embed=true'
+
 /// Only WordPress sites we mean to read: the url comes from the caller, and
 /// this must not become a way to make the worker fetch anything.
-const WORDPRESS_HOSTS = new Set(['wp.stolaf.edu', 'www.carleton.edu'])
+const WORDPRESS_HOSTS = new Set(['wp.stolaf.edu', 'www.carleton.edu', 'www.olafmessenger.com'])
 
 export type WpNewsParams = {url: string}
 
