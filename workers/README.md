@@ -189,6 +189,22 @@ streams soonest first within a page, as their live routes are (streams take
 `sort=descending`). A `before` that is not a time is a 400. Without
 `?before=`, every route answers as it did.
 
+### The Node server's addresses
+
+`src/legacy.ts` answers the addresses the apps already ship, so old builds can
+be pointed at the Worker. A request whose host's first label is `stolaf` or 🦁
+(`xn--0s9h`) is St. Olaf's, and `carleton` or 🐧 (`xn--vo8h`) Carleton's; on
+those hosts, a `/v1` path is answered by the campus route it names, with `/v1`
+dropped and `news/named/<name>` and `calendar/named/<name>` read as
+`news/<name>` and `calendar/<name>`. `/`, `/ping` and `/v1/routes` answer as
+the Node server did, the listing at the Node addresses, and a `Link` header
+points back at Node addresses. Every other path on those hosts is a campus
+route as usual. Node's arbitrary-address routes (`/v1/news/rss`,
+`/v1/news/wpjson`, `/v1/calendar/ics`, `/v1/calendar/google`) and
+`/v1/food/item/:itemId` are not served. A test checks every other `/v1` route
+in the Node routers against the campus tables. The hosts still have to be
+added to the Worker as custom domains.
+
 ## Sources
 
 - `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
