@@ -1,10 +1,4 @@
-import {
-	CafeMenuWithError,
-	CustomCafe,
-	cafeFrom,
-	itemFrom,
-	menuFrom,
-} from '../../source/menus-bonapp/shape.ts'
+import {CafeMenuWithError, CustomCafe, cafeFrom, menuFrom} from '../../source/menus-bonapp/shape.ts'
 import {CAFES} from './cafes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
@@ -81,37 +75,6 @@ async function bonapp(cafeId: string, full: boolean, env: Env): Promise<Response
 	}
 }
 
-/// One item with its nutrition, found in the café pages this holds. The legacy
-/// API this route used to forward to (legacy.cafebonappetit.com/api/2/items)
-/// refuses unauthenticated requests now, but each page carries its items'
-/// nutrition, so the item comes back as the menu has it. An item is not tied to
-/// a café, so every café is asked; each answers from its own object.
-async function item(itemId: string, env: Env): Promise<Response> {
-	if (!/^\d{1,12}$/.test(itemId)) {
-		return json({message: 'itemId must be a number'}, 400)
-	}
-
-	let pages = await Promise.allSettled(
-		Object.values(CAFES).map((url) => fetchSource(env, bonappPage, {url})),
-	)
-
-	let failed = 0
-	for (let result of pages) {
-		if (result.status === 'rejected') {
-			failed += 1
-			console.error(result.reason, {itemId})
-			continue
-		}
-		let found = itemFrom(result.value.value, itemId)
-		if (found !== undefined) return json(found, 200, ONE_HOUR)
-	}
-
-	// an item could be on a page that could not be read, so that is not a 404
-	return failed > 0
-		? json({message: `could not read ${String(failed)} cafés to look for item ${itemId}`}, 502)
-		: json({message: `no café has item ${itemId}`}, 404)
-}
-
 export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
@@ -120,9 +83,6 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	let eating = /^\/v1\/food\/(menu|cafe)\/([^/]+)$/.exec(url.pathname)
 	if (eating?.[1] && eating[2]) return food(eating[1] as 'menu' | 'cafe', eating[2], env)
-
-	let nutrition = /^\/v1\/food\/item\/([^/]+)$/.exec(url.pathname)
-	if (nutrition?.[1]) return item(nutrition[1], env)
 
 	let match = /^\/bonapp\/([^/]+)$/.exec(url.pathname)
 	if (match?.[1]) return bonapp(match[1], url.searchParams.get('full') === '1', env)
