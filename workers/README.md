@@ -61,7 +61,9 @@ source".
 ## Cloudflare builds
 
 Workers Builds runs from the repo root (`npm clean-install`, `npm run build`,
-then `npx wrangler preview`). The root has no wrangler config of its own, so
-`/.wrangler/deploy/config.json` redirects wrangler to `workers/wrangler.jsonc`.
-Without it, wrangler stops at the workspace root. `npm run build` at the root
-is the Node server's `tsc`; this package's own build is `npm run build` here.
+then `npx wrangler preview`), and wrangler stops at a workspace root that has no
+config of its own. So the one wrangler config lives at the repo root
+(`wrangler.jsonc`, with `main` pointing into `workers/`), and this package's
+scripts and `vitest.config.ts` point at it with `-c ../wrangler.jsonc`. The
+root `npm run build` is the Node server's `tsc`; this package's own is
+`npm run build` here.

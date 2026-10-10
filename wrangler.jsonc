@@ -1,6 +1,6 @@
 {
 	"name": "ccc-server",
-	"main": "src/worker.ts",
+	"main": "workers/src/worker.ts",
 	"compatibility_date": "2026-08-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"durable_objects": {
