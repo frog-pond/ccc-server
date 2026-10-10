@@ -113,7 +113,7 @@ describe('GET /edu.stolaf/student-work/postings', () => {
 	test('lists every posting, newest first, with what its title and description say', async () => {
 		let response = await get('/edu.stolaf/student-work/postings')
 		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 
 		let body = await response.json<List>()
 		expect(body.updatedAt).toBe(new Date(now).toISOString())
@@ -292,7 +292,7 @@ describe('GET /edu.stolaf/student-work/postings/:id', () => {
 	test('one posting, with its description as Markdown, fields and HTML', async () => {
 		let response = await get('/edu.stolaf/student-work/postings/2841')
 		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		let body = await response.json<Posting & {description: Record<string, unknown>}>()
 
 		let html = DETAILS.get('2841')!.items[0].ExternalDescriptionStr
@@ -317,7 +317,7 @@ describe('GET /edu.stolaf/student-work/units', () => {
 	test('answers as the Node route does for the same postings', async () => {
 		let response = await get('/edu.stolaf/student-work/units')
 		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		expect(await response.json()).toEqual(
 			groupUnits({2841: '11725', 2799: '11727', 2903: null, 2770: '15141'}, listedUnitsOf(AREAS)),
 		)

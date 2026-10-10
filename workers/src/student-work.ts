@@ -5,7 +5,9 @@ import {registerSource} from './registry.ts'
 import {pagesJson} from './sources/pages-json.ts'
 import {parseFilters, type AreaUnits, type PostingWithDescription} from './student-work-shape.ts'
 
-const ONE_HOUR = 60 * 60
+/// Kept ten minutes, then re-checked against its ETag, so a board that
+/// changes reaches the apps within ten minutes.
+const KEEP = 10 * 60
 const ONE_MINUTE = 60
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -86,7 +88,7 @@ export async function postings(env: Env, work: StudentWork, params: URLSearchPar
 	return json(
 		{updatedAt: iso(result.updatedAt), count: result.postings.length, postings: result.postings},
 		200,
-		ONE_HOUR,
+		KEEP,
 	)
 }
 
@@ -97,7 +99,7 @@ export async function posting(env: Env, work: StudentWork, id: string) {
 	if (result.state === 'error') return failed(result.error)
 	if (!result.posting) return json({message: 'no such posting on the board'}, 404, ONE_MINUTE)
 	let body: PostingWithDescription = {...result.posting, description: result.description}
-	return json(body, 200, ONE_HOUR)
+	return json(body, 200, KEEP)
 }
 
 /// `/student-work/units`: each posting's unit by id, as the Node server's
@@ -106,5 +108,5 @@ export async function units(env: Env, work: StudentWork) {
 	let areas = await readAreas(env, work.areasUrl)
 	let result = await board(env).units()
 	if (result.state === 'error') return failed(result.error)
-	return json(groupUnits(result.units, areas && new Set(areas.listed)), 200, ONE_HOUR)
+	return json(groupUnits(result.units, areas && new Set(areas.listed)), 200, KEEP)
 }

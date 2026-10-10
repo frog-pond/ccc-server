@@ -49,6 +49,11 @@ names its source.
 
 - `GET /`: the campuses.
 
+Every successful response carries an `ETag`, a digest of its body, and a
+request whose `If-None-Match` names it is answered with a `304` and no body
+(`src/etag.ts`). So once a response's `max-age` runs out, a client re-checks
+and downloads again only if the body changed.
+
 - `GET /food/menu/:cafeId` and `GET /food/cafe/:cafeId`: the apps' menu and
   café info, in the contract the Node server's routes keep (an unknown id is a
   400; BonApp failing with nothing stored is a 200 with a stand-in). They share
@@ -104,7 +109,7 @@ names its source.
   a student sees only), and `sort` (`newest`, the default, or `relevance`, best
   match for `q` or `title` first, a title match counting more). The filters and
   searches run as SQL in the object (FTS5 for the searches), and only the
-  postings that match leave it. An unknown parameter or value is a 400. Cacheable for an hour; a 502, kept a minute, if Oracle has never been
+  postings that match leave it. An unknown parameter or value is a 400. Cacheable for ten minutes; a 502, kept a minute, if Oracle has never been
   read, or if `area` is asked for and the areas file cannot be read.
 - `GET /student-work/postings/:id`: one posting, as above, with its
   `description`: `markdown` (what is neither one of the named fields nor on every
@@ -126,7 +131,7 @@ names its source.
   `break`), `off_campus` (`true`, `false`), `posted_since` (`YYYY-MM-DD`), and `q`,
   `title` and `sort` as above. Each job also has `firstSeenAt`. The jobs are
   rows in the `StudentWorkDO` named `carleton`, and the filters and searches run
-  there as SQL, as for St. Olaf. Cacheable for an hour; a 502, kept a minute, if
+  there as SQL, as for St. Olaf. Cacheable for ten minutes; a 502, kept a minute, if
   the site has never been read. `GET /student-work/postings/:id` adds the
   `description` as above, and is a 404 for a job not listed.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with

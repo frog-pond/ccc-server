@@ -1,7 +1,9 @@
 import {searchWords} from '../../source/student-work/posting-shape.ts'
 import type {CarletonFilters} from './carleton-board.ts'
 
-const ONE_HOUR = 60 * 60
+/// Kept ten minutes, then re-checked against its ETag, so a board that
+/// changes reaches the apps within ten minutes.
+const KEEP = 10 * 60
 const ONE_MINUTE = 60
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -92,7 +94,7 @@ export async function carletonPostings(env: Env, params: URLSearchParams) {
 	return json(
 		{updatedAt: iso(result.updatedAt), count: result.postings.length, postings: result.postings},
 		200,
-		ONE_HOUR,
+		KEEP,
 	)
 }
 
@@ -101,5 +103,5 @@ export async function carletonPosting(env: Env, id: string) {
 	let result = await board(env).carletonOne(id)
 	if (result.state === 'error') return failed(result.error)
 	if (!result.posting) return json({message: 'no such posting on the board'}, 404, ONE_MINUTE)
-	return json(result.posting, 200, ONE_HOUR)
+	return json(result.posting, 200, KEEP)
 }
