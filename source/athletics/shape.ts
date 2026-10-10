@@ -199,7 +199,7 @@ function calendarUrlFromScoresUrl(scoresUrl: string): string {
  * `parseDateUtcField` leaves as it came, so they have no kickoff; nor does a
  * date that does not parse.
  */
-function kickoffTime(score: {date_utc: string}): Date | undefined {
+export function kickoffTime(score: {date_utc: string}): Date | undefined {
 	if (!score.date_utc.includes('T')) {
 		return undefined
 	}

@@ -4,10 +4,12 @@ import {
 	livestatsUrlFromScoresUrl,
 	scoresFromFeeds,
 	yesterdayCalendarUrl,
+	type Score,
 } from '../../source/athletics/shape.ts'
 import {CAMPUSES} from '../src/campuses.ts'
 import {clock} from '../src/clock.ts'
-import {athleticsScores} from '../src/sources/athletics.ts'
+import {fetchSource} from '../src/client.ts'
+import {athleticsFreshFor, athleticsScores} from '../src/sources/athletics.ts'
 import {spyOnFetch} from './spy.ts'
 import scoresRaw from '../../source/athletics/fixtures/2026-09-26-home-games/20260926T180044Z-scores.json?raw'
 import livestatsRaw from '../../source/athletics/fixtures/2026-09-26-home-games/20260926T180044Z-livestats.json?raw'
@@ -52,6 +54,37 @@ afterEach(() => {
 })
 
 const fetched = () => fetchSpy.mock.calls.map(([input]) => String(input))
+const scoresReads = () => fetched().filter((url) => url.includes('scores_chris')).length
+
+const SECOND = 1000
+const MINUTE = 60 * SECOND
+
+/// A game with only a kickoff, as the scores feed lists one not yet started.
+const game = (kickoff: string) =>
+	({date_utc: kickoff, status: {indicator: 'scheduled', value: ''}}) as unknown as Score
+
+describe('athleticsFreshFor', () => {
+	test('is an hour with no games', () => {
+		expect(athleticsFreshFor([], NOW)).toBe(60 * MINUTE)
+	})
+
+	test('is a minute while a game is about to start', () => {
+		expect(athleticsFreshFor([game(new Date(NOW + 2 * MINUTE).toISOString())], NOW)).toBe(MINUTE)
+	})
+
+	test('lasts until five minutes before the next kickoff', () => {
+		let games = [
+			game(new Date(NOW + 30 * MINUTE).toISOString()),
+			game(new Date(NOW + 20 * MINUTE).toISOString()),
+		]
+		expect(athleticsFreshFor(games, NOW)).toBe(15 * MINUTE)
+	})
+
+	test('ignores past kickoffs and all-day games', () => {
+		let games = [game(new Date(NOW - 3 * 60 * MINUTE).toISOString()), game('2030-09-26')]
+		expect(athleticsFreshFor(games, NOW)).toBe(60 * MINUTE)
+	})
+})
 
 describe('GET /athletics/scores', () => {
 	test('is the games the Node server makes of the same feeds', async () => {
@@ -78,11 +111,25 @@ describe('GET /athletics/scores', () => {
 		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
 	})
 
-	test('is kept for five minutes with no game under way or about to start', async () => {
+	test('is kept for ten minutes with no game under way or about to start', async () => {
 		fetchSpy.mockImplementation(feeds('{"scores": []}', '{"Games": []}'))
 		let response = await get('/edu.stolaf/athletics/scores')
 		expect(await response.json()).toEqual([])
-		expect(response.headers.get('cache-control')).toBe('public, max-age=300')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
+	})
+
+	test('goes stale after a minute while a game is under way', async () => {
+		await get('/edu.stolaf/athletics/scores')
+		clock.now = () => NOW + 61 * SECOND
+		expect((await fetchSource(env, athleticsScores, STOLAF)).state).toBe('stale')
+	})
+
+	test('stays fresh for the hour with no game under way or about to start', async () => {
+		fetchSpy.mockImplementation(feeds('{"scores": []}', '{"Games": []}'))
+		await get('/edu.stolaf/athletics/scores')
+		clock.now = () => NOW + 59 * MINUTE
+		expect((await fetchSource(env, athleticsScores, STOLAF)).state).toBe('fresh')
+		expect(scoresReads()).toBe(1)
 	})
 
 	test('a second request is served from the object', async () => {

@@ -17,8 +17,7 @@ import {itemsBefore} from './archive.ts'
 import {streamsArchive} from './archives/streams.ts'
 import {convosArchive} from './archives/convos.ts'
 import {asOf} from './archives/calendars.ts'
-import {needsFrequentRefresh} from '../../source/athletics/shape.ts'
-import {athleticsScores, type AthleticsParams} from './sources/athletics.ts'
+import {athleticsFreshFor, athleticsScores, type AthleticsParams} from './sources/athletics.ts'
 import {stolafDirectory} from './sources/stolaf-directory.ts'
 import {streams} from './sources/streams.ts'
 import {
@@ -195,18 +194,14 @@ async function served<V>(
 	}
 }
 
-const ONE_MINUTE_SECONDS = 60
-const FIVE_MINUTES_SECONDS = 5 * 60
-
-/// A college's games. Kept by clients for five minutes, as on the Node
-/// server, or one while a game is under way or about to start.
+/// A college's games. Kept by clients for a minute while a game is under way
+/// or about to start, and otherwise the usual ten, or less when a game is
+/// about to start sooner.
 async function athletics(env: Env, params: AthleticsParams): Promise<Response> {
 	return served(
 		async () => (await fetchSource(env, athleticsScores, params)).value,
 		(scores) => {
-			let keep = needsFrequentRefresh(scores, new Date(clock.now()))
-				? ONE_MINUTE_SECONDS
-				: FIVE_MINUTES_SECONDS
+			let keep = Math.min(CLIENT_MAX_AGE, athleticsFreshFor(scores, clock.now()) / 1000)
 			return {body: scores, headers: {'Cache-Control': `public, max-age=${keep.toFixed(0)}`}}
 		},
 	)

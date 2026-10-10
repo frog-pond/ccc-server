@@ -7,6 +7,8 @@ export interface Source<P, V> {
 	load: (params: P, env: Env) => Promise<V>
 	/** fresh for this long (ms) */
 	ttl: number
+	/** fresh for this long (ms) after a load that found `value`, in place of `ttl` */
+	ttlFor?: (value: V, fetchedAt: number) => number
 	/** after ttl, keep serving the old value for this long while refreshing, and on error */
 	staleIfError: number
 	/** a value is only fresh within the epoch it was loaded in, such as the campus date */

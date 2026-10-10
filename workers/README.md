@@ -159,8 +159,9 @@ day if its host fails; student work keeps its own schedule, below.
 - `GET /athletics/scores`: the college's games, as the Node route makes them
   (`source/athletics/shape.ts`, shared with the Node server): the athletics
   site's scores feed, with livestats' scores for games under way and the
-  calendar's results for yesterday's games. Clients keep it for five minutes,
-  or one while a game is under way or about to start. A 502 if nothing was
+  calendar's results for yesterday's games. Clients keep it for a minute
+  while a game is under way or about to start, and otherwise ten minutes (less
+  when the next game is about to start sooner). A 502 if nothing was
   ever stored.
 - `GET /edu.stolaf/directory/departments` and `/directory/majors`: St.
   Olaf's directory lists, passed through as they are.
@@ -218,7 +219,9 @@ streams soonest first within a page, as their live routes are (streams take
   an error.
 - `athletics-scores` (`src/sources/athletics.ts`): a college's games from its
   athletics site (three requests a read: scores, livestats and yesterday's
-  calendar), fresh for a minute and kept a day. Only `athletics.stolaf.edu` and
+  calendar), fresh for a minute while a game is under way or about to start,
+  otherwise until the next game is about to start, at most an hour; kept a
+  day. A source can decide its freshness from what it read (`ttlFor`). Only `athletics.stolaf.edu` and
   `athletics.carleton.edu` load.
 - `stolaf-directory` (`src/sources/stolaf-directory.ts`): one of St. Olaf's
   two directory lists, fresh for 1 hour and kept a day; only those two

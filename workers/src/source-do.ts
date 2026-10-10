@@ -20,6 +20,8 @@ type Row = {
 	backoff_until: number
 	last_error: string | null
 	last_read: number
+	/// how long this value is fresh, when its source decides that by the value
+	ttl: number | null
 }
 
 /// One upstream resource: its last good value, kept in SQLite, and everything
@@ -42,8 +44,16 @@ export class SourceDO extends DurableObject<Env> {
 				failures INTEGER NOT NULL DEFAULT 0,
 				backoff_until INTEGER NOT NULL DEFAULT 0,
 				last_error TEXT,
-				last_read INTEGER NOT NULL
+				last_read INTEGER NOT NULL,
+				ttl INTEGER
 			)`)
+		// objects made before the column was
+		let columns = ctx.storage.sql
+			.exec<{name: string}>("SELECT name FROM pragma_table_info('entry')")
+			.toArray()
+		if (!columns.some(({name}) => name === 'ttl')) {
+			ctx.storage.sql.exec('ALTER TABLE entry ADD COLUMN ttl INTEGER')
+		}
 	}
 
 	#row(): Row | undefined {
@@ -77,11 +87,12 @@ export class SourceDO extends DurableObject<Env> {
 		let age = hasValue ? now - row.fetched_at! : Infinity
 		let sameEpoch = !spec.epoch || row.epoch === spec.epoch(new Date(now))
 		let backedOff = row.backoff_until > now
+		let ttl = row.ttl ?? spec.ttl
 
-		if (hasValue && sameEpoch && age < spec.ttl) return this.#served(row, 'fresh')
+		if (hasValue && sameEpoch && age < ttl) return this.#served(row, 'fresh')
 
 		// stale-while-revalidate: answer now, refresh from the alarm, which survives eviction
-		if (hasValue && sameEpoch && age < spec.ttl + spec.staleIfError) {
+		if (hasValue && sameEpoch && age < ttl + spec.staleIfError) {
 			if (!backedOff) await this.ctx.storage.setAlarm(now)
 			return this.#served(row, 'stale')
 		}
@@ -114,11 +125,12 @@ export class SourceDO extends DurableObject<Env> {
 			let params = JSON.parse(row.params) as never
 			let value = await spec.load(params, this.env)
 			this.ctx.storage.sql.exec(
-				`UPDATE entry SET value = ?, fetched_at = ?, epoch = ?,
+				`UPDATE entry SET value = ?, fetched_at = ?, epoch = ?, ttl = ?,
 					failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1`,
 				JSON.stringify(value),
 				now,
 				spec.epoch?.(new Date(now)) ?? null,
+				spec.ttlFor?.(value, now) ?? null,
 			)
 			// the history is kept beside the answer; failing to keep it does not fail the answer
 			if (spec.record) {
@@ -150,7 +162,8 @@ export class SourceDO extends DurableObject<Env> {
 		let spec = registry[row.name]!
 		let now = clock.now()
 		if (now - row.last_read > IDLE_AFTER) return this.ctx.storage.deleteAlarm()
-		let next = row.backoff_until > now ? row.backoff_until : (row.fetched_at ?? now) + spec.ttl
+		let next =
+			row.backoff_until > now ? row.backoff_until : (row.fetched_at ?? now) + (row.ttl ?? spec.ttl)
 		await this.ctx.storage.setAlarm(next)
 	}
 
