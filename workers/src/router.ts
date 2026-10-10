@@ -3,6 +3,7 @@ import {CAFES} from './cafes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {bonappPage, campusToday} from './sources/bonapp.ts'
+import {STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -75,11 +76,26 @@ async function bonapp(cafeId: string, full: boolean, env: Env): Promise<Response
 	}
 }
 
+/// St. Olaf news as feed items. Unlike the Node server's stub for older builds,
+/// this is the real feed; with nothing stored and WordPress failing it is a 502,
+/// kept briefly, not a feed.
+async function stolafNews(env: Env): Promise<Response> {
+	try {
+		let {value} = await fetchSource(env, wpNews, {url: STOLAF_NEWS_URL})
+		return json(value, 200, ONE_HOUR)
+	} catch (err) {
+		console.error(err)
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
 export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
 	if (url.pathname === '/') return json({cafes: CAFES})
+
+	if (url.pathname === '/v1/news/named/stolaf') return stolafNews(env)
 
 	let eating = /^\/v1\/food\/(menu|cafe)\/([^/]+)$/.exec(url.pathname)
 	if (eating?.[1] && eating[2]) return food(eating[1] as 'menu' | 'cafe', eating[2], env)
