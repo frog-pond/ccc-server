@@ -38,6 +38,14 @@ npm test            # vitest, running inside workerd
 npm run typecheck   # regenerates worker-configuration.d.ts first
 ```
 
+## Routes
+
+- `GET /`: the cafés this knows, by BonApp id.
+- `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
+  `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
+  A 502 means BonApp failed with nothing stored. This is a look at the source,
+  not the apps' menu contract.
+
 ## Sources
 
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
