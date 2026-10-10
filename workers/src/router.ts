@@ -1,5 +1,6 @@
 import {CafeMenuWithError, CustomCafe, cafeFrom, menuFrom} from '../../source/menus-bonapp/shape.ts'
 import {CAMPUSES, type Campus, type NewsFeed} from './campuses.ts'
+import type {Calendar} from './calendars.ts'
 import type {PagesRoute} from './pages-routes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
@@ -102,6 +103,17 @@ async function news(env: Env, {source, url}: NewsFeed): Promise<Response> {
 	}
 }
 
+/// A calendar as events. With nothing stored and the source failing this is a
+/// 502, kept briefly, as for the news feeds.
+async function calendar(env: Env, {read, maxAge}: Calendar): Promise<Response> {
+	try {
+		return json(await read(env), 200, maxAge)
+	} catch (err) {
+		console.error(err)
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
 /// A data file the colleges publish, passed through as it is. A failure with
 /// nothing stored is a 502, kept briefly, as for the news feeds.
 async function dataFile(env: Env, {url, maxAge}: PagesRoute): Promise<Response> {
@@ -130,6 +142,13 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (feed !== undefined && Object.hasOwn(campus.news, feed) && campus.news[feed]) {
 		return news(env, campus.news[feed])
 	}
+
+	let named = /^\/calendar\/([^/]+)$/.exec(path)?.[1]
+	if (named !== undefined && Object.hasOwn(campus.calendars, named) && campus.calendars[named]) {
+		return calendar(env, campus.calendars[named])
+	}
+
+	if (path === '/convos/upcoming' && campus.convos) return calendar(env, campus.convos)
 
 	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
 	if (file) return dataFile(env, file)
