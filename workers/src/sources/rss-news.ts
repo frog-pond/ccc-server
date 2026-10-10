@@ -7,16 +7,12 @@ import {upstream} from '../upstream.ts'
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
 
-/// The feed the app reads for The Carletonian, the way the Node server's
-/// `carletonian` route does.
-export const CARLETONIAN_URL = 'https://thecarletonian.com/feed/'
-
 /// The feed the app reads for KRLX, the way the Node server's `krlx` route does.
 export const KRLX_URL = 'https://content.krlx.org/feed/'
 
 /// Only RSS feeds we mean to read: the url comes from the caller, and this must
 /// not become a way to make the worker fetch anything.
-const RSS_HOSTS = new Set(['thecarletonian.com', 'content.krlx.org'])
+const RSS_HOSTS = new Set(['content.krlx.org'])
 
 export type RssNewsParams = {url: string}
 

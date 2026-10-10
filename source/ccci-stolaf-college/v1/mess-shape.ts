@@ -117,12 +117,14 @@ export function rulesFor(
 	resource: string,
 	id: string | undefined,
 	query: URLSearchParams,
+	/// what the 404 calls the site, for another paper on the same WordPress plugins
+	paper = 'the Olaf Messenger',
 ): Verdict {
 	let entry = Object.hasOwn(RESOURCES, resource) ? RESOURCES[resource] : undefined
 	let rules = id === undefined ? entry?.list : entry?.item
 	if (!rules || (id !== undefined && !INTEGER.test(id))) {
 		let name = id === undefined ? resource : `${resource}/:id`
-		return refuse(404, `the Olaf Messenger has no ${name}`)
+		return refuse(404, `${paper} has no ${name}`)
 	}
 
 	for (let name of new Set(query.keys())) {

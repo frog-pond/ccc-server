@@ -1,10 +1,10 @@
 import {env, exports} from 'cloudflare:workers'
 import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} from 'vitest'
-import {UPSTREAM, canonicalKey} from '../../source/ccci-stolaf-college/v1/mess-shape.ts'
+import {canonicalKey} from '../../source/ccci-stolaf-college/v1/mess-shape.ts'
 import {fetchSource} from '../src/client.ts'
 import {clock} from '../src/clock.ts'
 import {registry} from '../src/registry.ts'
-import {messengerApi} from '../src/sources/messenger.ts'
+import {CARLETONIAN, MESSENGER, wordpressApi} from '../src/sources/wordpress-api.ts'
 import {spyOnFetch} from './spy.ts'
 
 const get = (path: string) => exports.default.fetch(new Request(`https://worker.test${path}`))
@@ -34,9 +34,11 @@ let errorSpy: {mockRestore: () => void}
 
 beforeEach(async () => {
 	clock.now = () => Date.now()
-	for (let [path, query] of KEYS) {
-		let key = canonicalKey(path, new URLSearchParams(query))
-		await env.SOURCE.getByName(`${messengerApi.name}:${key}`).purge()
+	for (let {upstream} of [MESSENGER, CARLETONIAN]) {
+		for (let [path, query] of KEYS) {
+			let key = canonicalKey(path, new URLSearchParams(query))
+			await env.SOURCE.getByName(`${wordpressApi.name}:${upstream}/${key}`).purge()
+		}
 	}
 	fetchSpy = spyOnFetch()
 	errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -46,17 +48,30 @@ afterEach(() => {
 	errorSpy.mockRestore()
 })
 
+// fetches of either paper
 const paperFetches = () =>
 	fetchSpy.mock.calls
 		.map(([input]) => String(input))
-		.filter((u) => URL.canParse(u) && new URL(u).hostname === new URL(UPSTREAM).hostname)
+		.filter(
+			(u) =>
+				URL.canParse(u) &&
+				[MESSENGER, CARLETONIAN].some(
+					({upstream}) => new URL(u).hostname === new URL(upstream).hostname,
+				),
+		)
 
-describe('GET /news/mess/wp/v2/:resource', () => {
+const PAPERS = [
+	{name: 'mess', site: MESSENGER},
+	{name: 'carletonian', site: CARLETONIAN},
+]
+
+describe.each(PAPERS)('GET /news/$name/wp/v2/:resource', ({name, site}) => {
+	const UPSTREAM = site.upstream
 	test("passes the paper's answer on, with its paging headers and links", async () => {
 		fetchSpy.mockImplementation(() =>
 			Promise.resolve(wordpress(POSTS, 200, {'x-wp-total': '30', 'x-wp-totalpages': '3'})),
 		)
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
 		expect(response.status).toBe(200)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		expect(response.headers.get('content-type')).toBe('application/json; charset=UTF-8')
@@ -64,9 +79,9 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 		expect(response.headers.get('x-wp-totalpages')).toBe('3')
 		expect(response.headers.get('link')).toBe(
 			[
-				'</edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true>; rel="first"',
-				'</edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true&page=2>; rel="next"',
-				'</edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true&page=3>; rel="last"',
+				`</edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true>; rel="first"`,
+				`</edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true&page=2>; rel="next"`,
+				`</edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true&page=3>; rel="last"`,
 			].join(', '),
 		)
 		expect(await response.text()).toBe(POSTS)
@@ -77,15 +92,15 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 	test('is served on both campus prefixes', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(wordpress(POSTS)))
 		for (let campus of ['edu.stolaf', 'edu.carleton']) {
-			let response = await get(`/${campus}/news/mess/wp/v2/posts?per_page=10&_embed=true`)
+			let response = await get(`/${campus}/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
 			expect(response.status).toBe(200)
 		}
 	})
 
 	test('a request spelled another way is served from the same object', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(wordpress(POSTS)))
-		await get('/edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true')
-		let again = await get('/edu.stolaf/news/mess/wp/v2/posts?_embed=true&per_page=10')
+		await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
+		let again = await get(`/edu.stolaf/news/${name}/wp/v2/posts?_embed=true&per_page=10`)
 		expect(again.status).toBe(200)
 		expect(await again.text()).toBe(POSTS)
 		expect(paperFetches()).toHaveLength(1)
@@ -93,7 +108,7 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 
 	test('one post, by id', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(wordpress(POST)))
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts/36238?_embed=true')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts/36238?_embed=true`)
 		expect(response.status).toBe(200)
 		expect(response.headers.get('link')).toBeNull()
 		expect(await response.text()).toBe(POST)
@@ -102,7 +117,7 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 
 	test('a byte order mark ahead of the JSON is dropped', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(wordpress(`﻿${POSTS}`)))
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
 		expect(await response.text()).toBe(POSTS)
 	})
 
@@ -110,7 +125,7 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 		fetchSpy.mockImplementation(() =>
 			Promise.resolve(wordpress('{"code":"rest_post_invalid_id"}', 404)),
 		)
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts/404')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts/404`)
 		expect(response.status).toBe(404)
 		expect(response.headers.get('cache-control')).toBeNull()
 		expect(await response.json()).toEqual({code: 'rest_post_invalid_id'})
@@ -123,7 +138,7 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 		['an unknown parameter', '/posts?search=hello', 400],
 		['a malformed parameter', '/posts?per_page=lots', 400],
 	])('%s is refused without asking the paper', async (_, rest, status) => {
-		let response = await get(`/edu.stolaf/news/mess/wp/v2${rest}`)
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2${rest}`)
 		expect(response.status).toBe(status)
 		expect(paperFetches()).toEqual([])
 	})
@@ -137,19 +152,17 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 				}),
 			),
 		)
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
 		expect(response.status).toBe(502)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
-		expect(await response.json()).toEqual({
-			message: 'the Olaf Messenger could not be reached for posts',
-		})
+		expect(await response.json()).toEqual({message: `${site.paper} could not be reached for posts`})
 	})
 
 	test('JSON that does not parse is a 502, not kept', async () => {
 		fetchSpy.mockImplementation(() =>
 			Promise.resolve(wordpress('<b>Warning</b>: PHP ate the JSON')),
 		)
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
 		expect(response.status).toBe(502)
 	})
 
@@ -159,7 +172,7 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 				new Response(null, {status: 301, headers: {location: 'https://elsewhere.example/'}}),
 			),
 		)
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
 		expect(response.status).toBe(502)
 		expect(fetchSpy.mock.calls.map(([i]) => String(i))).not.toContain('https://elsewhere.example/')
 	})
@@ -168,26 +181,37 @@ describe('GET /news/mess/wp/v2/:resource', () => {
 		fetchSpy.mockImplementation(() =>
 			Promise.resolve(wordpress(POSTS, 200, {'x-wp-totalpages': '3'})),
 		)
-		let response = await get('/edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true&page=2')
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true&page=2`)
 		expect(response.headers.get('link')).toContain(
-			'</edu.stolaf/news/mess/wp/v2/posts?per_page=10&_embed=true>; rel="prev"',
+			`</edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true>; rel="prev"`,
 		)
 	})
 })
 
-describe('the Messenger source', () => {
+describe('the WordPress API source', () => {
 	test('is registered by the worker entry point', async () => {
 		await import('../src/worker.ts')
-		expect(registry[messengerApi.name]).toBe(messengerApi)
+		expect(registry[wordpressApi.name]).toBe(wordpressApi)
 	})
 
 	test('refuses a request the app does not make, without fetching', async () => {
-		await expect(fetchSource(env, messengerApi, {path: 'users', query: ''})).rejects.toThrow(
-			/not a Messenger request/,
-		)
 		await expect(
-			fetchSource(env, messengerApi, {path: 'posts/1/revisions', query: ''}),
-		).rejects.toThrow(/not a Messenger request/)
+			fetchSource(env, wordpressApi, {site: MESSENGER, path: 'users', query: ''}),
+		).rejects.toThrow(/not a request this reads/)
+		await expect(
+			fetchSource(env, wordpressApi, {site: CARLETONIAN, path: 'posts/1/revisions', query: ''}),
+		).rejects.toThrow(/not a request this reads/)
+		expect(paperFetches()).toEqual([])
+	})
+
+	test('refuses a site it does not read, without fetching', async () => {
+		let site = {upstream: 'https://example.com/wp-json/wp/v2', paper: 'Example'}
+		await expect(fetchSource(env, wordpressApi, {site, path: 'posts', query: ''})).rejects.toThrow(
+			/not a WordPress API this reads/,
+		)
+		expect(
+			fetchSpy.mock.calls.map(([i]) => String(i)).filter((u) => u.includes('example.com')),
+		).toEqual([])
 		expect(paperFetches()).toEqual([])
 	})
 })

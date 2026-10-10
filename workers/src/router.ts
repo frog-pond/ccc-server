@@ -6,6 +6,7 @@ import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
 import {pagesJson} from './sources/pages-json.ts'
+import {wordpress as wordpressApi} from './sources/wordpress-api.ts'
 import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
@@ -146,8 +147,8 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let wordpress = /^\/news\/([^/]+)\/wp\/v2\/([^/]+)(?:\/([^/]+))?$/.exec(path)
 	let site = wordpress?.[1]
 	if (wordpress?.[2] && site !== undefined && Object.hasOwn(campus.wordpressNews, site)) {
-		let read = campus.wordpressNews[site]
-		if (read) return read(url, wordpress[2], wordpress[3], env)
+		let paper = campus.wordpressNews[site]
+		if (paper) return wordpressApi(paper, url, wordpress[2], wordpress[3], env)
 	}
 
 	let named = /^\/calendar\/([^/]+)$/.exec(path)?.[1]

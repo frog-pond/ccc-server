@@ -4,10 +4,11 @@ import {deprecatedWpJson, retiredNnb} from '../../source/feeds/deprecated.ts'
 import {clock} from '../src/clock.ts'
 import {spyOnFetch} from './spy.ts'
 
-const get = (path: string) => exports.default.fetch(new Request(`https://worker.test${path}`))
+const get = (path: string, headers: Record<string, string> = {}) =>
+	exports.default.fetch(new Request(`https://worker.test${path}`, {headers}))
 
 const NOW = Date.parse('2030-04-22T15:27:41Z')
-const HOUR_START = '2030-04-22T15:00:00.000Z'
+const DAY = 24 * 60 * 60 * 1000
 
 let fetchSpy: MockInstance<typeof fetch>
 
@@ -28,29 +29,36 @@ const NOTICES = [
 ]
 
 describe.each(NOTICES)('GET $path', ({path, expected}) => {
-	test('is the notice the Node route answers with, dated at the start of the hour', async () => {
+	test('is the notice the Node route answers with, undated', async () => {
 		let response = await get(path)
 		expect(response.status).toBe(200)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		let body: unknown = await response.json()
-		expect(body).toEqual(expected(new Date(HOUR_START)))
-		expect(body).toMatchObject([{datePublished: HOUR_START}])
+		expect(body).toEqual(expected(null))
+		expect(body).toMatchObject([{datePublished: null}])
 	})
 
-	test('a client re-checking it later in the hour is answered with a 304', async () => {
+	test('a client re-checking it any time later is answered with a 304', async () => {
 		let tag = (await get(path)).headers.get('etag')
 		expect(tag).toBeTruthy()
-		clock.now = () => NOW + 20 * 60 * 1000
-		let again = await exports.default.fetch(
-			new Request(`https://worker.test${path}`, {headers: {'If-None-Match': tag ?? ''}}),
-		)
-		expect(again.status).toBe(304)
+		clock.now = () => NOW + DAY
+		expect((await get(path, {'If-None-Match': tag ?? ''})).status).toBe(304)
 	})
 
 	test('fetches nothing', async () => {
 		await get(path)
 		expect(fetchSpy).not.toHaveBeenCalled()
 	})
+})
+
+test.each([
+	'/edu.carleton/news/oleville',
+	'/edu.carleton/news/politicole',
+	'/edu.carleton/news/ksto',
+	'/edu.stolaf/news/covid',
+	'/edu.stolaf/news/nnb',
+])('GET %s is a 404', async (path) => {
+	expect((await get(path)).status).toBe(404)
 })
 
 test('the notices say what they stand in for', () => {

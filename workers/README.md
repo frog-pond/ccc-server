@@ -69,113 +69,52 @@ day if its host fails; student work keeps its own schedule, below.
   Worker's; the Node server only has a stub for older builds). Shaped by
   `feedItemsFrom` (`source/feeds/wp-json-shape.ts`), shared with the Node
   server. A 502 if nothing has ever been stored.
-- `GET /news/mess`: The Olaf Messenger's posts (`www.olafmessenger.com`'s
-  WordPress) as feed items, read and shaped like St. Olaf news. The paper's
-  Cloudflare bot challenge currently answers the Worker with a 403, so this is
-  a 502 until the paper lets the Worker through.
-- `GET /news/mess/wp/v2/:resource` and `/news/mess/wp/v2/:resource/:id`: the
-  Messenger's WordPress REST API in WordPress's own shape, for the requests
-  the app makes and nothing else (`rulesFor` in
-  `source/ccci-stolaf-college/v1/mess-shape.ts`, shared with the Node server:
-  anything else is a 404 or 400 without asking the paper). The paper's status,
-  content type and `x-wp-total`/`x-wp-totalpages` headers are passed on, with
-  an RFC 8288 `Link` header on the lists the app pages through. Every spelling
-  of one request shares one stored copy. A 4xx from the paper is passed on
-  without a `Cache-Control`; a 5xx, a bot challenge, a redirect or a body that
-  is not JSON is an error, a 502 if nothing was ever stored. Behind the same
-  bot challenge as `/news/mess`.
-- `GET /news/carleton-now` and `GET /news/carletonian`: Carleton
-  News (the `carleton.edu/news` WordPress) and The Carletonian (its RSS feed), as
-  feed items, shaped by `feedItemsFrom` and `feedItemsFromRss`
-  (`source/feeds/`), shared with the Node server. Same behavior as the St. Olaf
-  route: a 502 if nothing was ever stored. One difference from Node: a Carletonian response that is not RSS
-  (a bot-challenge page, say) is an error, not an empty feed.
+- `GET /news/mess` and `GET /news/carletonian`: The Olaf Messenger's and The
+  Carletonian's posts (`www.olafmessenger.com`'s and `thecarletonian.com`'s
+  WordPress) as feed items, read and shaped like St. Olaf news. Both papers'
+  Cloudflare bot challenges currently answer the Worker with a 403, so these
+  are 502s until the papers let the Worker through. The Carletonian is read
+  from its WordPress API, where the Node server reads its RSS feed.
+- `GET /news/mess/wp/v2/:resource[/:id]` and
+  `GET /news/carletonian/wp/v2/:resource[/:id]`: each paper's WordPress REST
+  API in WordPress's own shape, for the requests the app makes and nothing else
+  (`rulesFor` in `source/ccci-stolaf-college/v1/mess-shape.ts`, shared with
+  the Node server's Messenger route; the papers run the same WordPress
+  plugins). Anything else is a 404 or 400 without asking the paper. The
+  paper's status, content type and `x-wp-total`/`x-wp-totalpages` headers are
+  passed on, with an RFC 8288 `Link` header on the lists the app pages
+  through. Every spelling of one request shares one stored copy. A 4xx from
+  the paper is passed on without a `Cache-Control`; a 5xx, a bot challenge, a
+  redirect or a body that is not JSON is an error, a 502 if nothing was ever
+  stored. Behind the same bot challenges as the feeds.
+- `GET /news/carleton-now`: Carleton News (the `carleton.edu/news` WordPress)
+  as feed items, shaped by `feedItemsFrom`, shared with the Node server. A 502
+  if nothing was ever stored.
 - `GET /news/krlx`: KRLX's posts (`content.krlx.org`'s RSS feed) as feed
-  items, read and shaped like The Carletonian, with the same 502 when nothing
-  was ever stored.
-- `GET /news/oleville`, `/news/politicole`, `/news/ksto`, `/news/covid` and
-  `/news/nnb`: feeds that are no longer published. Each answers with one feed
-  item saying so, dated at the start of the hour (so its ETag holds for the
-  hour), the same notice the Node routes send (`deprecatedWpJson` and `retiredNnb` in
-  `source/feeds/deprecated.ts`, shared with the Node server). Nothing is
-  fetched.
-- `GET /calendar/:name`: a calendar as events, in the contract the Node server's
-  `/v1/calendar/named/:name` routes keep. The names are `carleton`, `upcoming-convos`
-  and `sumo-schedule` (Carleton's calendars, with the pictures their pages show),
-  `northfield` (an iCal feed), `krlx-schedule` (a Google calendar), `ksto-schedule` (the weekly schedule
-  AAO-React-Native publishes, `ksto-schedule.json`), `stolaf`, and the retired
-  `the-cave` and `oleville`. `stolaf` is described below. A retired calendar is a single
-  notice event. The others are a 502 if nothing has ever been stored. Shaped by
-  `source/calendar/*-shape.ts`, shared with the Node server.
-- `GET /calendar/stolaf` is the college calendar, on The Events
-  Calendar (Tribe) at `wp.stolaf.edu/calendar`: the next month in campus dates,
-  read across the feed's pages (fifty at a time, at most ten pages; a longer feed
-  is an error rather than a short calendar). `GET /calendar/student-orgs` (St.
-  Olaf) is the events student organizations post to Presence
-  (`api.presence.io/stolaf/v1/events`), those on now or still to come, with
-  cover images and the organizers' contact (name and email) in `metadata`. Both read events
-  the way AAO-React-Native's own parsers do, and an event that cannot be read is
-  skipped unless none can.
-- `GET /convos/upcoming` (Carleton only): the same list as `upcoming-convos`.
-- `GET /student-work/postings` (St. Olaf only): the Oracle Recruiting Student
-  Work board, newest first, as `{updatedAt, count, postings}`. Each posting has
-  the board's listing (`title`, `postedDate`, `location`), what its title says
-  (`displayTitle` without the term prefix or pay code, `term`, `level`,
-  `payCode`), what its description says (`unit`, `department`, `wage`, `length`,
-  `contact`, `classification`), its Student Work `areas` (slugs, from the
-  published `student-work-areas.json`, read by its own `student-work-areas` source that keeps only a list of areas; a unit no area lists goes to the area that
-  lists `other`), its apply `url`, and when it was first seen and its detail last
-  read. Query parameters narrow the list; values of one parameter (repeated or
-  comma-separated) are alternatives, and parameters narrow together: `area`
-  (slug), `unit` (five digits, or `none`), `level` (`entry`, `experienced`,
-  `lead`, `none`), `term` (`academic-year`, `fall`, `spring`, `summer`, `none`),
-  `posted_since` (`YYYY-MM-DD`), `q` (every word starts a word of the title or
-  the description, ignoring case and accents), `title` (the same, in the title
-  a student sees only), and `sort` (`newest`, the default, or `relevance`, best
-  match for `q` or `title` first, a title match counting more). The filters and
-  searches run as SQL in the object (FTS5 for the searches), and only the
-  postings that match leave it. An unknown parameter or value is a 400. Cacheable for ten minutes; a 502, kept a minute, if Oracle has never been
-  read, or if `area` is asked for and the areas file cannot be read.
-- `GET /student-work/postings/:id`: one posting, as above, with its
-  `description`: `markdown` (what is neither one of the named fields nor on every
-  posting), every labelled line as `fields`, and the original `html`. A 404 if it
-  is not on the board.
-- `GET /student-work/units`: each posting's unit by id, in the contract the
-  Node server's `/v1/student-work/units` keeps (`groupUnits` in
-  `source/student-work/areas.ts`). A posting whose detail has not been read is
-  left out.
-- `GET /student-work/postings` (Carleton): the jobs on Carleton's Student
-  Employment WordPress site (`/student-employment/post-jobs`), newest first, as
-  `{updatedAt, count, postings}`, without the archived ones. Each posting has its
-  `title`, page `url`, `postedAt` and `modifiedAt`, its `categories`, whether it
-  is available `duringTerm` and `duringBreak`, whether it is `offCampus`
-  (community-based work-study), the labelled lines the posting forms use
-  (`department`, `dateOpen` and `opensOn` as `YYYY-MM-DD`, `availability`,
-  `classification`, `wage`, `supervisor`, `employer`, `workLocation`, `active`),
-  and every link in it. Query parameters narrow the list: `when` (`term`,
-  `break`), `off_campus` (`true`, `false`), `posted_since` (`YYYY-MM-DD`), and `q`,
-  `title` and `sort` as above. Each job also has `firstSeenAt`. The jobs are
-  rows in the `StudentWorkDO` named `carleton`, and the filters and searches run
-  there as SQL, as for St. Olaf. Cacheable for ten minutes; a 502, kept a minute, if
-  the site has never been read. `GET /student-work/postings/:id` adds the
-  `description` as above, and is a 404 for a job not listed.
-- `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
-  `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
-  A 502 means BonApp failed with nothing stored. This is a look at the source,
-  not the apps' menu contract.
+  items, shaped by `feedItemsFromRss` (`source/feeds/rss-shape.ts`), shared
+  with the Node server. A 502 if nothing was ever stored. One difference from
+  Node: a response that is not RSS (a bot-challenge page, say) is an error,
+  not an empty feed.
+- `GET /edu.stolaf/news/oleville`, `/edu.stolaf/news/politicole`,
+  `/edu.stolaf/news/ksto`, `/edu.carleton/news/covid` and
+  `/edu.carleton/news/nnb`: feeds that are no longer published. Each answers
+  with one undated feed item saying so (so its body and ETag never change), the
+  notice the Node routes send (`deprecatedWpJson` and `retiredNnb` in
+  `source/feeds/deprecated.ts`, shared with the Node server, which dates it
+  at the request). Nothing is fetched.
 
 ## Sources
 
 - `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
-  fresh for 1 hour and kept a day; only `wp.stolaf.edu`, `www.carleton.edu`
-  and `www.olafmessenger.com` load.
-- `messenger-api` (`src/sources/messenger.ts`): one request to the Messenger's
+  fresh for 1 hour and kept a day; only `wp.stolaf.edu`, `www.carleton.edu`,
+  `www.olafmessenger.com` and `thecarletonian.com` load.
+- `wordpress-api` (`src/sources/wordpress-api.ts`): one request to a paper's
   WordPress API, its answer kept as the paper sent it (status, content type,
-  body, paging headers), the same lifetimes. Only paths and queries the app
-  makes load, and only from `olafmessenger.com`; an answer over 1.9 MB is an
-  error, as one SQLite row holds at most 2 MB.
+  body, paging headers), the same lifetimes. Only the Messenger's and The
+  Carletonian's APIs, and only paths and queries the app makes, load; an answer
+  over 1.9 MB is an error, as one SQLite row holds at most 2 MB.
 - `rss-news` (`src/sources/rss-news.ts`): an RSS feed as feed items, the same
-  lifetimes; only `thecarletonian.com` and `content.krlx.org` load.
+  lifetimes; only `content.krlx.org` loads.
 - `calendar-ical`, `calendar-carleton`, `calendar-google`,
   `calendar-weekly-schedule`, `calendar-tec` and `calendar-presence`
   (`src/sources/calendars.ts`): a calendar's events, fresh for an hour and kept a
