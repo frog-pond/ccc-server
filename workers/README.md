@@ -40,14 +40,14 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
 
 ## Routes
 
-Routes have no `/v1` prefix and news is `/news/<name>`, not `/news/named/<name>`.
-The Node server's arbitrary-URL endpoints (`/news/rss`, `/news/wpjson`,
-`/calendar/ics`, `/calendar/google`) are not migrated: a route names its source.
-A route both colleges have keeps one plain path when they read the same source
-(`/news/krlx`: both read `content.krlx.org`), and is served under `/edu.stolaf` and
-`/edu.carleton` when they read different ones.
+Every route is mounted under a campus, `/edu.stolaf` or `/edu.carleton`, and has
+no `/v1` prefix. Each campus has its own table in `src/campuses.ts` (its cafés and
+news feeds), so one can change without the other. The paths below are shown
+without the prefix. The Node server's arbitrary-URL endpoints (`/news/rss`,
+`/news/wpjson`, `/calendar/ics`, `/calendar/google`) are not migrated: a route
+names its source.
 
-- `GET /`: the cafés this knows, by BonApp id.
+- `GET /`: the campuses.
 
 - `GET /food/menu/:cafeId` and `GET /food/cafe/:cafeId`: the apps' menu and
   café info, in the contract the Node server's routes keep (an unknown id is a

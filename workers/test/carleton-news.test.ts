@@ -23,7 +23,7 @@ let errorSpy: {mockRestore: () => void}
 const FEEDS = [
 	{
 		name: 'Carleton News',
-		path: '/news/carleton-now',
+		path: '/edu.carleton/news/carleton-now',
 		url: CARLETON_NOW_URL,
 		source: `${wpNews.name}:${CARLETON_NOW_URL}`,
 		upstream: () => answer(carletonPosts, 'application/json'),
@@ -31,7 +31,7 @@ const FEEDS = [
 	},
 	{
 		name: 'The Carletonian',
-		path: '/news/carletonian',
+		path: '/edu.carleton/news/carletonian',
 		url: CARLETONIAN_URL,
 		source: `${rssNews.name}:${CARLETONIAN_URL}`,
 		upstream: () => answer(carletonianFeed, 'application/rss+xml'),

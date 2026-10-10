@@ -41,9 +41,9 @@ const fetchesOf = (hostname: string) =>
 
 const newsFetches = () => fetchesOf('wp.stolaf.edu')
 
-describe('GET /news/stolaf', () => {
+describe('GET /edu.stolaf/news/stolaf', () => {
 	test('is the feed items the Node code makes of the same posts', async () => {
-		let response = await get('/news/stolaf')
+		let response = await get('/edu.stolaf/news/stolaf')
 		expect(response.status).toBe(200)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
 		expect(await response.json()).toEqual(JSON.parse(golden))
@@ -51,14 +51,14 @@ describe('GET /news/stolaf', () => {
 	})
 
 	test('a second request is served from the object, not WordPress', async () => {
-		await get('/news/stolaf')
-		expect((await get('/news/stolaf')).status).toBe(200)
+		await get('/edu.stolaf/news/stolaf')
+		expect((await get('/edu.stolaf/news/stolaf')).status).toBe(200)
 		expect(newsFetches()).toHaveLength(1)
 	})
 
 	test('WordPress down with nothing stored is a 502, briefly cacheable', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(json('boom', 503)))
-		let response = await get('/news/stolaf')
+		let response = await get('/edu.stolaf/news/stolaf')
 		expect(response.status).toBe(502)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
 		expect(await response.json()).toMatchObject({message: expect.stringContaining('503')})
@@ -68,15 +68,15 @@ describe('GET /news/stolaf', () => {
 		fetchSpy.mockImplementation(() =>
 			Promise.resolve(json('{"code":"rest_no_route","message":"No route"}')),
 		)
-		expect((await get('/news/stolaf')).status).toBe(502)
+		expect((await get('/edu.stolaf/news/stolaf')).status).toBe(502)
 	})
 
 	test('a failed refresh keeps serving the last good feed', async () => {
-		await get('/news/stolaf')
+		await get('/edu.stolaf/news/stolaf')
 		// two hours on: past the hour it is fresh for, well within the day it is kept
 		clock.now = () => Date.now() + 2 * HOUR
 		fetchSpy.mockImplementation(() => Promise.resolve(json('boom', 503)))
-		let response = await get('/news/stolaf')
+		let response = await get('/edu.stolaf/news/stolaf')
 		expect(response.status).toBe(200)
 		expect(await response.json()).toEqual(JSON.parse(golden))
 	})
