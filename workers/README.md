@@ -124,8 +124,9 @@ names its source.
   `classification`, `wage`, `supervisor`, `employer`, `workLocation`, `active`),
   and every link in it. Query parameters narrow the list: `when` (`term`,
   `break`), `off_campus` (`true`, `false`), `posted_since` (`YYYY-MM-DD`), and `q`,
-  `title` and `sort` as above. With a handful of jobs, the filters run in the
-  Worker over the stored list. Cacheable for an hour; a 502, kept a minute, if
+  `title` and `sort` as above. Each job also has `firstSeenAt`. The jobs are
+  rows in the `StudentWorkDO` named `carleton`, and the filters and searches run
+  there as SQL, as for St. Olaf. Cacheable for an hour; a 502, kept a minute, if
   the site has never been read. `GET /student-work/postings/:id` adds the
   `description` as above, and is a 404 for a job not listed.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
@@ -148,10 +149,6 @@ names its source.
   `stolaf.dev`, `wp.stolaf.edu`, `api.presence.io`). The Google source reads the Calendar API with the worker's
   `GOOGLE_CALENDAR_API_KEY` secret, which has to be set on the worker (and on its
   Previews); without it those calendars are a 502.
-- `carleton-student-work` (`src/sources/carleton-student-work.ts`): Carleton's
-  student jobs, every page of the WordPress posts (at most ten), shaped by
-  `source/student-work/carleton-shape.ts`. Fresh for an hour and kept a day;
-  only `www.carleton.edu` is fetched, and a redirect is not followed.
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
   validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
   and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
@@ -171,6 +168,13 @@ names its source.
   and the next read resumes it. Shaping is in `source/student-work/oracle-shape.ts`
   and `posting-shape.ts`; the unit is read by `unit-number.ts`, shared with the
   Node server.
+
+  The object named `carleton` holds Carleton's board instead (an object keeps
+  the board it was first asked for): every page of the Student Employment
+  site's WordPress posts (at most ten), without the archived ones, as one row
+  per job with its own FTS5 index, on the same schedule, backoff and idling.
+  Shaping is in `source/student-work/carleton-shape.ts`; the rows and queries
+  in `src/carleton-board.ts`.
 
 A source must be imported from `src/worker.ts`, or the object answers "unknown
 source".

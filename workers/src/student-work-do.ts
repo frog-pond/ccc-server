@@ -8,6 +8,17 @@ import {
 	type BoardPosting,
 } from '../../source/student-work/oracle-shape.ts'
 import {unitNumberOfDescription} from '../../source/student-work/unit-number.ts'
+import {
+	createCarletonTables,
+	listCarleton,
+	oneCarleton,
+	purgeCarleton,
+	readCarletonBoard,
+	saveCarletonBoard,
+	type CarletonFilters,
+	type CarletonJob,
+	type CarletonListing,
+} from './carleton-board.ts'
 import {clock} from './clock.ts'
 import {
 	listingOf,
@@ -72,6 +83,16 @@ type StateRow = {
 /// Oracle answered with something that says to slow down.
 class Refused extends Error {}
 
+/// Which board an object holds: St. Olaf's on Oracle Recruiting, or
+/// Carleton's on its Student Employment WordPress site. An object holds the
+/// board it was first asked about.
+export type BoardKind = 'oracle' | 'carleton'
+
+const UNAVAILABLE: Record<BoardKind, string> = {
+	oracle: 'Oracle Recruiting unavailable',
+	carleton: 'Carleton Student Employment unavailable',
+}
+
 async function getJson(url: string): Promise<unknown> {
 	// built from oracle-shape's own addresses; checked anyway, and a redirect
 	// is not followed
@@ -90,9 +111,10 @@ async function getJson(url: string): Promise<unknown> {
 	return response.json()
 }
 
-/// St. Olaf's Student Work board, one row per posting in SQLite, kept fresh by
-/// the object's own alarm: the board every few hours, and each posting's
-/// detail when it is new, has no unit yet, or was read a day ago.
+/// A student jobs board, one row per posting in SQLite, kept fresh by the
+/// object's own alarm every few hours. For St. Olaf's, each posting's detail is
+/// also read when it is new, has no unit yet, or was read a day ago; Carleton's
+/// site lists every job whole.
 export class StudentWorkDO extends DurableObject<Env> {
 	#inflight: Promise<void> | null = null
 
@@ -124,7 +146,19 @@ export class StudentWorkDO extends DurableObject<Env> {
 				last_error TEXT,
 				last_read INTEGER NOT NULL
 			);
-			INSERT OR IGNORE INTO state (id, last_read) VALUES (1, 0);`)
+			INSERT OR IGNORE INTO state (id, last_read) VALUES (1, 0);
+			CREATE TABLE IF NOT EXISTS kind (
+				id INTEGER PRIMARY KEY CHECK (id = 1),
+				kind TEXT NOT NULL
+			);`)
+		createCarletonTables(ctx.storage.sql)
+	}
+
+	/// The board this object holds, recorded on the first request.
+	#kind(asked?: BoardKind): BoardKind | undefined {
+		let sql = this.ctx.storage.sql
+		if (asked) sql.exec('INSERT OR IGNORE INTO kind (id, kind) VALUES (1, ?)', asked)
+		return sql.exec<{kind: BoardKind}>('SELECT kind FROM kind WHERE id = 1').toArray()[0]?.kind
 	}
 
 	#state(): StateRow {
@@ -134,7 +168,10 @@ export class StudentWorkDO extends DurableObject<Env> {
 	/// Makes sure there is a board to answer from. With nothing stored yet, it
 	/// is read first; a stored board past its refresh is answered at once and
 	/// refreshed behind.
-	async #ensure(): Promise<BoardResult<object>> {
+	async #ensure(asked: BoardKind): Promise<BoardResult<object>> {
+		let kind = this.#kind(asked)
+		if (kind !== asked)
+			return {state: 'error', error: `this object holds the ${String(kind)} board`}
 		let now = clock.now()
 		let state = this.#state()
 		if (now - state.last_read > TOUCH_EVERY) {
@@ -151,7 +188,7 @@ export class StudentWorkDO extends DurableObject<Env> {
 			}
 			state = this.#state()
 			if (state.board_fetched_at === null) {
-				return {state: 'error', error: state.last_error ?? 'Oracle Recruiting unavailable'}
+				return {state: 'error', error: state.last_error ?? UNAVAILABLE[kind]}
 			}
 		} else if ((await this.ctx.storage.getAlarm()) === null) {
 			// a board that went quiet: refresh now if it is due, else on schedule
@@ -164,7 +201,7 @@ export class StudentWorkDO extends DurableObject<Env> {
 	/// `areas` is each area's units; a posting is in the areas that list its
 	/// unit, or in those listing "other" when none does or it names none.
 	async list(filters: Filters, areas: AreaUnits): Promise<BoardResult<{postings: Posting[]}>> {
-		let ready = await this.#ensure()
+		let ready = await this.#ensure('oracle')
 		if (ready.state === 'error') return ready
 
 		let where: string[] = []
@@ -253,7 +290,7 @@ export class StudentWorkDO extends DurableObject<Env> {
 		id: string,
 		areas: AreaUnits,
 	): Promise<BoardResult<{posting: Posting | null; description: PostingDescription | null}>> {
-		let ready = await this.#ensure()
+		let ready = await this.#ensure('oracle')
 		if (ready.state === 'error') return ready
 		let row = this.ctx.storage.sql
 			.exec<{detail: string | null}>('SELECT detail FROM postings WHERE id = ?', id)
@@ -271,7 +308,7 @@ export class StudentWorkDO extends DurableObject<Env> {
 
 	/// Each read posting's unit by id; a posting whose detail is unread is left out.
 	async units(): Promise<BoardResult<{units: Record<string, string | null>}>> {
-		let ready = await this.#ensure()
+		let ready = await this.#ensure('oracle')
 		if (ready.state === 'error') return ready
 		let units: Record<string, string | null> = {}
 		for (let {id, unit} of this.ctx.storage.sql
@@ -284,6 +321,22 @@ export class StudentWorkDO extends DurableObject<Env> {
 		return {...ready, units}
 	}
 
+	/// Carleton's jobs that pass the filters.
+	async carletonList(
+		filters: CarletonFilters,
+	): Promise<BoardResult<{postings: CarletonListing[]}>> {
+		let ready = await this.#ensure('carleton')
+		if (ready.state === 'error') return ready
+		return {...ready, postings: listCarleton(this.ctx.storage.sql, filters)}
+	}
+
+	/// One of Carleton's jobs with its description, or null when it is not listed.
+	async carletonOne(id: string): Promise<BoardResult<{posting: CarletonJob | null}>> {
+		let ready = await this.#ensure('carleton')
+		if (ready.state === 'error') return ready
+		return {...ready, posting: oneCarleton(this.ctx.storage.sql, id)}
+	}
+
 	#refresh(): Promise<void> {
 		return (this.#inflight ??= this.#run().finally(() => {
 			this.#inflight = null
@@ -294,6 +347,15 @@ export class StudentWorkDO extends DurableObject<Env> {
 		let now = clock.now()
 		let unread = 0
 		try {
+			if (this.#kind() === 'carleton') {
+				saveCarletonBoard(this.ctx.storage.sql, await readCarletonBoard(), now)
+				this.ctx.storage.sql.exec(
+					`UPDATE state SET board_fetched_at = ?, failures = 0, backoff_until = 0,
+						last_error = NULL WHERE id = 1`,
+					now,
+				)
+				return
+			}
 			let board = boardPostings(await getJson(boardUrl()))
 			let stored = this.ctx.storage.sql
 				.exec<{n: number}>('SELECT count(*) AS n FROM postings')
@@ -446,6 +508,8 @@ export class StudentWorkDO extends DurableObject<Env> {
 	async purge() {
 		this.ctx.storage.sql.exec('DELETE FROM postings')
 		this.ctx.storage.sql.exec('DELETE FROM postings_fts')
+		this.ctx.storage.sql.exec('DELETE FROM kind')
+		purgeCarleton(this.ctx.storage.sql)
 		this.ctx.storage.sql.exec(
 			`UPDATE state SET board_fetched_at = NULL, failures = 0, backoff_until = 0,
 				last_error = NULL, last_read = 0 WHERE id = 1`,

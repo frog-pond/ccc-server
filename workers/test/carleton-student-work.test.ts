@@ -1,7 +1,7 @@
 import {env, exports} from 'cloudflare:workers'
+import {runDurableObjectAlarm} from 'cloudflare:test'
 import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} from 'vitest'
 import {clock} from '../src/clock.ts'
-import {carletonStudentWork} from '../src/sources/carleton-student-work.ts'
 import {spyOnFetch} from './spy.ts'
 import jobs from './fixtures/carleton-student-jobs.json?raw'
 
@@ -17,6 +17,7 @@ const ARCHIVED = {
 	_embedded: {'wp:term': [[{taxonomy: 'category', name: 'Archived'}]]},
 }
 
+const stub = () => env.STUDENT_WORK.getByName('carleton')
 const get = (path: string) => exports.default.fetch(new Request(`https://worker.test${path}`))
 const list = async (query = '') => {
 	let response = await get(`/edu.carleton/student-work/postings${query}`)
@@ -37,7 +38,7 @@ let upstream: () => Response
 
 beforeEach(async () => {
 	clock.now = () => Date.now()
-	await env.SOURCE.getByName(`${carletonStudentWork.name}:carleton`).purge()
+	await stub().purge()
 	upstream = () =>
 		Response.json([...POSTS, ARCHIVED], {headers: {'x-wp-total': '5', 'x-wp-totalpages': '1'}})
 	fetchSpy = spyOnFetch()
@@ -151,6 +152,40 @@ describe('Carleton /student-work/postings', () => {
 	test('does not follow a redirect', async () => {
 		await list()
 		expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({redirect: 'manual'})
+	})
+})
+
+describe('Carleton refresh', () => {
+	test('the alarm adds new jobs and drops ones no longer listed', async () => {
+		await list()
+		let added = {...POSTS[1]!, id: 7000}
+		upstream = () => Response.json([added, ...POSTS.slice(1)])
+		expect(await runDurableObjectAlarm(stub())).toBe(true)
+		// the new job was posted when 4063 was, and the newer id comes first
+		expect(await ids('')).toEqual(['7000', '4063', '4060', '3732'])
+		expect(await ids('?q=instagram')).toEqual([])
+	})
+
+	test('keeps when the job was first seen', async () => {
+		let first = (await list()).body.postings[0] as {firstSeenAt?: string}
+		expect(first.firstSeenAt).toMatch(/^\d{4}-\d{2}-\d{2}T/u)
+		await runDurableObjectAlarm(stub())
+		let again = (await list()).body.postings[0] as {firstSeenAt?: string}
+		expect(again.firstSeenAt).toBe(first.firstSeenAt)
+	})
+
+	test('an empty board in place of a full one keeps the stored jobs', async () => {
+		await list()
+		upstream = () => Response.json([])
+		await runDurableObjectAlarm(stub())
+		expect((await list()).body.count).toBe(4)
+	})
+
+	test('a failing site keeps the stored jobs', async () => {
+		await list()
+		upstream = () => new Response('down', {status: 503})
+		await runDurableObjectAlarm(stub())
+		expect((await list()).body.count).toBe(4)
 	})
 })
 
