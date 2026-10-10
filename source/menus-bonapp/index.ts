@@ -1,13 +1,8 @@
 import {getJson, getText} from '../ccc-lib/http.ts'
 import * as Sentry from '@sentry/node'
-import {CafeMenuIsClosed, CafeMenuWithError, CustomCafe, campusToday} from './helpers.ts'
-import {cleanDayPart, cleanMenuItem} from './clean.ts'
-import {
-	CafeInfoResponseSchema,
-	CafeMenuResponseSchema,
-	type CafeInfoResponseType,
-	type CafeMenuResponseType,
-} from './types.ts'
+import {CafeMenuWithError, CustomCafe, campusToday} from './helpers.ts'
+import {cafeFrom, menuFrom} from './shape.ts'
+import type {CafeInfoResponseType, CafeMenuResponseType} from './types.ts'
 
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
 import {extractBamco} from './extract-bamco.ts'
@@ -24,30 +19,7 @@ async function getBamco(url: string | URL) {
 }
 
 export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
-	let bamco = await getBamco(cafeUrl)
-	if (typeof bamco === 'undefined') {
-		return CustomCafe('Café is closed')
-	}
-
-	return CafeInfoResponseSchema.parse({
-		cafe: {
-			name: bamco.current_cafe.name,
-			days: [
-				{
-					date: campusToday(),
-					dayparts: Object.values(bamco.dayparts).map(
-						({id, label, message, starttime, endtime}) => ({
-							id,
-							label,
-							message,
-							starttime,
-							endtime,
-						}),
-					),
-				},
-			],
-		},
-	})
+	return cafeFrom((await getBamco(cafeUrl)) ?? null, campusToday())
 }
 
 export async function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
@@ -65,35 +37,13 @@ export function nutrition(itemId: string) {
 }
 
 export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
-	let bamco = await getBamco(cafeUrl)
-	if (typeof bamco === 'undefined') {
-		// also what a page BonApp has reshaped past reading looks like
-		recordFeedItems('bonapp', feedName(cafeUrl), 0, {closed: true})
-		return CafeMenuIsClosed()
-	}
-
-	let {items, dayparts} = stage('bonapp.clean', () => ({
-		items: Object.fromEntries(
-			Object.entries(bamco.menu_items).map(([id, item]) => [id, cleanMenuItem(item)]),
-		),
-		dayparts: Object.values(bamco.dayparts).map(cleanDayPart),
-	}))
-	recordFeedItems('bonapp', feedName(cafeUrl), Object.keys(items).length, {closed: false})
-
-	return CafeMenuResponseSchema.parse({
-		cor_icons: Array.isArray(bamco.cor_icons) ? {} : bamco.cor_icons,
-		items,
-		days: [
-			{
-				date: campusToday(),
-				cafe: {
-					name: bamco.current_cafe.name,
-					menu_id: '1',
-					dayparts: [dayparts],
-				},
-			},
-		],
+	let bamco = (await getBamco(cafeUrl)) ?? null
+	// a closed café is also what a page BonApp has reshaped past reading looks like
+	recordFeedItems('bonapp', feedName(cafeUrl), bamco ? Object.keys(bamco.menu_items).length : 0, {
+		closed: bamco === null,
 	})
+
+	return stage('bonapp.clean', () => menuFrom(bamco, campusToday()))
 }
 
 export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
