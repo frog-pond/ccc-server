@@ -19,6 +19,8 @@ export default defineConfig({
 		// the first request of a file loads the worker, whose calendar readers bring
 		// in moment-timezone and its zone data, which takes seconds to load here
 		testTimeout: 30_000,
+		// and a file's first hook may be what loads it
+		hookTimeout: 30_000,
 		includeTaskLocation: true,
 		reporters: [
 			'default',

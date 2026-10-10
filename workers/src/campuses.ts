@@ -1,9 +1,21 @@
 import {CARLETON_CALENDARS, CONVOS, STOLAF_CALENDARS, type Calendar} from './calendars.ts'
 import {deprecatedWpJson, retiredNnb} from '../../source/feeds/deprecated.ts'
 import type {FeedItemType} from '../../source/feeds/types.ts'
-import {CAFES} from './cafes.ts'
+import {CAFES, NAMED_CAFES} from './cafes.ts'
 import {fetchSource} from './client.ts'
-import {CARLETON_FILES, STOLAF_FILES, type PagesRoute} from './pages-routes.ts'
+import {
+	CARLETON_FILES,
+	CARLETON_REDIRECTS,
+	STOLAF_FILES,
+	STOLAF_REDIRECTS,
+	STOLAF_SCHEDULES,
+	type PagesRoute,
+} from './pages-routes.ts'
+import type {ScheduleParams} from './sources/schedules.ts'
+import {
+	A_TO_Z_TEXT,
+	deprecatedLinkGroups,
+} from '../../source/ccci-stolaf-college/v1/deprecated-shape.ts'
 import type {Jobs, Orgs} from './student-orgs.ts'
 import type {StudentWork} from './student-work.ts'
 import {KRLX_URL, rssNews} from './sources/rss-news.ts'
@@ -30,6 +42,8 @@ export type NewsFeed = {
 export type Campus = {
 	/// BonApp café ids (what the apps ask for) to their pages
 	cafes: Record<string, string>
+	/// café names, as in `/food/named/{menu,cafe}/<name>`, to their pages
+	namedCafes: Record<string, string>
 	/// feed names, as in `/news/<name>`
 	news: Record<string, NewsFeed>
 	/// news sites the app reads in WordPress's own shape, by name, as in
@@ -41,6 +55,15 @@ export type Campus = {
 	convos?: Calendar
 	/// data files the college publishes, passed through, by path
 	files: Record<string, PagesRoute>
+	/// files answered with a temporary redirect to where they are published, by path
+	redirects: Record<string, string>
+	/// fixed answers that need nothing fetched, by path
+	notices: Record<string, unknown>
+	/// the building hours and break calendar, read together and resolved, where
+	/// the campus has them (`/spaces/hours` and `/breaks`)
+	schedules?: ScheduleParams
+	/// whether `/images/:group/:name` redirects to the published app images
+	images: boolean
 	/// the student jobs routes, where the campus has them, by where they are read
 	studentWork?: ({board: 'oracle'} & StudentWork) | {board: 'wordpress'}
 	/// what the student orgs routes answer, where the campus has them
@@ -87,6 +110,7 @@ const WORDPRESS_NEWS: Record<string, WordPressSite> = {
 
 const STOLAF: Campus = {
 	cafes: CAFES,
+	namedCafes: NAMED_CAFES,
 	news: {
 		...NEWS,
 		oleville: NO_LONGER_UPDATED,
@@ -96,6 +120,10 @@ const STOLAF: Campus = {
 	wordpressNews: WORDPRESS_NEWS,
 	calendars: STOLAF_CALENDARS,
 	files: STOLAF_FILES,
+	redirects: STOLAF_REDIRECTS,
+	notices: {'/a-to-z': deprecatedLinkGroups(A_TO_Z_TEXT)},
+	schedules: STOLAF_SCHEDULES,
+	images: true,
 	studentWork: {board: 'oracle', areasUrl: STOLAF_FILES['/student-work/areas']!.url},
 	orgs: 'presence',
 	jobs: 'retired',
@@ -103,11 +131,15 @@ const STOLAF: Campus = {
 
 const CARLETON: Campus = {
 	cafes: CAFES,
+	namedCafes: NAMED_CAFES,
 	news: {...NEWS, covid: NO_LONGER_UPDATED, nnb: NNB},
 	wordpressNews: WORDPRESS_NEWS,
 	calendars: CARLETON_CALENDARS,
 	convos: CONVOS,
 	files: CARLETON_FILES,
+	redirects: CARLETON_REDIRECTS,
+	notices: {},
+	images: true,
 	studentWork: {board: 'wordpress'},
 	orgs: 'unavailable',
 	jobs: 'carleton',

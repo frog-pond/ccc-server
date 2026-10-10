@@ -11,6 +11,9 @@ import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
 import {jobs, org, orgCategories, orgs} from './student-orgs.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
+import {schedules, type ScheduleParams} from './sources/schedules.ts'
+import {imageUrl, isPublishedImage} from '../../source/ccc-lib/images-shape.ts'
+import {routeListing} from './routes.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -35,15 +38,7 @@ function cafeUrl(campus: Campus, cafeId: string): string | Response {
 /// The apps' menu and café info for a BonApp café, in the contract the Node
 /// server's /v1/food routes keep. A failure with nothing stored is still a
 /// 200 with a stand-in, which is what the apps already know how to show.
-async function food(
-	campus: Campus,
-	kind: 'menu' | 'cafe',
-	cafeId: string,
-	env: Env,
-): Promise<Response> {
-	let url = cafeUrl(campus, cafeId)
-	if (url instanceof Response) return url
-
+async function food(kind: 'menu' | 'cafe', url: string, env: Env): Promise<Response> {
 	try {
 		let {value} = await fetchSource(env, bonappPage, {url})
 		// read after the fetch, which can run across campus midnight: the response
@@ -55,7 +50,7 @@ async function food(
 			? json(menuFrom(value, date), 200, keep)
 			: json(cafeFrom(value, date), 200, keep)
 	} catch (err) {
-		console.error(err, {cafeId})
+		console.error(err, {url})
 		let date = campusToday(new Date(clock.now()))
 		return kind === 'menu'
 			? json(
@@ -128,6 +123,31 @@ async function dataFile(env: Env, {url}: PagesRoute): Promise<Response> {
 	}
 }
 
+/// A temporary redirect to where a file is published. Temporary, so a client
+/// asks here again and the file can be served from here later.
+const redirect = (location: string) =>
+	new Response(null, {
+		status: 307,
+		headers: {Location: location, 'Cache-Control': `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`},
+	})
+
+/// The building hours or the break calendar, resolved together, as the Node
+/// server's `/spaces/hours` and `/breaks` answer them. A failure with nothing
+/// stored is a 502, kept briefly.
+async function schedule(
+	env: Env,
+	params: ScheduleParams,
+	which: 'hours' | 'calendar',
+): Promise<Response> {
+	try {
+		let {value} = await fetchSource(env, schedules, params)
+		return json(value[which], 200, CLIENT_MAX_AGE)
+	} catch (err) {
+		console.error(err)
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
 export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
@@ -136,9 +156,10 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	// every other route is under a campus: /edu.stolaf/..., /edu.carleton/...
 	let mounted = /^\/([^/]+)(\/.*)$/.exec(url.pathname)
-	let campus = mounted?.[1] ? CAMPUSES.get(mounted[1]) : undefined
+	let prefix = mounted?.[1]
+	let campus = prefix ? CAMPUSES.get(prefix) : undefined
 	let path = mounted?.[2]
-	if (!campus || !path) return json({error: 'not found'}, 404)
+	if (!prefix || !campus || !path) return json({error: 'not found'}, 404)
 
 	let feed = /^\/news\/([^/]+)$/.exec(path)?.[1]
 	if (feed !== undefined && Object.hasOwn(campus.news, feed) && campus.news[feed]) {
@@ -158,6 +179,26 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	}
 
 	if (path === '/convos/upcoming' && campus.convos) return calendar(env, campus.convos)
+
+	if (path === '/routes') return json(routeListing(prefix, campus), 200, CLIENT_MAX_AGE)
+
+	if (Object.hasOwn(campus.notices, path)) return json(campus.notices[path], 200, CLIENT_MAX_AGE)
+
+	let location = Object.hasOwn(campus.redirects, path) ? campus.redirects[path] : undefined
+	if (location) return redirect(location)
+
+	if (campus.schedules) {
+		if (path === '/spaces/hours') return schedule(env, campus.schedules, 'hours')
+		if (path === '/breaks') return schedule(env, campus.schedules, 'calendar')
+	}
+
+	// only the app's published images, and one address for each (Node keeps
+	// the same rule, `isPublishedImage`, in source/ccc-lib/images-shape.ts)
+	let image = /^\/images\/([^/]+)\/([^/]+)$/.exec(path)
+	if (image?.[1] && image[2] && campus.images) {
+		if (url.search || !isPublishedImage(image[1], image[2])) return json({error: 'not found'}, 404)
+		return redirect(imageUrl(image[1], image[2]).href)
+	}
 
 	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
 	if (file) return dataFile(env, file)
@@ -187,7 +228,18 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (path === '/jobs' && campus.jobs) return jobs(env, campus.jobs)
 
 	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(path)
-	if (eating?.[1] && eating[2]) return food(campus, eating[1] as 'menu' | 'cafe', eating[2], env)
+	if (eating?.[1] && eating[2]) {
+		let cafe = cafeUrl(campus, eating[2])
+		if (cafe instanceof Response) return cafe
+		return food(eating[1] as 'menu' | 'cafe', cafe, env)
+	}
+
+	let namedFood = /^\/food\/named\/(menu|cafe)\/([^/]+)$/.exec(path)
+	let namedCafe =
+		namedFood?.[2] && Object.hasOwn(campus.namedCafes, namedFood[2])
+			? campus.namedCafes[namedFood[2]]
+			: undefined
+	if (namedFood?.[1] && namedCafe) return food(namedFood[1] as 'menu' | 'cafe', namedCafe, env)
 
 	let match = /^\/bonapp\/([^/]+)$/.exec(path)
 	if (match?.[1]) return bonapp(campus, match[1], url.searchParams.get('full') === '1', env)

@@ -93,12 +93,12 @@ describe('the route table', () => {
 			'/faqs': ['faqs.json', 'faqs.json'],
 			'/tools/help': ['help.json', 'help.json'],
 			'/webcams': ['webcams.json', 'webcams.json'],
-			'/spaces/hours': ['building-hours.json', 'building-hours.json'],
 		}
 		for (let [path, [stolafFile, carletonFile]] of Object.entries(files)) {
 			expect(stolaf?.[path]?.url).toBe(STOLAF_PAGES(stolafFile).href)
 			expect(carleton?.[path]?.url).toBe(CARLETON_PAGES(carletonFile).href)
 		}
+		expect(carleton?.['/spaces/hours']?.url).toBe(CARLETON_PAGES('building-hours.json').href)
 		for (let [path, file] of Object.entries({
 			'/sources': 'sources.json',
 			'/spaces/directory': 'building-directory.json',
