@@ -23,6 +23,25 @@ const campusDate = new Intl.DateTimeFormat('en-CA', {
 /// Today's date on campus, e.g. `2026-09-22`.
 export const campusToday = (now: Date): string => campusDate.format(now)
 
+const campusClock = new Intl.DateTimeFormat('en-US', {
+	timeZone: CAMPUS_TIMEZONE,
+	hourCycle: 'h23',
+	hour: 'numeric',
+	minute: 'numeric',
+	second: 'numeric',
+})
+
+/// Seconds left in the campus day, up to a whole one just after midnight. A
+/// response dated by `campusToday` is wrong once the day ends, so nothing is
+/// kept past it. Only the last hour before midnight can bind, and a clock
+/// change (at 2 AM) cannot fall within it, so counting from the clock's own
+/// hours, minutes and seconds is exact where it matters.
+export function secondsUntilCampusMidnight(now: Date): number {
+	let part = (type: string) =>
+		Number(campusClock.formatToParts(now).find((p) => p.type === type)?.value)
+	return 24 * 60 * 60 - (part('hour') * 60 * 60 + part('minute') * 60 + part('second'))
+}
+
 /// Only BonApp's own café pages: the url comes from the caller, and this must
 /// not become a way to make the worker fetch anything.
 const BONAPP_HOST = /^[a-z]+\.cafebonappetit\.com$/
