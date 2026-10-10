@@ -51,13 +51,13 @@ describe('how long a food response may be kept', () => {
 
 	test('a menu is kept no longer than the campus day it is for', async () => {
 		campusTime('2030-01-15T05:30:00Z') // 11:30 PM CST on the 14th
-		let response = await get('/v1/food/menu/261')
+		let response = await get('/food/menu/261')
 		expect(response.headers.get('cache-control')).toBe('public, max-age=1800')
 	})
 
 	test('café info is kept no longer than the campus day it is for', async () => {
 		campusTime('2030-01-15T05:30:00Z')
-		let response = await get('/v1/food/cafe/262')
+		let response = await get('/food/cafe/262')
 		expect(response.headers.get('cache-control')).toBe('public, max-age=1800')
 	})
 
@@ -72,7 +72,7 @@ describe('how long a food response may be kept', () => {
 
 	test('a fetch that ends after campus midnight is dated and kept by the day it ended', async () => {
 		crossMidnight(() => new Response(stavHall, {headers: {'content-type': 'text/html'}}))
-		let response = await get('/v1/food/menu/35')
+		let response = await get('/food/menu/35')
 		let body = await response.json<{days: {date: string}[]}>()
 		expect(body.days[0]?.date).toBe('2030-01-15')
 		// the new day has nearly all of it left, so an hour, not the one second the old day had
@@ -81,13 +81,13 @@ describe('how long a food response may be kept', () => {
 
 	test('a stand-in made after campus midnight is dated by the day it was made', async () => {
 		crossMidnight(() => new Response('boom', {status: 503}))
-		let body = await (await get('/v1/food/menu/36')).json<{days: {date: string}[]}>()
+		let body = await (await get('/food/menu/36')).json<{days: {date: string}[]}>()
 		expect(body.days[0]?.date).toBe('2030-01-15')
 	})
 
 	test('earlier in the day it is still kept an hour', async () => {
 		campusTime('2030-01-15T18:00:00Z') // noon CST
-		let response = await get('/v1/food/menu/263')
+		let response = await get('/food/menu/263')
 		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
 	})
 })

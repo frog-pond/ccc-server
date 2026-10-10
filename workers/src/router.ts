@@ -107,11 +107,11 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	if (url.pathname === '/') return json({cafes: CAFES})
 
-	if (url.pathname === '/v1/news/named/stolaf') return news(env, wpNews, STOLAF_NEWS_URL)
-	if (url.pathname === '/v1/news/named/carleton-now') return news(env, wpNews, CARLETON_NOW_URL)
-	if (url.pathname === '/v1/news/named/carletonian') return news(env, rssNews, CARLETONIAN_URL)
+	if (url.pathname === '/news/stolaf') return news(env, wpNews, STOLAF_NEWS_URL)
+	if (url.pathname === '/news/carleton-now') return news(env, wpNews, CARLETON_NOW_URL)
+	if (url.pathname === '/news/carletonian') return news(env, rssNews, CARLETONIAN_URL)
 
-	let eating = /^\/v1\/food\/(menu|cafe)\/([^/]+)$/.exec(url.pathname)
+	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(url.pathname)
 	if (eating?.[1] && eating[2]) return food(eating[1] as 'menu' | 'cafe', eating[2], env)
 
 	let match = /^\/bonapp\/([^/]+)$/.exec(url.pathname)

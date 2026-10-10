@@ -41,19 +41,25 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
 ## Routes
 
 - `GET /`: the cafés this knows, by BonApp id.
-- `GET /v1/food/menu/:cafeId` and `GET /v1/food/cafe/:cafeId`: the apps' menu and
+  Routes have no `/v1` prefix and news is `/news/<name>`, not `/news/named/<name>`.
+  The Node server's arbitrary-URL endpoints (`/news/rss`, `/news/wpjson`,
+  `/calendar/ics`, `/calendar/google`) are not migrated: a route names its source.
+  A name both colleges use for different things (such as `krlx`) gets the
+  `/edu.stolaf` and `/edu.carleton` prefixes when it moves.
+
+- `GET /food/menu/:cafeId` and `GET /food/cafe/:cafeId`: the apps' menu and
   café info, in the contract the Node server's routes keep (an unknown id is a
   400; BonApp failing with nothing stored is a 200 with a stand-in). They share
   `menuFrom` and `cafeFrom` (`source/menus-bonapp/shape.ts`) with the Node
   server. Successes are cacheable for an hour, or until campus midnight if that comes sooner (they are dated by the campus day); stand-ins for a minute.
-- `GET /v1/news/named/stolaf`: St. Olaf news as feed items, from
+- `GET /news/stolaf`: St. Olaf news as feed items, from
   `wp.stolaf.edu`'s WordPress (which blocks the Node server's IP but not a
   Worker's; the Node server only has a stub for older builds). Shaped by
   `feedItemsFrom` (`source/feeds/wp-json-shape.ts`), shared with the Node
   server. Fresh for an hour, kept a day if WordPress fails; a 502 if nothing
   has ever been stored. `olafmessenger.com` is not served here: its Cloudflare
   bot challenge blocks Worker egress.
-- `GET /v1/news/named/carleton-now` and `GET /v1/news/named/carletonian`: Carleton
+- `GET /news/carleton-now` and `GET /news/carletonian`: Carleton
   News (the `carleton.edu/news` WordPress) and The Carletonian (its RSS feed), as
   feed items, shaped by `feedItemsFrom` and `feedItemsFromRss`
   (`source/feeds/`), shared with the Node server. Same behavior as the St. Olaf

@@ -35,7 +35,7 @@ afterEach(() => {
 describe.each([
 	{
 		name: 'the St. Olaf news feed',
-		path: '/v1/news/named/stolaf',
+		path: '/news/stolaf',
 		url: STOLAF_NEWS_URL,
 		field: 'message',
 	},
