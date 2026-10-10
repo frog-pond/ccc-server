@@ -26,9 +26,24 @@ export type Conditional = {
 
 export const conditional = new AsyncLocalStorage<Conditional>()
 
-/// A body bigger than this is not kept, and its address is asked for in full:
-/// a SQLite row holds at most 2 MB, and the value is kept too.
-const MAX_KEPT = 512 * 1024
+/// A body bigger than this is not kept, and its address is asked for in full.
+/// Bodies are kept compressed, and a SQLite row holds at most 2 MB: a café page
+/// or Carleton's calendar page is 1.5 to 3.5 MB of HTML, a tenth of that gzipped.
+const MAX_KEPT = 16 * 1024 * 1024
+/// Nor is one that is bigger than this compressed.
+export const MAX_KEPT_COMPRESSED = 1024 * 1024
+
+/// A body as it is kept.
+export async function gzip(text: string): Promise<ArrayBuffer> {
+	let stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))
+	return new Response(stream).arrayBuffer()
+}
+
+/// A kept body as it was.
+export async function gunzip(data: ArrayBuffer): Promise<string> {
+	let stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('gzip'))
+	return new Response(stream).text()
+}
 
 /// The longest `Retry-After` honored, so a misread or hostile header cannot
 /// stop a source for good.

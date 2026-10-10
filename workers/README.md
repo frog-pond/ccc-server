@@ -294,7 +294,7 @@ streams soonest first within a page, as their live routes are (streams take
 Every upstream request goes through `upstream` (`src/upstream.ts`), which sends
 `User-Agent: ccc-server/2.0` and never follows a redirect. While a source
 loads, its GETs are conditional (`src/conditional.ts`): an answer that came
-with an `ETag` or `Last-Modified` is kept beside the value (up to 512 KB, by a
+with an `ETag` or `Last-Modified` is kept gzipped beside the value (up to 1 MB compressed, by a
 digest of its address), the next load sends `If-None-Match` /
 `If-Modified-Since`, and a `304` is read as that kept answer, a fresh read of
 the same body. A `429` or `503` with a `Retry-After` holds the source off at

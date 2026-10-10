@@ -88,6 +88,19 @@ describe('conditional requests', () => {
 		expect(sent(3).has('If-Modified-Since')).toBe(false)
 	})
 
+	test('a page too big for a row is kept compressed', async () => {
+		let page = `<html>${'<li>Lunch: soup of the day</li>'.repeat(100_000)}</html>`
+		expect(page.length).toBeGreaterThan(3_000_000)
+		fetchSpy.mockImplementationOnce(() =>
+			Promise.resolve(new Response(page, {headers: {ETag: '"big"'}})),
+		)
+		await get()
+		now += 2 * MINUTE
+		fetchSpy.mockImplementationOnce(() => Promise.resolve(new Response(null, {status: 304})))
+		expect((await get()).value.body).toBe(page)
+		expect(sent(1).get('If-None-Match')).toBe('"big"')
+	})
+
 	test('an answer without validators is asked for in full next time', async () => {
 		fetchSpy.mockImplementationOnce(() => Promise.resolve(new Response('plain')))
 		await get()

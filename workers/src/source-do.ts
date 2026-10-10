@@ -1,6 +1,13 @@
 import {DurableObject} from 'cloudflare:workers'
 import {clock} from './clock.ts'
-import {conditional, type Conditional, type KeptResponse} from './conditional.ts'
+import {
+	MAX_KEPT_COMPRESSED,
+	conditional,
+	gunzip,
+	gzip,
+	type Conditional,
+	type KeptResponse,
+} from './conditional.ts'
 import type {Served, SourceResult} from './define-source.ts'
 import {registry} from './registry.ts'
 
@@ -63,7 +70,8 @@ export class SourceDO extends DurableObject<Env> {
 				etag TEXT,
 				last_modified TEXT,
 				headers TEXT NOT NULL,
-				body TEXT NOT NULL
+				-- gzipped
+				body BLOB NOT NULL
 			)`)
 	}
 
@@ -120,42 +128,49 @@ export class SourceDO extends DurableObject<Env> {
 		return {state: 'error', error: row.last_error ?? 'upstream unavailable'}
 	}
 
-	#keptResponses(): Map<string, KeptResponse> {
+	async #keptResponses(): Promise<Map<string, KeptResponse>> {
 		let rows = this.ctx.storage.sql
 			.exec<{
 				key: string
 				etag: string | null
 				last_modified: string | null
 				headers: string
-				body: string
+				body: ArrayBuffer | string
 			}>('SELECT * FROM response')
 			.toArray()
-		return new Map(
-			rows.map((r) => [
-				r.key,
-				{
-					etag: r.etag,
-					lastModified: r.last_modified,
-					headers: JSON.parse(r.headers) as [string, string][],
-					body: r.body,
-				},
-			]),
-		)
+		let kept = new Map<string, KeptResponse>()
+		for (let row of rows) {
+			// one that cannot be read is asked for in full
+			if (typeof row.body === 'string') continue
+			let body = await gunzip(row.body).catch(() => null)
+			if (body === null) continue
+			kept.set(row.key, {
+				etag: row.etag,
+				lastModified: row.last_modified,
+				headers: JSON.parse(row.headers) as [string, string][],
+				body,
+			})
+		}
+		return kept
 	}
 
 	/// Keeps the answers a good load got, and only those: an address it no
 	/// longer asks for is not asked for conditionally again.
-	#keepResponses(used: ReadonlyMap<string, KeptResponse>) {
+	async #keepResponses(used: ReadonlyMap<string, KeptResponse>) {
+		let compressed = await Promise.all(
+			[...used].map(async ([key, kept]) => [key, kept, await gzip(kept.body)] as const),
+		)
 		let sql = this.ctx.storage.sql
 		sql.exec('DELETE FROM response')
-		for (let [key, kept] of used) {
+		for (let [key, kept, body] of compressed) {
+			if (body.byteLength > MAX_KEPT_COMPRESSED) continue
 			sql.exec(
 				'INSERT INTO response (key, etag, last_modified, headers, body) VALUES (?, ?, ?, ?, ?)',
 				key,
 				kept.etag,
 				kept.lastModified,
 				JSON.stringify(kept.headers),
-				kept.body,
+				body,
 			)
 		}
 	}
@@ -172,11 +187,15 @@ export class SourceDO extends DurableObject<Env> {
 		let row = this.#row()!
 		let spec = registry[row.name]!
 		let now = clock.now()
-		let context: Conditional = {kept: this.#keptResponses(), used: new Map(), retryAfter: 0}
+		let context: Conditional = {
+			kept: await this.#keptResponses(),
+			used: new Map(),
+			retryAfter: 0,
+		}
 		try {
 			let params = JSON.parse(row.params) as never
 			let value = await conditional.run(context, () => spec.load(params, this.env))
-			this.#keepResponses(context.used)
+			await this.#keepResponses(context.used)
 			this.ctx.storage.sql.exec(
 				`UPDATE entry SET value = ?, fetched_at = ?, epoch = ?, ttl = ?,
 					failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1`,
