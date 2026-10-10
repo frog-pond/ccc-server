@@ -7,6 +7,7 @@
 		"bindings": [
 			{"name": "SOURCE", "class_name": "SourceDO"},
 			{"name": "STUDENT_WORK", "class_name": "StudentWorkDO"},
+			{"name": "STUDENT_ORGS", "class_name": "StudentOrgsDO"},
 		],
 	},
 	"observability": {
@@ -20,6 +21,7 @@
 	"migrations": [
 		{"tag": "v1", "new_sqlite_classes": ["SourceDO"]},
 		{"tag": "v2", "new_sqlite_classes": ["StudentWorkDO"]},
+		{"tag": "v3", "new_sqlite_classes": ["StudentOrgsDO"]},
 	],
 	// A Preview does not inherit bindings, so it needs its own copy to have
 	// env.SOURCE or observability. Each Preview gets its own Durable Object namespace and storage.
@@ -36,6 +38,7 @@
 			"bindings": [
 				{"name": "SOURCE", "class_name": "SourceDO"},
 				{"name": "STUDENT_WORK", "class_name": "StudentWorkDO"},
+				{"name": "STUDENT_ORGS", "class_name": "StudentOrgsDO"},
 			],
 		},
 	},

@@ -102,6 +102,32 @@ day if its host fails; student work keeps its own schedule, below.
   notice the Node routes send (`deprecatedWpJson` and `retiredNnb` in
   `source/feeds/deprecated.ts`, shared with the Node server, which dates it
   at the request). Nothing is fetched.
+- `GET /edu.stolaf/orgs`: every student org Presence lists, in the app's list
+  order, as the Node route answers them (`presenceOrgs` and `withoutDemoOrgs` in
+  `source/student-orgs/presence-shape.ts`, shared with the Node server; orgs in
+  Presence's Demo category are left out). `?q=` keeps the orgs whose name or
+  description has words starting with each word given; `?category=` (repeatable)
+  keeps the orgs in any of the categories named. Other parameters are ignored,
+  as Node ignores them. A 502 if nothing was ever stored.
+- `GET /edu.stolaf/orgs/categories`: each category with the uris of its orgs,
+  as the Node route answers them (`presenceCategories` and
+  `withoutDemoCategory`).
+- `GET /edu.stolaf/orgs/uri/:uri`: one org with the contacts, advisors, links
+  and office details from its Presence portal view (`orgDetail`, with
+  `portalFields` in `source/student-orgs/portal.ts`). A uri that is not a
+  Presence slug, or not in the list, is a 404 without reading Presence. A 502
+  when the portal view cannot be read and nothing is stored.
+- `GET /edu.carleton/orgs`: the Node route's notice that Carleton's orgs
+  cannot be loaded (`unavailableOrgs` in
+  `source/ccci-carleton-college/v1/deprecated.ts`, shared with the Node
+  server). Nothing is fetched.
+- `GET /edu.carleton/jobs`: Carleton's Student Employment jobs in the Node
+  route's shape (`jobFromPost` in `source/ccci-carleton-college/v1/jobs-shape.ts`,
+  shared with the Node server), newest first, read from the Carleton student
+  work board below, so it costs no fetch of its own. A 502 if nothing was ever stored.
+- `GET /edu.stolaf/jobs`: the Node route's notice that the listings moved
+  (`deprecatedJobs` in `source/student-work/retired-jobs.ts`), dated by a fixed
+  day so its body and ETag never change. Nothing is fetched.
 
 ## Sources
 
@@ -149,6 +175,23 @@ day if its host fails; student work keeps its own schedule, below.
   per job with its own FTS5 index, on the same schedule, backoff and idling.
   Shaping is in `source/student-work/carleton-shape.ts`; the rows and queries
   in `src/carleton-board.ts`.
+
+- `StudentOrgsDO` (`src/student-orgs-do.ts`): another Durable Object (binding
+  `STUDENT_ORGS`, one object named `stolaf`), holding St. Olaf's student orgs as
+  one SQLite row per org in list order, with an FTS5 index of each org's name
+  and description, and a row per category. It reads Presence (`api.presence.io`:
+  the org list, the campus and the category memberships, three requests a
+  run); only Presence's origin is fetched, and a redirect is not followed. Its alarm reads
+  the list every hour plus up to ten minutes of jitter; orgs no longer listed
+  are dropped. A failed read keeps the stored list and backs off (five minutes,
+  doubling, up to an hour), an empty list in place of a full one is a failure,
+  and it stops refreshing after two days without a read. An org's portal view
+  (about 1.5 MB) is read only when someone opens that org; only the fields the
+  route answers are kept, in a row per org, and they are read again behind an
+  answer once an hour old, or five minutes after a failed read.
+
+  Both objects' schedules (when to read, backoff, idling) are in
+  `src/board-schedule.ts`.
 
 Every upstream request goes through `upstream` (`src/upstream.ts`), which sends
 `User-Agent: ccc-server/2.0` and never follows a redirect.

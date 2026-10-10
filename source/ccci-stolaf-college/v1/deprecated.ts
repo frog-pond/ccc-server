@@ -4,6 +4,9 @@ import {FeedItemSchema} from '../../feeds/types.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
 import {z} from 'zod'
+import {RETIRED_JOBS_TEXT, deprecatedJobs} from '../../student-work/retired-jobs.ts'
+
+export {deprecatedJobs} from '../../student-work/retired-jobs.ts'
 
 /// Where St. Olaf's WordPress blocks this server's IP, the app fetches those
 /// sources itself. Builds that predate that change still call these routes, so
@@ -45,44 +48,7 @@ export function jobs(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = deprecatedJobs(
-		"Student job listings can't be loaded in this version. Tap for details.",
-	)
-}
-
-/// Fills the list's grouping heading and row subtitle, which have no message to
-/// carry but cannot be blank.
-const JOBS_HEADING = 'Student work'
-
-export function deprecatedJobs(text: string, now = new Date()) {
-	return [
-		{
-			comments: '',
-			contactEmail: '',
-			contactName: '',
-			contactPhone: '',
-			description: text,
-			goodForIncomingStudents: false,
-			hoursPerWeek: '',
-			howToApply: '',
-			id: 0,
-			lastModified: now.toLocaleDateString('en-US', {
-				month: 'long',
-				day: 'numeric',
-				year: 'numeric',
-			}),
-			links: [DISCUSSION_URL],
-			office: JOBS_HEADING,
-			openPositions: '',
-			skills: '',
-			timeline: '',
-			timeOfHours: '',
-			title: UNAVAILABLE_TITLE,
-			type: JOBS_HEADING,
-			url: DISCUSSION_URL,
-			year: '',
-		},
-	]
+	ctx.body = deprecatedJobs(RETIRED_JOBS_TEXT)
 }
 
 /// The Google calendar behind this route was deleted upstream, and no app

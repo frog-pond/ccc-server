@@ -5,7 +5,7 @@ interface TurndownOptions {
 	baseUrl?: string
 }
 
-function turndown(content: string, {baseUrl = ''}: TurndownOptions = {}): string {
+function turndown(content: string | HTMLElement, {baseUrl = ''}: TurndownOptions = {}): string {
 	let t = new Turndown({
 		headingStyle: 'atx',
 		hr: '---',
@@ -43,6 +43,8 @@ function turndown(content: string, {baseUrl = ''}: TurndownOptions = {}): string
 	return t.turndown(content)
 }
 
-export function htmlToMarkdown(htmlStr: string, opts?: TurndownOptions) {
+/// Markdown for HTML, given as a string or as an element already parsed (with
+/// linkedom, say), which needs no DOM of turndown's own to read.
+export function htmlToMarkdown(htmlStr: string | HTMLElement, opts?: TurndownOptions) {
 	return turndown(htmlStr, opts)
 }

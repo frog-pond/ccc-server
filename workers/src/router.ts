@@ -9,6 +9,7 @@ import {pagesJson} from './sources/pages-json.ts'
 import {wordpress as wordpressApi} from './sources/wordpress-api.ts'
 import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
+import {jobs, org, orgCategories, orgs} from './student-orgs.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -173,6 +174,17 @@ export async function route(request: Request, env: Env): Promise<Response> {
 		let id = /^\/student-work\/postings\/(\d{1,12})$/.exec(path)?.[1]
 		if (id) return carletonPosting(env, id)
 	}
+
+	if (campus.orgs) {
+		if (path === '/orgs') return orgs(env, campus.orgs, url.searchParams)
+		if (campus.orgs === 'presence') {
+			if (path === '/orgs/categories') return orgCategories(env)
+			let uri = /^\/orgs\/uri\/([^/]+)$/.exec(path)?.[1]
+			if (uri !== undefined) return org(env, uri)
+		}
+	}
+
+	if (path === '/jobs' && campus.jobs) return jobs(env, campus.jobs)
 
 	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(path)
 	if (eating?.[1] && eating[2]) return food(campus, eating[1] as 'menu' | 'cafe', eating[2], env)

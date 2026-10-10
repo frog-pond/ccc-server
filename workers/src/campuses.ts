@@ -4,6 +4,7 @@ import type {FeedItemType} from '../../source/feeds/types.ts'
 import {CAFES} from './cafes.ts'
 import {fetchSource} from './client.ts'
 import {CARLETON_FILES, STOLAF_FILES, type PagesRoute} from './pages-routes.ts'
+import type {Jobs, Orgs} from './student-orgs.ts'
 import type {StudentWork} from './student-work.ts'
 import {KRLX_URL, rssNews} from './sources/rss-news.ts'
 import {
@@ -42,6 +43,10 @@ export type Campus = {
 	files: Record<string, PagesRoute>
 	/// the student jobs routes, where the campus has them, by where they are read
 	studentWork?: ({board: 'oracle'} & StudentWork) | {board: 'wordpress'}
+	/// what the student orgs routes answer, where the campus has them
+	orgs?: Orgs
+	/// what `/jobs` answers, where the campus has it
+	jobs?: Jobs
 }
 
 const fromWordPress = (url: string): NewsFeed => ({
@@ -92,6 +97,8 @@ const STOLAF: Campus = {
 	calendars: STOLAF_CALENDARS,
 	files: STOLAF_FILES,
 	studentWork: {board: 'oracle', areasUrl: STOLAF_FILES['/student-work/areas']!.url},
+	orgs: 'presence',
+	jobs: 'retired',
 }
 
 const CARLETON: Campus = {
@@ -102,6 +109,8 @@ const CARLETON: Campus = {
 	convos: CONVOS,
 	files: CARLETON_FILES,
 	studentWork: {board: 'wordpress'},
+	orgs: 'unavailable',
+	jobs: 'carleton',
 }
 
 /// The campuses, by the prefix they are mounted at.

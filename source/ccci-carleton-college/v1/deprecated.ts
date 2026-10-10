@@ -1,5 +1,5 @@
 import {DISCUSSION_URL, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
-import {SortableCarletonStudentOrgSchema} from './orgs.ts'
+import {SortableCarletonStudentOrgSchema} from './orgs-shape.ts'
 
 export {retiredNnb} from '../../feeds/deprecated.ts'
 

@@ -10,6 +10,7 @@ import {
 	type CarletonPosting,
 	type CarletonPostingWithDescription,
 } from '../../source/student-work/carleton-shape.ts'
+import {jobFromPost} from '../../source/ccci-carleton-college/v1/jobs-shape.ts'
 import {searchWords} from '../../source/student-work/posting-shape.ts'
 import {ftsQuery} from './student-work-shape.ts'
 import {upstream} from './upstream.ts'
@@ -198,6 +199,19 @@ export function listCarleton(sql: SqlStorage, filters: CarletonFilters): Carleto
 export function oneCarleton(sql: SqlStorage, id: string): CarletonJob | null {
 	let row = sql.exec<{job: string}>('SELECT job FROM carleton_jobs WHERE id = ?', id).toArray()[0]
 	return row ? (JSON.parse(row.job) as CarletonJob) : null
+}
+
+/// Every job, newest first, in the shape the Node server's `/jobs` answers.
+export function carletonJobsAsListed(sql: SqlStorage): ReturnType<typeof jobFromPost>[] {
+	return sql
+		.exec<{job: string}>(
+			'SELECT job FROM carleton_jobs ORDER BY posted_at DESC, CAST(id AS INTEGER) DESC',
+		)
+		.toArray()
+		.map(({job}) => {
+			let {id, postedAt, url, title, description, categories} = JSON.parse(job) as CarletonJob
+			return jobFromPost({id, postedAt, link: url, title, html: description.html, categories})
+		})
 }
 
 export function purgeCarleton(sql: SqlStorage) {

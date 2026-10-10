@@ -2,34 +2,19 @@ import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
 import {parseHtml} from '../../ccc-lib/dom.ts'
 import {groupableName, sortOrgs, sortableName} from '../../student-orgs/names.ts'
-import {z} from 'zod'
+import {
+	SortableCarletonStudentOrgSchema,
+	type SortableCarletonStudentOrgType,
+} from './orgs-shape.ts'
 import type {Context} from '../../ccc-server/context.ts'
 import {unavailableOrgs} from './deprecated.ts'
 
-/// An org with no website, or none we may administer, is ordinary rather than
-/// malformed, and `domToOrg` says so with ''. Demanding a URL outright threw on
-/// those, and `getOrgs` parses in an unguarded loop, so one such org emptied the
-/// whole list.
-const UrlOrBlank = z.union([z.url(), z.literal('')])
-
-export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
-export const CarletonStudentOrgSchema = z.object({
-	id: z.string(),
-	contacts: z.string().array(),
-	categories: z.string().array(),
-	socialLinks: z.url().array(),
-	adminLink: UrlOrBlank,
-	description: z.string(),
-	website: UrlOrBlank,
-	name: z.string().min(1),
-})
-
-export type SortableCarletonStudentOrgType = z.infer<typeof SortableCarletonStudentOrgSchema>
-export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend({
-	/** The name, folded for sorting: no leading prefix such as "The", no accents, no opening punctuation */
-	$sortableName: z.string(),
-	$groupableName: z.string(),
-})
+export {
+	CarletonStudentOrgSchema,
+	SortableCarletonStudentOrgSchema,
+	type CarletonStudentOrgType,
+	type SortableCarletonStudentOrgType,
+} from './orgs-shape.ts'
 
 export function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
 	let name =
