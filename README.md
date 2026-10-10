@@ -97,19 +97,61 @@ mise run build
 mise run start:prod
 ```
 
-### Cache administration
+## Cache endpoint
 
-`GET /_cache` lists the response cache. `DELETE /_cache` clears it, or only the
-keys given as `?key=…`. Both need the admin key: set `ADMIN_KEY` in `.env` and
-send it as a bearer token.
+Each institution keeps an in-memory response cache, and `/_cache` lets you see
+and clear it. It lives next to `/ping`: at `/_cache` for a single-institution
+server, and at `/stolaf/_cache` and `/carleton/_cache` in combined mode. Each one
+only sees its own institution's entries.
+
+### Authentication
+
+Set `ADMIN_KEY` in `.env` and send it as a bearer token in the `Authorization`
+header: `Authorization: Bearer <ADMIN_KEY>`.
+
+Without `ADMIN_KEY` set, or without a matching token, every `/_cache` request
+answers 404 as if the route didn't exist.
+
+### Listing entries
+
+`GET /_cache` returns a JSON object mapping each cache key to the whole seconds
+until that entry expires. A key is the request path plus its query string, with
+the institution prefix in combined mode:
 
 ```sh
 curl -H "Authorization: Bearer $ADMIN_KEY" https://stolaf.api.frogpond.tech/_cache
-curl -X DELETE -H "Authorization: Bearer $ADMIN_KEY" https://stolaf.api.frogpond.tech/_cache
 ```
 
-Without `ADMIN_KEY` set, or without a matching token, `/_cache` answers 404 as if
-it didn't exist.
+```json
+{
+  "/v1/food/named/menu/stav-hall": "312",
+  "/v1/calendar/ics?url=https%3A%2F%2Fexample.com%2Fevents.ics": "3540"
+}
+```
+
+The listing is never cached itself, so it always shows the current state,
+including right after a deletion.
+
+### Deleting entries
+
+`DELETE /_cache` clears the institution's whole cache. Add one or more `key`
+parameters, URL-encoded, to remove only those entries; other query variants of
+the same path stay. The response is `204 No Content`, with the number of evicted
+entries in `X-Cache-Deleted`.
+
+```sh
+# everything
+curl -X DELETE -H "Authorization: Bearer $ADMIN_KEY" https://stolaf.api.frogpond.tech/_cache
+
+# one entry
+curl -X DELETE -H "Authorization: Bearer $ADMIN_KEY" -G \
+  --data-urlencode 'key=/v1/food/named/menu/stav-hall' \
+  https://stolaf.api.frogpond.tech/_cache
+```
+
+The next request for an evicted route fetches from upstream again. St. Olaf's
+hours and breaks share one snapshot; see [Schedule snapshots](#schedule-snapshots)
+for how deleting either key behaves.
 
 ## Endpoint versioning
 
