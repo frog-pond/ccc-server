@@ -1,9 +1,4 @@
 import {DurableObject} from 'cloudflare:workers'
-import {
-	CARLETON_ORGS_URL,
-	orgsFromHtml,
-	type SortableCarletonStudentOrgType,
-} from '../../source/ccci-carleton-college/v1/orgs-shape.ts'
 import {searchWords} from '../../source/student-work/posting-shape.ts'
 import {portalFields} from '../../source/student-orgs/portal.ts'
 import {
@@ -46,17 +41,6 @@ const DETAIL_BACKOFF = 5 * MINUTE
 /// The school Presence files St. Olaf under.
 const PRESENCE_SCHOOL = 'stolaf'
 const PRESENCE_ORIGIN = 'https://api.presence.io'
-const CARLETON_ORIGIN = new URL(CARLETON_ORGS_URL).origin
-
-/// Which list an object holds: St. Olaf's orgs from Presence, or Carleton's
-/// from its orgs page. An object holds the list it was first asked about.
-export type OrgsKind = 'presence' | 'carleton'
-
-const UNAVAILABLE: Record<OrgsKind, string> = {
-	presence: 'Presence unavailable',
-	carleton: "Carleton's student orgs unavailable",
-}
-
 /// What a list can be narrowed by.
 export interface OrgFilters {
 	/// words that must each start a word of the name or description
@@ -65,26 +49,24 @@ export interface OrgFilters {
 	category: string[]
 }
 
-/// A response from one of the addresses a list is read from. A redirect is
-/// not followed, and only the source's own origin is fetched. Errors name the
-/// address without its query.
-async function read(url: string, origin: string, what: string): Promise<Response> {
+/// One of Presence's answers. A redirect is not followed, and only Presence's
+/// own origin is fetched. Errors name the address without its query.
+async function presenceJson(url: string): Promise<unknown> {
 	let parsed = new URL(url)
-	if (parsed.protocol !== 'https:' || parsed.origin !== origin) {
-		throw new Error(`${parsed.origin} is not ${what}`)
+	if (parsed.protocol !== 'https:' || parsed.origin !== PRESENCE_ORIGIN) {
+		throw new Error(`${parsed.origin} is not Presence`)
 	}
 	let response = await upstream(url)
 	if (!response.ok) {
-		throw new Error(`${what} responded ${String(response.status)} for ${origin}${parsed.pathname}`)
+		throw new Error(
+			`Presence responded ${String(response.status)} for ${PRESENCE_ORIGIN}${parsed.pathname}`,
+		)
 	}
-	return response
+	return response.json()
 }
 
-const presenceJson = async (url: string): Promise<unknown> =>
-	(await read(url, PRESENCE_ORIGIN, 'Presence')).json()
-
-/// A list of student orgs, one row per org in SQLite, kept fresh by the
-/// object's own alarm. St. Olaf's also keeps each org's details, read from
+/// St. Olaf's student orgs from Presence, one row per org in SQLite, kept
+/// fresh by the object's own alarm, with each org's details read from
 /// Presence when someone first opens that org.
 export class StudentOrgsDO extends DurableObject<Env> {
 	#inflight: Promise<void> | null = null
@@ -117,29 +99,16 @@ export class StudentOrgsDO extends DurableObject<Env> {
 				id TEXT PRIMARY KEY,
 				fields TEXT NOT NULL,
 				fetched_at INTEGER NOT NULL
-			);
-			CREATE TABLE IF NOT EXISTS kind (
-				id INTEGER PRIMARY KEY CHECK (id = 1),
-				kind TEXT NOT NULL
 			);`)
 	}
 
-	/// The list this object holds, recorded on the first request.
-	#kind(asked?: OrgsKind): OrgsKind | undefined {
-		let sql = this.ctx.storage.sql
-		if (asked) sql.exec('INSERT OR IGNORE INTO kind (id, kind) VALUES (1, ?)', asked)
-		return sql.exec<{kind: OrgsKind}>('SELECT kind FROM kind WHERE id = 1').toArray()[0]?.kind
-	}
-
-	async #ensure(asked: OrgsKind): Promise<BoardResult<object>> {
-		let kind = this.#kind(asked)
-		if (kind !== asked) return {state: 'error', error: `this object holds the ${String(kind)} list`}
-		return this.#schedule.ensure(() => this.#refresh(), UNAVAILABLE[kind])
+	#ensure(): Promise<BoardResult<object>> {
+		return this.#schedule.ensure(() => this.#refresh(), 'Presence unavailable')
 	}
 
 	/// The orgs that pass the filters, in list order.
-	async list(kind: OrgsKind, filters: OrgFilters): Promise<BoardResult<{orgs: ListedOrg[]}>> {
-		let ready = await this.#ensure(kind)
+	async list(filters: OrgFilters): Promise<BoardResult<{orgs: SortableStudentOrgType[]}>> {
+		let ready = await this.#ensure()
 		if (ready.state === 'error') return ready
 
 		let where: string[] = []
@@ -161,13 +130,13 @@ export class StudentOrgsDO extends DurableObject<Env> {
 				...params,
 			)
 			.toArray()
-			.map(({org}) => JSON.parse(org) as ListedOrg)
+			.map(({org}) => JSON.parse(org) as SortableStudentOrgType)
 		return {...ready, orgs}
 	}
 
 	/// St. Olaf's categories, each with the uris of its orgs.
 	async categories(): Promise<BoardResult<{categories: OrgCategoryType[]}>> {
-		let ready = await this.#ensure('presence')
+		let ready = await this.#ensure()
 		if (ready.state === 'error') return ready
 		let categories = this.ctx.storage.sql
 			.exec<{category: string}>('SELECT category FROM categories ORDER BY position')
@@ -180,7 +149,7 @@ export class StudentOrgsDO extends DurableObject<Env> {
 	/// Details are read the first time an org is asked for; once they are old
 	/// they are answered at once and read again behind.
 	async org(uri: string): Promise<BoardResult<{org: DetailedStudentOrgType | null}>> {
-		let ready = await this.#ensure('presence')
+		let ready = await this.#ensure()
 		if (ready.state === 'error') return ready
 		let sql = this.ctx.storage.sql
 		let row = sql.exec<{org: string}>('SELECT org FROM orgs WHERE id = ?', uri).toArray()[0]
@@ -254,12 +223,8 @@ export class StudentOrgsDO extends DurableObject<Env> {
 	#refresh(): Promise<void> {
 		return (this.#inflight ??= this.#schedule
 			.run(async (now) => {
-				if (this.#kind() === 'carleton') {
-					this.#save(await readCarleton(), [])
-				} else {
-					let {orgs, categories} = await readPresence()
-					this.#save(orgs, categories)
-				}
+				let {orgs, categories} = await readPresence()
+				this.#save(orgs, categories)
 				this.#schedule.stored(now)
 				return 0
 			})
@@ -270,7 +235,7 @@ export class StudentOrgsDO extends DurableObject<Env> {
 
 	/// The list replaces the stored orgs and categories: new ones are added,
 	/// changed ones updated, and ones no longer listed dropped, with their details.
-	#save(orgs: ListedOrg[], categories: OrgCategoryType[]) {
+	#save(orgs: SortableStudentOrgType[], categories: OrgCategoryType[]) {
 		let sql = this.ctx.storage.sql
 		let stored = sql.exec<{n: number}>('SELECT count(*) AS n FROM orgs').one().n
 		// an empty list in place of a full one is far likelier the site's
@@ -278,7 +243,7 @@ export class StudentOrgsDO extends DurableObject<Env> {
 		if (orgs.length === 0 && stored > 0) throw new Error('the list of orgs came back empty')
 
 		orgs.forEach((org, position) => {
-			let id = idOf(org)
+			let id = org.organizationUri
 			sql.exec(
 				`INSERT INTO orgs (id, position, org) VALUES (?, ?, ?)
 					ON CONFLICT (id) DO UPDATE SET position = excluded.position, org = excluded.org`,
@@ -294,7 +259,7 @@ export class StudentOrgsDO extends DurableObject<Env> {
 				searchWords(org.description).join(' '),
 			)
 		})
-		let listed = JSON.stringify(orgs.map(idOf))
+		let listed = JSON.stringify(orgs.map((org) => org.organizationUri))
 		for (let table of ['orgs', 'orgs_fts', 'details']) {
 			sql.exec(`DELETE FROM ${table} WHERE id NOT IN (SELECT value FROM json_each(?))`, listed)
 		}
@@ -320,7 +285,7 @@ export class StudentOrgsDO extends DurableObject<Env> {
 	}
 
 	async purge() {
-		for (let table of ['orgs', 'orgs_fts', 'categories', 'details', 'kind']) {
+		for (let table of ['orgs', 'orgs_fts', 'categories', 'details']) {
 			this.ctx.storage.sql.exec(`DELETE FROM ${table}`)
 		}
 		this.#detailFailedAt.clear()
@@ -328,12 +293,11 @@ export class StudentOrgsDO extends DurableObject<Env> {
 	}
 }
 
-type ListedOrg = SortableStudentOrgType | SortableCarletonStudentOrgType
-
-const idOf = (org: ListedOrg) => ('organizationUri' in org ? org.organizationUri : org.id)
-
 /// St. Olaf's orgs and categories, as the Node server's routes answer them.
-async function readPresence(): Promise<{orgs: ListedOrg[]; categories: OrgCategoryType[]}> {
+async function readPresence(): Promise<{
+	orgs: SortableStudentOrgType[]
+	categories: OrgCategoryType[]
+}> {
 	let urls = presenceUrls(PRESENCE_SCHOOL)
 	let [list, campus, memberships] = await Promise.all([
 		presenceJson(urls.organizations),
@@ -344,13 +308,4 @@ async function readPresence(): Promise<{orgs: ListedOrg[]; categories: OrgCatego
 		orgs: withoutDemoOrgs(presenceOrgs(list, campus)),
 		categories: withoutDemoCategory(presenceCategories(memberships)),
 	}
-}
-
-/// Carleton's orgs, from its orgs page. A page with no orgs on it is a page
-/// standing in for the list (a bot check, say), not an empty list.
-async function readCarleton(): Promise<ListedOrg[]> {
-	let response = await read(CARLETON_ORGS_URL, CARLETON_ORIGIN, "Carleton's orgs page")
-	let orgs = orgsFromHtml(await response.text())
-	if (orgs.length === 0) throw new Error("Carleton's orgs page listed no orgs")
-	return orgs
 }

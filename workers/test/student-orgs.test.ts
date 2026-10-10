@@ -3,7 +3,6 @@ import {runDurableObjectAlarm, runInDurableObject} from 'cloudflare:test'
 import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} from 'vitest'
 import {unavailableOrgs} from '../../source/ccci-carleton-college/v1/deprecated.ts'
 import {convertJobPost, type JobPost} from '../../source/ccci-carleton-college/v1/jobs-shape.ts'
-import {orgsFromHtml} from '../../source/ccci-carleton-college/v1/orgs-shape.ts'
 import {portalFields} from '../../source/student-orgs/portal.ts'
 import {
 	orgDetail,
@@ -16,7 +15,6 @@ import {deprecatedJobs, RETIRED_JOBS_TEXT} from '../../source/student-work/retir
 import {clock} from '../src/clock.ts'
 import {DETAIL_TTL} from '../src/student-orgs-do.ts'
 import {spyOnFetch} from './spy.ts'
-import carletonOrgsPage from './fixtures/carleton-orgs.html?raw'
 import jobsFixture from './fixtures/carleton-student-jobs.json?raw'
 import categoriesFixture from './fixtures/presence-categories.json?raw'
 import orgsFixture from './fixtures/presence-orgs.json?raw'
@@ -27,7 +25,6 @@ const LIST = `${PRESENCE}/organizations`
 const CATEGORIES = `${PRESENCE}/organizations/categories`
 const CAMPUS = `${PRESENCE}/app/campus`
 const PORTAL = `${PRESENCE}/grid/portal-view/Organization/`
-const CARLETON_ORGS = 'https://apps.carleton.edu/student/orgs/'
 const CARLETON_JOBS = 'https://www.carleton.edu/student-employment/post-jobs/wp-json/wp/v2/posts'
 
 type RawOrg = {uri: string; name: string; categories: string[]}
@@ -37,21 +34,18 @@ const CAMPUS_BODY = {apiId: 'campus-id', cdn: 'https://cdn.example.net'}
 const MEMBERSHIPS = JSON.parse(categoriesFixture) as unknown[]
 const PORTAL_BODY = JSON.parse(portalFixture) as unknown
 const JOB_POSTS = JSON.parse(jobsFixture) as JobPost[]
-const CHALLENGE = '<!doctype html><title>Checking your browser - reCAPTCHA</title>'
 
 const HOUR = 60 * 60 * 1000
 
 let now = 0
 let list: RawOrg[] = ORGS
-let carletonPage = carletonOrgsPage
 let respond: (url: URL) => Response | undefined = () => undefined
 let fetchSpy: MockInstance<typeof fetch>
 let warnSpy: {mockRestore: () => void}
 
 const get = (path: string, headers?: HeadersInit) =>
-	exports.default.fetch(new Request(`https://worker.test${path}`, {headers}))
+	exports.default.fetch(new Request(`https://worker.test${path}`, headers ? {headers} : {}))
 const stolaf = () => env.STUDENT_ORGS.getByName('stolaf')
-const carleton = () => env.STUDENT_ORGS.getByName('carleton')
 const calls = (prefix: string) =>
 	fetchSpy.mock.calls.map(([input]) => String(input)).filter((url) => url.startsWith(prefix))
 const callsTo = (address: string) =>
@@ -65,10 +59,8 @@ beforeEach(async () => {
 	now = Date.parse('2030-10-10T12:00:00Z')
 	clock.now = () => now
 	list = ORGS
-	carletonPage = carletonOrgsPage
 	respond = () => undefined
 	await stolaf().purge()
-	await carleton().purge()
 	await env.STUDENT_WORK.getByName('carleton').purge()
 
 	fetchSpy = spyOnFetch()
@@ -80,9 +72,6 @@ beforeEach(async () => {
 		if (url.href === CAMPUS) return Promise.resolve(Response.json(CAMPUS_BODY))
 		if (url.href === CATEGORIES) return Promise.resolve(Response.json(MEMBERSHIPS))
 		if (url.href.startsWith(PORTAL)) return Promise.resolve(Response.json(PORTAL_BODY))
-		if (url.href === CARLETON_ORGS) {
-			return Promise.resolve(new Response(carletonPage, {headers: {'Content-Type': 'text/html'}}))
-		}
 		if (url.href.startsWith(CARLETON_JOBS)) {
 			return Promise.resolve(Response.json(JOB_POSTS, {headers: {'x-wp-totalpages': '1'}}))
 		}
@@ -346,47 +335,15 @@ describe('GET /edu.stolaf/orgs/uri/:uri', () => {
 })
 
 describe('GET /edu.carleton/orgs', () => {
-	test('lists the orgs on Carleton’s page as the Node scraper reads them', async () => {
+	test('answers the Node notice, the same at any time, without fetching', async () => {
 		let response = await get('/edu.carleton/orgs')
 		expect(response.status).toBe(200)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
-		let body = await response.json<{id: string; categories: string[]}[]>()
-		expect(body).toEqual(orgsFromHtml(carletonOrgsPage))
-		expect(body.map((org) => org.id)).toEqual(['chess', 'debate', 'ultimate'])
-		expect(body[0]?.categories).toEqual(['Academic', 'Recreation'])
-		expect(calls(CARLETON_ORGS)).toHaveLength(1)
-	})
-
-	test('?category= and ?q= narrow the list', async () => {
-		let ids = async (query: string) =>
-			(await (await get(`/edu.carleton/orgs${query}`)).json<{id: string}[]>()).map((org) => org.id)
-		expect(await ids('?category=Recreation')).toEqual(['chess', 'ultimate'])
-		expect(await ids('?q=disc')).toEqual(['ultimate'])
-	})
-
-	test('a bot check in place of the page answers the Node notice, kept briefly', async () => {
-		carletonPage = CHALLENGE
-		let response = await get('/edu.carleton/orgs')
-		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
 		expect(await response.json()).toEqual(unavailableOrgs())
-	})
-
-	test('the notice gives way to the list once the page can be read', async () => {
-		carletonPage = CHALLENGE
-		await get('/edu.carleton/orgs')
-		carletonPage = carletonOrgsPage
-		now += 2 * HOUR
-		await runDurableObjectAlarm(carleton())
-		let body = await (await get('/edu.carleton/orgs')).json()
-		expect(body).toEqual(orgsFromHtml(carletonOrgsPage))
-	})
-
-	test('a page that will not load is not read again while it backs off', async () => {
-		carletonPage = CHALLENGE
-		await get('/edu.carleton/orgs')
-		await get('/edu.carleton/orgs')
-		expect(calls(CARLETON_ORGS)).toHaveLength(1)
+		now += 30 * 24 * HOUR
+		let later = await get('/edu.carleton/orgs?q=chess')
+		expect(later.headers.get('etag')).toBe(response.headers.get('etag'))
+		expect(fetchSpy).not.toHaveBeenCalled()
 	})
 
 	test('has no categories or org details', async () => {

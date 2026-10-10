@@ -1,21 +1,110 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
+import {parseHtml} from '../../ccc-lib/dom.ts'
+import {groupableName, sortOrgs, sortableName} from '../../student-orgs/names.ts'
+import {
+	SortableCarletonStudentOrgSchema,
+	type SortableCarletonStudentOrgType,
+} from './orgs-shape.ts'
 import type {Context} from '../../ccc-server/context.ts'
 import {unavailableOrgs} from './deprecated.ts'
-import {CARLETON_ORGS_URL, orgsFromHtml, type SortableCarletonStudentOrgType} from './orgs-shape.ts'
 
 export {
 	CarletonStudentOrgSchema,
 	SortableCarletonStudentOrgSchema,
-	domToOrg,
 	type CarletonStudentOrgType,
 	type SortableCarletonStudentOrgType,
 } from './orgs-shape.ts'
 
+export function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
+	let name =
+		orgNode
+			.querySelector('h4')
+			?.textContent.replace(/ Manage$/, '')
+			.trim() ?? ''
+
+	let adminLink = orgNode.querySelector('h4 > a')?.getAttribute('href')
+	adminLink = adminLink ? `https://apps.carleton.edu${adminLink}` : ''
+
+	const ids = Array.from(orgNode.querySelectorAll('a[name]')).map((n) => n.getAttribute('name'))
+	const id = ids[0] ?? name
+
+	const description = orgNode.querySelector('.orgDescription')?.textContent.trim() ?? ''
+
+	let contacts = Array.from(
+		new Set(
+			orgNode
+				.querySelector('.contacts')
+				?.textContent.trim()
+				.replace(/^Contact: /, '')
+				.split(', ') ?? [],
+		),
+	)
+
+	const websiteEls = Array.from(orgNode.querySelectorAll('.site a')).flatMap((n) => {
+		let href = n.getAttribute('href')
+		return href ? [href] : []
+	})
+	let website = websiteEls[0] ?? ''
+	if (website.length && !/^https?:\/\//.test(website)) {
+		website = `http://${website}`
+	}
+
+	const socialLinks = Array.from(orgNode.querySelectorAll('a > img')).flatMap((n) => {
+		let href = n.parentElement?.getAttribute('href')
+		return href ? [href] : []
+	})
+
+	let sortable = sortableName(name, sortableRegex)
+
+	let orgObj: SortableCarletonStudentOrgType = {
+		id,
+		contacts,
+		description,
+		name,
+		website,
+		categories: [],
+		socialLinks,
+		adminLink,
+		$sortableName: sortable,
+		$groupableName: groupableName(sortable),
+	}
+
+	return SortableCarletonStudentOrgSchema.parse(orgObj)
+}
+
 /// Kept against the block being lifted: the page's shape has not changed,
 /// only our ability to reach it.
 export async function getOrgs(): Promise<SortableCarletonStudentOrgType[]> {
-	return orgsFromHtml(await getText(CARLETON_ORGS_URL))
+	let body = await getText('https://apps.carleton.edu/student/orgs/')
+	let dom = parseHtml(body)
+
+	const allOrgWrappers = dom.querySelectorAll('.orgContainer, .careerField')
+
+	const allOrgs = new Map<string, SortableCarletonStudentOrgType>()
+	const sortableRegex = /^(Carleton( College)?|The) +/i
+	let currentCategory = null
+	for (const orgNode of allOrgWrappers) {
+		if (orgNode.classList.contains('careerField')) {
+			currentCategory = orgNode.textContent.trim()
+			continue
+		}
+
+		const org = domToOrg(orgNode, sortableRegex)
+		if (!allOrgs.has(org.id)) {
+			allOrgs.set(org.id, org)
+		}
+
+		const stored = allOrgs.get(org.id)
+		if (!stored || !currentCategory) {
+			continue
+		}
+		if (!stored.categories.includes(currentCategory)) {
+			stored.categories.push(currentCategory)
+		}
+	}
+
+	return sortOrgs(Array.from(allOrgs.values()))
 }
 
 export function orgs(ctx: Context) {

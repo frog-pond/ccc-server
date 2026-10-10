@@ -43,7 +43,7 @@ export type Campus = {
 	files: Record<string, PagesRoute>
 	/// the student jobs routes, where the campus has them, by where they are read
 	studentWork?: ({board: 'oracle'} & StudentWork) | {board: 'wordpress'}
-	/// the student orgs routes, where the campus has them, by where they are read
+	/// what the student orgs routes answer, where the campus has them
 	orgs?: Orgs
 	/// what `/jobs` answers, where the campus has it
 	jobs?: Jobs
@@ -109,7 +109,7 @@ const CARLETON: Campus = {
 	convos: CONVOS,
 	files: CARLETON_FILES,
 	studentWork: {board: 'wordpress'},
-	orgs: 'carleton',
+	orgs: 'unavailable',
 	jobs: 'carleton',
 }
 

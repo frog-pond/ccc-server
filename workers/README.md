@@ -117,12 +117,10 @@ day if its host fails; student work keeps its own schedule, below.
   `portalFields` in `source/student-orgs/portal.ts`). A uri that is not a
   Presence slug, or not in the list, is a 404 without reading Presence. A 502
   when the portal view cannot be read and nothing is stored.
-- `GET /edu.carleton/orgs`: the orgs on `apps.carleton.edu/student/orgs/`,
-  read as the Node scraper reads them (`orgsFromHtml` in
-  `source/ccci-carleton-college/v1/orgs-shape.ts`), with the same `?q=` and
-  `?category=`. The page currently answers with a bot check; until it can be
-  read this is the Node route's notice (`unavailableOrgs`), cacheable for a
-  minute, and it becomes the list on its own once a read succeeds.
+- `GET /edu.carleton/orgs`: the Node route's notice that Carleton's orgs
+  cannot be loaded (`unavailableOrgs` in
+  `source/ccci-carleton-college/v1/deprecated.ts`, shared with the Node
+  server). Nothing is fetched.
 - `GET /edu.carleton/jobs`: Carleton's Student Employment jobs in the Node
   route's shape (`jobFromPost` in `source/ccci-carleton-college/v1/jobs-shape.ts`,
   shared with the Node server), newest first, read from the Carleton student
@@ -179,12 +177,11 @@ day if its host fails; student work keeps its own schedule, below.
   in `src/carleton-board.ts`.
 
 - `StudentOrgsDO` (`src/student-orgs-do.ts`): another Durable Object (binding
-  `STUDENT_ORGS`), holding a list of student orgs as one SQLite row per org in
-  list order, with an FTS5 index of each org's name and description. The object
-  named `stolaf` reads Presence (`api.presence.io`: the org list, the campus and
-  the category memberships, three requests a run) and also keeps a row per
-  category. The object named `carleton` reads Carleton's orgs page; a page with
-  no orgs on it (a bot check) is a failure, not an empty list. Its alarm reads
+  `STUDENT_ORGS`, one object named `stolaf`), holding St. Olaf's student orgs as
+  one SQLite row per org in list order, with an FTS5 index of each org's name
+  and description, and a row per category. It reads Presence (`api.presence.io`:
+  the org list, the campus and the category memberships, three requests a
+  run); only Presence's origin is fetched, and a redirect is not followed. Its alarm reads
   the list every hour plus up to ten minutes of jitter; orgs no longer listed
   are dropped. A failed read keeps the stored list and backs off (five minutes,
   doubling, up to an hour), an empty list in place of a full one is a failure,
