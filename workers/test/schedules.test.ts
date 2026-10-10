@@ -139,9 +139,14 @@ describe('GET /edu.stolaf/breaks', () => {
 })
 
 describe('Carleton', () => {
-	test('/spaces/hours is still its published file, and there is no /breaks', async () => {
-		fetchSpy.mockImplementation(() => Promise.resolve(json('{"from": "carleton"}')))
-		expect(await (await get('/edu.carleton/spaces/hours')).json()).toEqual({from: 'carleton'})
+	test('/spaces/hours is a redirect to its published file, and there is no /breaks', async () => {
+		let response = await exports.default.fetch(
+			new Request('https://worker.test/edu.carleton/spaces/hours', {redirect: 'manual'}),
+		)
+		expect(response.status).toBe(307)
+		expect(response.headers.get('location')).toBe(
+			'https://carls-app.github.io/carls/building-hours.json',
+		)
 		expect((await get('/edu.carleton/breaks')).status).toBe(404)
 	})
 })

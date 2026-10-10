@@ -299,8 +299,11 @@ a missing one.
 ## Data files, by college
 
 The small JSON files each college publishes on GitHub Pages (faqs, contacts,
-help, webcams, dictionary, the campus map, and Carleton's hours) are passed through as they
-are, by `pagesJson` (`src/sources/pages-json.ts`), from each campus's `files`
-table (`src/campuses.ts`, with the paths and urls in `src/pages-routes.ts`).
-A 502 if nothing has ever been stored.
+help, webcams, dictionary, the campus map, Carleton's hours, the student work
+areas and wages) are answered with a `307` to where each is published,
+cacheable for ten minutes, from each campus's `files` table (`src/campuses.ts`,
+with the paths and urls in `src/pages-routes.ts`). Nothing is fetched; the client
+reads the file from GitHub Pages, with its ETag and caching. `pagesJson`
+(`src/sources/pages-json.ts`) still reads the student work areas file for the
+units list.
 Examples: `/edu.stolaf/faqs`, `/edu.carleton/spaces/hours`.

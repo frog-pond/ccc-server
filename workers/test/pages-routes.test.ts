@@ -38,41 +38,14 @@ afterEach(() => {
 const fetched = () => fetchSpy.mock.calls.map(([input]) => String(input))
 
 describe.each(routes)('GET %s', (path, {url}) => {
-	test('passes the published file through, cacheable for ten minutes', async () => {
-		let response = await get(path)
-		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
-		expect(await response.json()).toEqual({from: url})
-		expect(fetched()).toEqual([url])
-	})
-
-	test('a second request is served from the object', async () => {
-		await get(path)
-		expect((await get(path)).status).toBe(200)
-		expect(fetched()).toHaveLength(1)
-	})
-
-	test('the host failing with nothing stored is a 502, briefly cacheable', async () => {
-		fetchSpy.mockImplementation(() => Promise.resolve(json('boom', 503)))
-		let response = await get(path)
-		expect(response.status).toBe(502)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
-	})
-
-	test('a page that is not JSON is a 502, not served as the file', async () => {
-		fetchSpy.mockImplementation(() => Promise.resolve(new Response('<html>Just a moment</html>')))
-		expect((await get(path)).status).toBe(502)
-	})
-
-	test('a redirect is not followed', async () => {
-		fetchSpy.mockImplementation(() =>
-			Promise.resolve(
-				new Response(null, {status: 301, headers: {location: 'https://example.com/'}}),
-			),
+	test('is a temporary redirect to the published file, kept ten minutes', async () => {
+		let response = await exports.default.fetch(
+			new Request(`https://worker.test${path}`, {redirect: 'manual'}),
 		)
-		expect((await get(path)).status).toBe(502)
-		expect(fetched()).toEqual([url])
-		expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({redirect: 'manual'})
+		expect(response.status).toBe(307)
+		expect(response.headers.get('location')).toBe(url)
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
+		expect(fetched()).toEqual([])
 	})
 })
 

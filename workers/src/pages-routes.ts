@@ -9,7 +9,8 @@ const STOLAF_MAP = (file: string) => `https://stolaf.dev/campus-map-data/${file}
 const CARLETON = (file: string) => `https://carls-app.github.io/carls/${file}`
 const CARLETON_MAP = (file: string) => `https://carls-app.github.io/map-data/${file}`
 
-/// What St. Olaf serves from its published data files, by path.
+/// St. Olaf's published data files, by path, each answered with a temporary
+/// redirect to where it is published.
 export const STOLAF_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: STOLAF('contact-info.json')},
 	'/dictionary': {url: STOLAF('dictionary.json')},
@@ -47,7 +48,8 @@ export const STOLAF_REDIRECTS: Record<string, string> = {
 	'/courses/catalog.db': 'https://stolaf.dev/course-data/catalog-recent.db',
 }
 
-/// What Carleton serves from its published data files, by path.
+/// Carleton's published data files, by path, each answered with a temporary
+/// redirect to where it is published.
 export const CARLETON_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: CARLETON('contact-info.json')},
 	'/dictionary': {url: CARLETON('dictionary-carls.json')},

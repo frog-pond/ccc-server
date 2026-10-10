@@ -1,11 +1,9 @@
 import {CafeMenuWithError, CustomCafe, cafeFrom, menuFrom} from '../../source/menus-bonapp/shape.ts'
 import {CAMPUSES, type Campus, type NewsFeed} from './campuses.ts'
 import type {Calendar} from './calendars.ts'
-import type {PagesRoute} from './pages-routes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
-import {pagesJson} from './sources/pages-json.ts'
 import {wordpress as wordpressApi} from './sources/wordpress-api.ts'
 import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
@@ -117,18 +115,6 @@ async function calendar(env: Env, {read}: Calendar): Promise<Response> {
 		return json(await read(env), 200, CLIENT_MAX_AGE)
 	} catch (err) {
 		console.error(err)
-		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
-	}
-}
-
-/// A data file the colleges publish, passed through as it is. A failure with
-/// nothing stored is a 502, kept briefly, as for the news feeds.
-async function dataFile(env: Env, {url}: PagesRoute): Promise<Response> {
-	try {
-		let {value} = await fetchSource(env, pagesJson, {url})
-		return json(value, 200, CLIENT_MAX_AGE)
-	} catch (err) {
-		console.error(err, {url})
 		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
 	}
 }
@@ -300,7 +286,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	}
 
 	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
-	if (file) return dataFile(env, file)
+	if (file) return redirect(file.url)
 
 	let work = campus.studentWork
 	if (work?.board === 'oracle') {

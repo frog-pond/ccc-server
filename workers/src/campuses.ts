@@ -54,7 +54,8 @@ export type Campus = {
 	calendars: Record<string, Calendar>
 	/// the convocations list, where the campus has one
 	convos?: Calendar
-	/// data files the college publishes, passed through, by path
+	/// data files the college publishes, answered with a temporary redirect to
+	/// where each is published, by path
 	files: Record<string, PagesRoute>
 	/// files answered with a temporary redirect to where they are published, by path
 	redirects: Record<string, string>
