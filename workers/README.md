@@ -57,3 +57,11 @@ source".
 - Time is `clock.now()`, not `Date.now()`; tests move it by assigning to it.
 - Reads return a value (`state: 'error'`) rather than throwing across RPC,
   because workerd reports every RPC exception as unhandled, caught or not.
+
+## Cloudflare builds
+
+Workers Builds runs from the repo root (`npm clean-install`, `npm run build`,
+then `npx wrangler preview`). The root has no wrangler config of its own, so
+`/.wrangler/deploy/config.json` redirects wrangler to `workers/wrangler.jsonc`.
+Without it, wrangler stops at the workspace root. `npm run build` at the root
+is the Node server's `tsc`; this package's own build is `npm run build` here.

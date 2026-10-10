@@ -21,3 +21,7 @@ npm-debug.log*
 
 # flakiness.io test reports
 /flakiness-report/
+
+# wrangler scratch; the deploy redirect to workers/wrangler.jsonc is committed
+/.wrangler/*
+!/.wrangler/deploy/
