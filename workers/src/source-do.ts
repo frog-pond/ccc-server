@@ -191,6 +191,7 @@ export class SourceDO extends DurableObject<Env> {
 			kept: await this.#keptResponses(),
 			used: new Map(),
 			retryAfter: 0,
+			remember: true,
 		}
 		try {
 			let params = JSON.parse(row.params) as never

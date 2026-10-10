@@ -22,6 +22,8 @@ export type Conditional = {
 	used: Map<string, KeptResponse>
 	/// the longest wait a 429 or 503 asked for, in milliseconds
 	retryAfter: number
+	/// whether answers are kept for next time; false only notes `Retry-After`
+	remember: boolean
 }
 
 export const conditional = new AsyncLocalStorage<Conditional>()
@@ -53,6 +55,22 @@ const MAX_RETRY_AFTER = 24 * 60 * 60 * 1000
 export async function addressKey(url: string): Promise<string> {
 	let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(url))
 	return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+/// Runs `read`, noting the longest `Retry-After` a 429 or 503 it got asked
+/// for, without asking conditionally: for the objects that read a list in
+/// pages or a step at a time, where an answer is not asked for again.
+export async function notingRetryAfter<T>(
+	read: () => Promise<T>,
+): Promise<{result: PromiseSettledResult<T>; retryAfter: number}> {
+	let context: Conditional = {kept: new Map(), used: new Map(), retryAfter: 0, remember: false}
+	let result = await conditional.run(context, () =>
+		read().then(
+			(value): PromiseSettledResult<T> => ({status: 'fulfilled', value}),
+			(reason: unknown): PromiseSettledResult<T> => ({status: 'rejected', reason}),
+		),
+	)
+	return {result, retryAfter: context.retryAfter}
 }
 
 /// A `Retry-After` in milliseconds from `now`: seconds, or an HTTP date.
@@ -90,7 +108,7 @@ export async function conditionalFetch(
 	}
 	let etag = response.headers.get('ETag')
 	let lastModified = response.headers.get('Last-Modified')
-	if (response.status === 200 && (etag || lastModified)) {
+	if (context.remember && response.status === 200 && (etag || lastModified)) {
 		let body = await response.clone().text()
 		if (body.length <= MAX_KEPT) {
 			let headers = [...response.headers].filter(([name]) => name !== 'set-cookie')

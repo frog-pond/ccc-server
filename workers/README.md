@@ -298,7 +298,10 @@ with an `ETag` or `Last-Modified` is kept gzipped beside the value (up to 1 MB c
 digest of its address), the next load sends `If-None-Match` /
 `If-Modified-Since`, and a `304` is read as that kept answer, a fresh read of
 the same body. A `429` or `503` with a `Retry-After` holds the source off at
-least that long (at most a day) before it is asked again.
+least that long (at most a day) before it is asked again. The student work and
+student orgs boards and the archives' walks back honor `Retry-After` the same
+way; they are not asked conditionally, since a page they read is not read
+again soon and their sites send no validators.
 
 A source must be imported from `src/worker.ts`, or the object answers "unknown
 source".

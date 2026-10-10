@@ -1,6 +1,7 @@
 import {DurableObject} from 'cloudflare:workers'
 import {archives, type Span} from './archive.ts'
 import {clock} from './clock.ts'
+import {notingRetryAfter} from './conditional.ts'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -134,13 +135,15 @@ export class ArchiveDO extends DurableObject<Env> {
 		}
 		let sql = this.ctx.storage.sql
 		let cursor = state.cursor
+		let retryAfter = 0
 		try {
 			for (let step = 0; step < STEPS_PER_RUN && !this.#state().done; step++) {
-				let found = await archive.backfill(
-					JSON.parse(state.params ?? 'null') as never,
-					this.env,
-					cursor,
+				let noted = await notingRetryAfter(() =>
+					archive.backfill(JSON.parse(state.params ?? 'null') as never, this.env, cursor),
 				)
+				retryAfter = noted.retryAfter
+				if (noted.result.status === 'rejected') throw noted.result.reason
+				let found = noted.result.value
 				for (let item of found.items) {
 					sql.exec(
 						'INSERT OR IGNORE INTO items (id, at, item) VALUES (?, ?, ?)',
@@ -159,7 +162,8 @@ export class ArchiveDO extends DurableObject<Env> {
 			if (!this.#state().done) await this.#wake(clock.now() + FOLLOW_UP)
 		} catch (err) {
 			let failures = this.#state().failures + 1
-			let wait = Math.min(MIN_BACKOFF * 2 ** (failures - 1), HOUR)
+			// at least as long as the site asked, when it said
+			let wait = Math.max(Math.min(MIN_BACKOFF * 2 ** (failures - 1), HOUR), retryAfter)
 			sql.exec(
 				'UPDATE state SET failures = ?, backoff_until = ?, last_error = ? WHERE id = 1',
 				failures,

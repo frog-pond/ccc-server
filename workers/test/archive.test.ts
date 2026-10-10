@@ -126,6 +126,18 @@ describe('an archive', () => {
 		expect(latest?.title).toBe('Live')
 	})
 
+	test('a 429 with a Retry-After holds the walk back that long', async () => {
+		await recordItems(env, streamsArchive, {}, [])
+		fetchSpy.mockImplementation(() =>
+			Promise.resolve(json('slow down', 429, {'Retry-After': '5400'})),
+		)
+		await runInDurableObject(streamsStub(), (instance) => instance.alarm())
+		let until = await runInDurableObject(streamsStub(), (_do, state) =>
+			state.storage.sql.exec<{backoff_until: number}>('SELECT backoff_until FROM state').one(),
+		)
+		expect(until.backoff_until).toBe(NOW + 90 * 60 * 1000)
+	})
+
 	test('a failed step backs off and is reported', async () => {
 		await recordItems(env, streamsArchive, {}, [])
 		fetchSpy.mockImplementation(() => Promise.resolve(json('boom', 503)))
