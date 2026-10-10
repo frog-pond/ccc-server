@@ -134,3 +134,16 @@ mise run test:carleton-college
 TDD workflow
 
 This repository practices TDD for agentic development: write a failing AVA test next to the implementation (`*.test.ts`), run `mise run test`, implement until green, then run smoke tests for integration checks.
+
+## Schedule authoring contracts
+
+AAO owns authoring validation and publishes normalized schedule objects, with
+explicit exception lists and references intact. The server checks the published
+containers and expands references in one traversal; missing references and cycles
+fail expansion. It does not repeat service, date, timezone, or overlap validation.
+Service contents and additive metadata pass through unchanged.
+Defaults accept only inline policies or template names. Space break policies also
+accept `normal`, `inherit`, and aliases to explicitly authored break entries. Local
+templates replace global policies completely; aliases use their target's context.
+The hours response includes every authored break policy; clients choose the
+applicable key using the breaks calendar. The server does not select today's hours.
