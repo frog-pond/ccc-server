@@ -154,6 +154,17 @@ describe('GET /edu.stolaf/streams/search', () => {
 		})
 	})
 
+	test('on a Node host, the links are Node addresses', async () => {
+		let response = await exports.default.fetch(
+			new Request('https://stolaf.api.frogpond.tech/v1/streams/search?query=choir&count=1'),
+		)
+		expect(response.status).toBe(200)
+		expect(response.headers.get('link')).toBe(
+			'</v1/streams/search?query=choir&count=1&offset=1>; rel="next", ' +
+				'</v1/streams/search?query=choir&count=1&offset=2>; rel="last"',
+		)
+	})
+
 	test('every spelling of one search shares one stored copy', async () => {
 		await get('/edu.stolaf/streams/search?query=choir&count=1&offset=1')
 		await get('/edu.stolaf/streams/search?offset=1&count=1&query=choir')
