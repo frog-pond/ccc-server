@@ -3,6 +3,8 @@ import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {SOURCE_TTL} from '../lifetimes.ts'
 import {upstream} from '../upstream.ts'
+import {recordItems} from '../archive.ts'
+import {newsArchive, postsEndpoint} from '../archives/news.ts'
 
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
@@ -54,6 +56,7 @@ export const wpNews = defineSource({
 		}
 		return feedItemsFrom(await response.json())
 	},
+	record: ({url}, items, env) => recordItems(env, newsArchive, {posts: postsEndpoint(url)}, items),
 	ttl: SOURCE_TTL,
 	staleIfError: DAY,
 })

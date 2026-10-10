@@ -1,5 +1,13 @@
 import {DurableObject} from 'cloudflare:workers'
 import {clock} from './clock.ts'
+import {
+	MAX_KEPT_COMPRESSED,
+	conditional,
+	gunzip,
+	gzip,
+	type Conditional,
+	type KeptResponse,
+} from './conditional.ts'
 import type {Served, SourceResult} from './define-source.ts'
 import {registry} from './registry.ts'
 
@@ -20,6 +28,8 @@ type Row = {
 	backoff_until: number
 	last_error: string | null
 	last_read: number
+	/// how long this value is fresh, when its source decides that by the value
+	ttl: number | null
 }
 
 /// One upstream resource: its last good value, kept in SQLite, and everything
@@ -42,7 +52,26 @@ export class SourceDO extends DurableObject<Env> {
 				failures INTEGER NOT NULL DEFAULT 0,
 				backoff_until INTEGER NOT NULL DEFAULT 0,
 				last_error TEXT,
-				last_read INTEGER NOT NULL
+				last_read INTEGER NOT NULL,
+				ttl INTEGER
+			)`)
+		// objects made before the column was
+		let columns = ctx.storage.sql
+			.exec<{name: string}>("SELECT name FROM pragma_table_info('entry')")
+			.toArray()
+		if (!columns.some(({name}) => name === 'ttl')) {
+			ctx.storage.sql.exec('ALTER TABLE entry ADD COLUMN ttl INTEGER')
+		}
+		// the answers the last load got, by a digest of their address, kept for
+		// their validators (`src/conditional.ts`)
+		ctx.storage.sql.exec(`
+			CREATE TABLE IF NOT EXISTS response (
+				key TEXT PRIMARY KEY,
+				etag TEXT,
+				last_modified TEXT,
+				headers TEXT NOT NULL,
+				-- gzipped
+				body BLOB NOT NULL
 			)`)
 	}
 
@@ -77,11 +106,12 @@ export class SourceDO extends DurableObject<Env> {
 		let age = hasValue ? now - row.fetched_at! : Infinity
 		let sameEpoch = !spec.epoch || row.epoch === spec.epoch(new Date(now))
 		let backedOff = row.backoff_until > now
+		let ttl = row.ttl ?? spec.ttl
 
-		if (hasValue && sameEpoch && age < spec.ttl) return this.#served(row, 'fresh')
+		if (hasValue && sameEpoch && age < ttl) return this.#served(row, 'fresh')
 
 		// stale-while-revalidate: answer now, refresh from the alarm, which survives eviction
-		if (hasValue && sameEpoch && age < spec.ttl + spec.staleIfError) {
+		if (hasValue && sameEpoch && age < ttl + spec.staleIfError) {
 			if (!backedOff) await this.ctx.storage.setAlarm(now)
 			return this.#served(row, 'stale')
 		}
@@ -98,6 +128,53 @@ export class SourceDO extends DurableObject<Env> {
 		return {state: 'error', error: row.last_error ?? 'upstream unavailable'}
 	}
 
+	async #keptResponses(): Promise<Map<string, KeptResponse>> {
+		let rows = this.ctx.storage.sql
+			.exec<{
+				key: string
+				etag: string | null
+				last_modified: string | null
+				headers: string
+				body: ArrayBuffer | string
+			}>('SELECT * FROM response')
+			.toArray()
+		let kept = new Map<string, KeptResponse>()
+		for (let row of rows) {
+			// one that cannot be read is asked for in full
+			if (typeof row.body === 'string') continue
+			let body = await gunzip(row.body).catch(() => null)
+			if (body === null) continue
+			kept.set(row.key, {
+				etag: row.etag,
+				lastModified: row.last_modified,
+				headers: JSON.parse(row.headers) as [string, string][],
+				body,
+			})
+		}
+		return kept
+	}
+
+	/// Keeps the answers a good load got, and only those: an address it no
+	/// longer asks for is not asked for conditionally again.
+	async #keepResponses(used: ReadonlyMap<string, KeptResponse>) {
+		let compressed = await Promise.all(
+			[...used].map(async ([key, kept]) => [key, kept, await gzip(kept.body)] as const),
+		)
+		let sql = this.ctx.storage.sql
+		sql.exec('DELETE FROM response')
+		for (let [key, kept, body] of compressed) {
+			if (body.byteLength > MAX_KEPT_COMPRESSED) continue
+			sql.exec(
+				'INSERT INTO response (key, etag, last_modified, headers, body) VALUES (?, ?, ?, ?, ?)',
+				key,
+				kept.etag,
+				kept.lastModified,
+				JSON.stringify(kept.headers),
+				body,
+			)
+		}
+	}
+
 	/// Single-flight: readers that arrive while a fetch is out share it. Awaiting
 	/// `fetch` yields the object, so without this each of them would start its own.
 	#refresh(): Promise<Row> {
@@ -110,22 +187,41 @@ export class SourceDO extends DurableObject<Env> {
 		let row = this.#row()!
 		let spec = registry[row.name]!
 		let now = clock.now()
+		let context: Conditional = {
+			kept: await this.#keptResponses(),
+			used: new Map(),
+			retryAfter: 0,
+			remember: true,
+		}
 		try {
-			let value = await spec.load(JSON.parse(row.params) as never, this.env)
+			let params = JSON.parse(row.params) as never
+			let value = await conditional.run(context, () => spec.load(params, this.env))
+			await this.#keepResponses(context.used)
 			this.ctx.storage.sql.exec(
-				`UPDATE entry SET value = ?, fetched_at = ?, epoch = ?,
+				`UPDATE entry SET value = ?, fetched_at = ?, epoch = ?, ttl = ?,
 					failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1`,
 				JSON.stringify(value),
 				now,
 				spec.epoch?.(new Date(now)) ?? null,
+				spec.ttlFor?.(value, now) ?? null,
 			)
+			// the history is kept beside the answer; failing to keep it does not fail the answer
+			if (spec.record) {
+				this.ctx.waitUntil(
+					spec.record(params, value, this.env, now).catch((err: unknown) => {
+						console.warn(`${row.name}: could not record the history`, String(err))
+					}),
+				)
+			}
 			return this.#row()!
 		} catch (err) {
 			let failures = row.failures + 1
 			this.ctx.storage.sql.exec(
 				'UPDATE entry SET failures = ?, backoff_until = ?, last_error = ? WHERE id = 1',
 				failures,
-				now + Math.min(MIN_BACKOFF * 2 ** (failures - 1), MAX_BACKOFF),
+				// at least as long as the site asked, when it said
+				now +
+					Math.max(Math.min(MIN_BACKOFF * 2 ** (failures - 1), MAX_BACKOFF), context.retryAfter),
 				String(err),
 			)
 			throw err
@@ -141,7 +237,8 @@ export class SourceDO extends DurableObject<Env> {
 		let spec = registry[row.name]!
 		let now = clock.now()
 		if (now - row.last_read > IDLE_AFTER) return this.ctx.storage.deleteAlarm()
-		let next = row.backoff_until > now ? row.backoff_until : (row.fetched_at ?? now) + spec.ttl
+		let next =
+			row.backoff_until > now ? row.backoff_until : (row.fetched_at ?? now) + (row.ttl ?? spec.ttl)
 		await this.ctx.storage.setAlarm(next)
 	}
 
@@ -163,6 +260,7 @@ export class SourceDO extends DurableObject<Env> {
 
 	async purge() {
 		this.ctx.storage.sql.exec('DELETE FROM entry')
+		this.ctx.storage.sql.exec('DELETE FROM response')
 		await this.ctx.storage.deleteAlarm()
 	}
 }

@@ -1,5 +1,5 @@
-import {z} from 'zod'
 import {getJson} from '../../ccc-lib/http.ts'
+import {publicationData} from '../../schedules/publications.ts'
 import {resolveScheduleResponses} from '../../schedules/resolve.ts'
 import {ONE_DAY, ONE_HOUR, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {GH_PAGES} from './gh-pages.ts'
@@ -8,11 +8,9 @@ import type {CacheAdmin} from '../../ccc-server/helpers.ts'
 
 export type ScheduleResponses = ReturnType<typeof resolveScheduleResponses>
 
-const envelope = z.object({data: z.unknown()})
-
 /** Unwrap AAO's normalized publications; expansion checks their structural compatibility. */
 async function getScheduleData(filename: 'building-hours.json' | 'breaks.json') {
-	return envelope.parse(await getJson(GH_PAGES(filename))).data
+	return publicationData(await getJson(GH_PAGES(filename)))
 }
 
 async function loadScheduleResponses() {

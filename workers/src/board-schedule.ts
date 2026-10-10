@@ -1,4 +1,5 @@
 import {clock} from './clock.ts'
+import {notingRetryAfter} from './conditional.ts'
 
 /// When a Durable Object that keeps a list of its own reads that list again:
 /// on a schedule with jitter, sooner after a run that left work over, later
@@ -91,8 +92,12 @@ export class BoardSchedule {
 	async run(read: (now: number) => Promise<number>): Promise<void> {
 		let now = clock.now()
 		let unread = 0
+		let retryAfter = 0
 		try {
-			unread = await read(now)
+			let noted = await notingRetryAfter(() => read(now))
+			retryAfter = noted.retryAfter
+			if (noted.result.status === 'rejected') throw noted.result.reason
+			unread = noted.result.value
 			this.#storage.sql.exec(
 				'UPDATE state SET failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1',
 			)
@@ -101,7 +106,12 @@ export class BoardSchedule {
 			this.#storage.sql.exec(
 				'UPDATE state SET failures = ?, backoff_until = ?, last_error = ? WHERE id = 1',
 				failures,
-				now + Math.min(this.#timing.minBackoff * 2 ** (failures - 1), this.#timing.every),
+				// at least as long as the site asked, when it said
+				now +
+					Math.max(
+						Math.min(this.#timing.minBackoff * 2 ** (failures - 1), this.#timing.every),
+						retryAfter,
+					),
 				err instanceof Error ? err.message : String(err),
 			)
 			throw err

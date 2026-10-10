@@ -6,8 +6,14 @@ export default defineConfig({
 	plugins: [
 		cloudflareTest({
 			wrangler: {configPath: '../wrangler.jsonc'},
-			// a secret of the deployed worker; the Google calendar tests check it is sent
-			miniflare: {bindings: {GOOGLE_CALENDAR_API_KEY: 'test-calendar-key'}},
+			miniflare: {
+				bindings: {
+					// a secret of the deployed worker; the Google calendar tests check it is sent
+					GOOGLE_CALENDAR_API_KEY: 'test-calendar-key',
+					// an archive's walk back would fetch in the middle of other tests
+					ARCHIVE_BACKFILL: 'off',
+				},
+			},
 		}),
 	],
 	// moment-timezone is a CommonJS package that requires moment; workerd runs
@@ -19,6 +25,8 @@ export default defineConfig({
 		// the first request of a file loads the worker, whose calendar readers bring
 		// in moment-timezone and its zone data, which takes seconds to load here
 		testTimeout: 30_000,
+		// and a file's first hook may be what loads it
+		hookTimeout: 30_000,
 		includeTaskLocation: true,
 		reporters: [
 			'default',

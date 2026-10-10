@@ -3,12 +3,19 @@ import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {SOURCE_TTL} from '../lifetimes.ts'
 import {upstream} from '../upstream.ts'
+import {recordItems} from '../archive.ts'
+import {newsArchive} from '../archives/news.ts'
 
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
 
 /// The feed the app reads for KRLX, the way the Node server's `krlx` route does.
 export const KRLX_URL = 'https://content.krlx.org/feed/'
+
+/// The WordPress posts behind each feed, where its history is read from.
+export const RSS_POSTS: Record<string, string> = {
+	[KRLX_URL]: 'https://content.krlx.org/wp-json/wp/v2/posts',
+}
 
 /// Only RSS feeds we mean to read: the url comes from the caller, and this must
 /// not become a way to make the worker fetch anything.
@@ -40,6 +47,10 @@ export const rssNews = defineSource({
 			throw new Error(`${url} did not answer with an RSS feed`)
 		}
 		return feedItemsFromRss(body)
+	},
+	async record({url}, items, env) {
+		let posts = RSS_POSTS[url]
+		if (posts) await recordItems(env, newsArchive, {posts}, items)
 	},
 	ttl: SOURCE_TTL,
 	staleIfError: DAY,

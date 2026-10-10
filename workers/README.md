@@ -129,6 +129,66 @@ day if its host fails; student work keeps its own schedule, below.
   (`deprecatedJobs` in `source/student-work/retired-jobs.ts`), dated by a fixed
   day so its body and ETag never change. Nothing is fetched.
 
+- `GET /edu.stolaf/spaces/hours` and `GET /edu.stolaf/breaks`: the building
+  hours with each building's break schedules expanded against the break
+  calendar, and the calendar itself, as the Node routes answer them
+  (`resolveScheduleResponses` in `source/schedules/resolve.ts`, and
+  `publicationData` in `source/schedules/publications.ts`, shared with the
+  Node server). Both are read from one pair of the published
+  `building-hours.json` and `breaks.json`, so the hours are only resolved
+  against the calendar they were read with. A 502 if nothing was ever stored.
+- Published files answered with a `307` to where they are published, cacheable
+  for ten minutes, with nothing fetched: `/transit/bus`, `/transit/modes` and
+  `/food/named/menu/the-pause` on both campuses (each its own college's file),
+  and St. Olaf's `/printing/color-printers`, `/reports/stav` and
+  `/courses/catalog.db`. The client then reads the file from its host, with
+  that host's ETag and caching.
+- `GET /images/:group/:name`: a `307` to the app's published image, for the
+  groups and names `isPublishedImage` (`source/ccc-lib/images-shape.ts`, shared
+  with the Node server) allows. Anything else, or a query string, is a 404.
+- `GET /edu.stolaf/a-to-z`: the Node route's notice that the A–Z index cannot be
+  loaded here (`deprecatedLinkGroups` in
+  `source/ccci-stolaf-college/v1/deprecated-shape.ts`). Nothing is fetched.
+- `GET /food/named/menu/:name` and `GET /food/named/cafe/:name`: the menu and
+  café info of the café each name stands for (`NAMED_CAFES` in `src/cafes.ts`,
+  the Node server's named routes), answered as the id routes answer them, and
+  sharing their stored copy.
+- `GET /routes`: every route on the campus's table, in the shape of the Node
+  server's `/v1/routes` (`path`, `displayName`, `methods`, `params`), sorted by
+  path (`src/routes.ts`).
+- `GET /athletics/scores`: the college's games, as the Node route makes them
+  (`source/athletics/shape.ts`, shared with the Node server): the athletics
+  site's scores feed, with livestats' scores for games under way and the
+  calendar's results for yesterday's games. Clients keep it for a minute
+  while a game is under way or about to start, and otherwise ten minutes (less
+  when the next game is about to start sooner). A 502 if nothing was
+  ever stored.
+- `GET /edu.stolaf/directory/departments` and `/directory/majors`: St.
+  Olaf's directory lists, passed through as they are.
+- `GET /edu.stolaf/streams/upcoming`, `/streams/archived` and `/streams/search`:
+  St. Olaf's streams for the next two months, the last two, or a search, with
+  the Node routes' parameters, checked as they check them
+  (`source/ccci-stolaf-college/v1/streams-shape.ts`, shared with the Node
+  server); parameters that do not check out are a 400 with nothing fetched. A
+  search's `Link` header points at its other pages. Every spelling of one query
+  shares one stored copy.
+- `GET /edu.carleton/convos/upcoming/:id` and `/convos/archived`: a convocation's
+  images, description and sponsor from its page on the convocations calendar,
+  and the latest hundred convocations in the podcast feed, as the Node routes
+  make them (`source/ccci-carleton-college/v1/convos-shape.ts`). An id that is
+  not a calendar code (letters and digits, up to 32) is a 404 with nothing
+  fetched.
+
+The news feeds, the calendars (all but KSTO's weekly schedule and the
+notices), `/streams/archived` and `/convos/archived` also take `?before=`, an
+ISO 8601 date or time: the answer is the kept history from before it (ten
+news items, fifty events or streams, a hundred convocations), read from
+`ArchiveDO` below, with a `Link: <...>; rel="next"` to the page before when
+the page is full. News and convocations are latest first; calendars and
+streams soonest first within a page, as their live routes are (streams take
+`sort=descending`). A `before` that is not a time is a 400. Without
+`?before=`, every route answers as it did.
+
 ## Sources
 
 - `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
@@ -152,6 +212,27 @@ day if its host fails; student work keeps its own schedule, below.
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
   validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
   and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
+
+- `schedules` (`src/sources/schedules.ts`): St. Olaf's building hours and
+  break calendar, read together and resolved; fresh for 1 hour and kept a day.
+  Only `stolaf.dev` loads; either file failing, or the pair not resolving, is
+  an error.
+- `athletics-scores` (`src/sources/athletics.ts`): a college's games from its
+  athletics site (three requests a read: scores, livestats and yesterday's
+  calendar), fresh for a minute while a game is under way or about to start,
+  otherwise until the next game is about to start, at most an hour; kept a
+  day. A source can decide its freshness from what it read (`ttlFor`). Only `athletics.stolaf.edu` and
+  `athletics.carleton.edu` load.
+- `stolaf-directory` (`src/sources/stolaf-directory.ts`): one of St. Olaf's
+  two directory lists, fresh for 1 hour and kept a day; only those two
+  addresses load.
+- `streams` (`src/sources/streams.ts`): one page of St. Olaf's streaming
+  collection for one checked query, keyed by the query in a fixed order; fresh
+  for 1 hour and kept a day. Its errors never name the query.
+- `convo-detail` and `convos-archived` (`src/sources/convos.ts`): a
+  convocation's calendar page, and the convocations podcast feed, shaped; fresh
+  for 1 hour and kept a day. A page without the event, or a feed that is not
+  RSS, is an error.
 
 - `StudentWorkDO` (`src/student-work-do.ts`): not a source but its own Durable
   Object (binding `STUDENT_WORK`), holding the St. Olaf Oracle Recruiting board
@@ -193,8 +274,34 @@ day if its host fails; student work keeps its own schedule, below.
   Both objects' schedules (when to read, backoff, idling) are in
   `src/board-schedule.ts`.
 
+- `ArchiveDO` (`src/archive-do.ts`, binding `ARCHIVE`): a feed's history,
+  one object per feed and one SQLite row per item (a post, an event, a stream,
+  a convocation), indexed by when it happens. Whatever a live source reads is
+  recorded behind its answer (`record` in `src/define-source.ts`), replacing
+  the stored copy. Nothing that has happened is removed; a future item that a
+  live read covering its date no longer lists is. The first time a feed is
+  recorded, the object's alarm starts walking its history back (two steps a
+  run, a minute apart; a failure backs off from a minute, doubling, up to an
+  hour) until it reaches the start, and keeps the live copy of anything it
+  finds already stored. How each feed is walked is in `src/archives/`: a news
+  site's WordPress posts twenty at a time; St. Olaf's whole streams
+  collection a hundred at a time; the convocations podcast in one read; an
+  iCal feed or Presence in one read of everything they publish; a Tribe
+  calendar a month at a time back until a year of empty months; a Google
+  calendar its last year. KRLX's history is read from its WordPress API, so
+  those items are shaped from WordPress rather than RSS.
+
 Every upstream request goes through `upstream` (`src/upstream.ts`), which sends
-`User-Agent: ccc-server/2.0` and never follows a redirect.
+`User-Agent: ccc-server/2.0` and never follows a redirect. While a source
+loads, its GETs are conditional (`src/conditional.ts`): an answer that came
+with an `ETag` or `Last-Modified` is kept gzipped beside the value (up to 1 MB compressed, by a
+digest of its address), the next load sends `If-None-Match` /
+`If-Modified-Since`, and a `304` is read as that kept answer, a fresh read of
+the same body. A `429` or `503` with a `Retry-After` holds the source off at
+least that long (at most a day) before it is asked again. The student work and
+student orgs boards and the archives' walks back honor `Retry-After` the same
+way; they are not asked conditionally, since a page they read is not read
+again soon and their sites send no validators.
 
 A source must be imported from `src/worker.ts`, or the object answers "unknown
 source".
@@ -231,8 +338,11 @@ a missing one.
 ## Data files, by college
 
 The small JSON files each college publishes on GitHub Pages (faqs, contacts,
-help, webcams, hours, dictionary, the campus map) are passed through as they
-are, by `pagesJson` (`src/sources/pages-json.ts`), from each campus's `files`
-table (`src/campuses.ts`, with the paths and urls in `src/pages-routes.ts`).
-A 502 if nothing has ever been stored.
+help, webcams, dictionary, the campus map, Carleton's hours, the student work
+areas and wages) are answered with a `307` to where each is published,
+cacheable for ten minutes, from each campus's `files` table (`src/campuses.ts`,
+with the paths and urls in `src/pages-routes.ts`). Nothing is fetched; the client
+reads the file from GitHub Pages, with its ETag and caching. `pagesJson`
+(`src/sources/pages-json.ts`) still reads the student work areas file for the
+units list.
 Examples: `/edu.stolaf/faqs`, `/edu.carleton/spaces/hours`.

@@ -19,6 +19,8 @@ import {registerSource} from '../registry.ts'
 import {eventsFromPresence} from './presence-shape.ts'
 import {TecPageSchema, eventsFromTec} from './tec-shape.ts'
 import {upstream} from '../upstream.ts'
+import {recordItems} from '../archive.ts'
+import {calendarArchive} from '../archives/calendars.ts'
 
 const MINUTE = 60 * 1000
 const DAY = 24 * 60 * MINUTE
@@ -30,11 +32,16 @@ const TTL = SOURCE_TTL
 /// sources go by is the one they are shaped by.
 const now = () => moment(clock.now())
 
+/// The start of the campus date a month after `at`: where a read that goes a
+/// month out stops covering, kept short of the date it goes up to.
+const campusMonthAhead = (at: number) =>
+	moment(at).tz('America/Chicago').add(1, 'month').startOf('day').valueOf()
+
 /// The url comes from this worker's own route table, and these sources must not
 /// become a way to make the worker fetch anything: the host is checked, and a
 /// redirect to another is not followed. Errors reach the apps and the logs, so
 /// they name the address without its query, which can carry the Google key.
-async function fetchFrom(hosts: ReadonlySet<string>, url: string, init: RequestInit = {}) {
+export async function fetchFrom(hosts: ReadonlySet<string>, url: string, init: RequestInit = {}) {
 	let parsed = new URL(url)
 	let named = parsed.origin + parsed.pathname
 	if (parsed.protocol !== 'https:' || !hosts.has(parsed.hostname)) {
@@ -47,8 +54,8 @@ async function fetchFrom(hosts: ReadonlySet<string>, url: string, init: RequestI
 	return response
 }
 
-const ICAL_HOSTS = new Set(['www.northfieldmn.gov', 'www.carleton.edu'])
-const icalText = async (url: string) =>
+export const ICAL_HOSTS = new Set(['www.northfieldmn.gov', 'www.carleton.edu'])
+export const icalText = async (url: string) =>
 	(await fetchFrom(ICAL_HOSTS, url, {headers: {accept: 'text/calendar'}})).text()
 
 export type IcalParams = {url: string}
@@ -61,6 +68,9 @@ export const ical = defineSource({
 	async load({url}) {
 		return eventsFromIcal(await icalText(url), url, {}, now())
 	},
+	// a feed lists everything still to come
+	record: ({url}, events, env, at) =>
+		recordItems(env, calendarArchive, {kind: 'ical', url}, events, {from: at, to: Infinity}),
 	ttl: TTL,
 	staleIfError: DAY,
 })
@@ -91,12 +101,20 @@ export const carletonCalendar = defineSource({
 		])
 		return withEventImages(eventsFromIcal(body, feedUrl, {maxEndDate}, at), images)
 	},
+	// the read stops at a month out, so only events before then can be gone
+	record: ({feedUrl}, events, env, at) =>
+		recordItems(env, calendarArchive, {kind: 'ical', url: feedUrl}, events, {
+			from: at,
+			to: campusMonthAhead(at),
+		}),
 	ttl: TTL,
 	staleIfError: DAY,
 })
 registerSource(carletonCalendar)
 
 export type GoogleCalendarParams = {calendarId: string}
+
+const GOOGLE_PAGE = 50
 
 /// A Google calendar's next fifty events, the way `googleCalendar` does for the
 /// Node server. The key is a secret of this worker, not part of what is stored.
@@ -112,7 +130,7 @@ export const googleCalendar = defineSource({
 			`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
 		)
 		url.search = new URLSearchParams({
-			maxResults: '50',
+			maxResults: String(GOOGLE_PAGE),
 			orderBy: 'startTime',
 			showDeleted: 'false',
 			singleEvents: 'true',
@@ -122,6 +140,13 @@ export const googleCalendar = defineSource({
 
 		let response = await fetchFrom(new Set(['www.googleapis.com']), url.href)
 		return eventsFromGoogle(await response.json(), at)
+	},
+	// a full read stops at its fiftieth event, so only events before that one
+	// can be gone
+	record: ({calendarId}, events, env, at) => {
+		let last = events.at(-1)
+		let to = events.length === GOOGLE_PAGE && last ? Date.parse(last.startTime) - 1 : Infinity
+		return recordItems(env, calendarArchive, {kind: 'google', calendarId}, events, {from: at, to})
 	},
 	ttl: TTL,
 	staleIfError: DAY,
@@ -154,6 +179,8 @@ export const presence = defineSource({
 		let response = await fetchFrom(new Set(['api.presence.io']), url)
 		return eventsFromPresence(await response.json(), now())
 	},
+	record: ({url}, events, env, at) =>
+		recordItems(env, calendarArchive, {kind: 'presence', url}, events, {from: at, to: Infinity}),
 	ttl: TTL,
 	staleIfError: DAY,
 })
@@ -163,7 +190,7 @@ export type TecParams = {url: string}
 
 /// The most pages of a feed this reads, at fifty events each. A feed longer than
 /// that throws rather than come back short.
-const TEC_MAX_PAGES = 10
+export const TEC_MAX_PAGES = 10
 
 /// An Events Calendar feed's events for the next month, in campus dates, across
 /// all its pages. TEC's `start_date` filter would drop an exhibition that opened
@@ -195,6 +222,11 @@ export const tec = defineSource({
 		}
 		return eventsFromTec(events, at)
 	},
+	record: ({url}, events, env, at) =>
+		recordItems(env, calendarArchive, {kind: 'tec', url}, events, {
+			from: at,
+			to: campusMonthAhead(at),
+		}),
 	ttl: TTL,
 	staleIfError: DAY,
 })

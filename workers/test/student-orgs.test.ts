@@ -206,6 +206,18 @@ describe('GET /edu.stolaf/orgs', () => {
 		expect(await response.json()).toEqual(nodeOrgs())
 	})
 
+	test('a 503 with a Retry-After is not asked again before it', async () => {
+		await get('/edu.stolaf/orgs')
+		respond = (url) =>
+			url.href === LIST
+				? new Response('busy', {status: 503, headers: {'Retry-After': '10800'}})
+				: undefined
+		now += 2 * HOUR
+		await runDurableObjectAlarm(stolaf())
+		let at = await runInDurableObject(stolaf(), (_do, state) => state.storage.getAlarm())
+		expect(at).toBe(now + 3 * HOUR)
+	})
+
 	test('an empty list in place of a full one is not taken', async () => {
 		await get('/edu.stolaf/orgs')
 		let full = nodeOrgs()

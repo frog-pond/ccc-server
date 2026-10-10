@@ -1,61 +1,16 @@
 import {getText} from '../../ccc-lib/http.ts'
 import {ONE_HOUR} from '../../ccc-lib/constants.ts'
-import {makeAbsoluteUrl} from '../../ccc-lib/url.ts'
-import {htmlToMarkdown} from '../../ccc-lib/html-to-markdown.ts'
-import {parseHtml, parseXml, textFromHtml} from '../../ccc-lib/dom.ts'
-import moment from 'moment'
 import type {Context} from '../../ccc-server/context.ts'
-import assert from 'node:assert/strict'
-
-function processConvo(event: Element) {
-	let title = textFromHtml(event.querySelector('title')?.textContent ?? '')
-
-	let description = textFromHtml(event.querySelector('description')?.textContent ?? '')
-
-	let pubDate = moment(event.querySelector('pubDate')?.textContent)
-
-	let enclosureEl = event.querySelector('enclosure')
-	let enclosure = enclosureEl
-		? {
-				type: enclosureEl.getAttribute('type') ?? '',
-				url: enclosureEl.getAttribute('url') ?? '',
-				length: enclosureEl.getAttribute('length') ?? '',
-			}
-		: null
-
-	return {title, description, pubDate, enclosure}
-}
+import {
+	CONVOS_CALENDAR_URL,
+	CONVOS_PODCAST_URL,
+	archivedFrom,
+	upcomingFrom,
+} from './convos-shape.ts'
 
 async function fetchUpcoming(eventId: string) {
-	let baseUrl = 'https://www.carleton.edu/convocations/calendar/'
-	let url = 'https://www.carleton.edu/convocations/calendar/'
-	let body = await getText(url, {searchParams: {eId: eventId}})
-
-	let dom = parseHtml(body)
-
-	let eventEl = dom.querySelector('.campus-calendar--event')
-	assert(eventEl)
-
-	let descText = htmlToMarkdown(eventEl.querySelector('.event_description')?.innerHTML ?? '', {
-		baseUrl,
-	})
-
-	let images = Array.from(eventEl.querySelectorAll('.single_event_image a'))
-		.flatMap((imgLink) => {
-			let href = imgLink.getAttribute('href')
-			return href ? [href] : []
-		})
-		.map((href) => makeAbsoluteUrl(href, {baseUrl}))
-
-	let sponsorText = htmlToMarkdown(eventEl.querySelector('.sponsorContactInfo')?.innerHTML ?? '', {
-		baseUrl,
-	})
-
-	return {
-		images,
-		content: descText,
-		sponsor: sponsorText,
-	}
+	let body = await getText(CONVOS_CALENDAR_URL, {searchParams: {eId: eventId}})
+	return upcomingFrom(body)
 }
 
 export const getUpcoming = fetchUpcoming
@@ -70,11 +25,8 @@ export async function upcomingDetail(ctx: Context) {
 }
 
 async function fetchArchived() {
-	let body = await getText('https://feed.podbean.com/carletonconvos/feed.xml')
-	let dom = parseXml(body)
-	let convos = Array.from(dom.querySelectorAll('rss channel item')).map(processConvo)
-	convos = convos.slice(0, 100)
-	return convos
+	let body = await getText(CONVOS_PODCAST_URL)
+	return archivedFrom(body)
 }
 
 export const getArchived = fetchArchived

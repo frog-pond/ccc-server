@@ -9,14 +9,14 @@ const STOLAF_MAP = (file: string) => `https://stolaf.dev/campus-map-data/${file}
 const CARLETON = (file: string) => `https://carls-app.github.io/carls/${file}`
 const CARLETON_MAP = (file: string) => `https://carls-app.github.io/map-data/${file}`
 
-/// What St. Olaf serves from its published data files, by path.
+/// St. Olaf's published data files, by path, each answered with a temporary
+/// redirect to where it is published.
 export const STOLAF_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: STOLAF('contact-info.json')},
 	'/dictionary': {url: STOLAF('dictionary.json')},
 	'/faqs': {url: STOLAF('faqs.json')},
 	'/tools/help': {url: STOLAF('help.json')},
 	'/webcams': {url: STOLAF('webcams.json')},
-	'/spaces/hours': {url: STOLAF('building-hours.json')},
 	'/spaces/directory': {url: STOLAF('building-directory.json')},
 	'/sources': {url: STOLAF('sources.json')},
 	'/a-to-z/extras': {url: STOLAF('a-to-z.json')},
@@ -30,7 +30,26 @@ export const STOLAF_FILES: Record<string, PagesRoute> = {
 	'/student-work/wages': {url: STOLAF('student-wages.json')},
 }
 
-/// What Carleton serves from its published data files, by path.
+/// St. Olaf's building hours and break calendar, which are read together.
+export const STOLAF_SCHEDULES = {
+	hoursUrl: STOLAF('building-hours.json'),
+	breaksUrl: STOLAF('breaks.json'),
+}
+
+/// What St. Olaf answers with a temporary redirect to where the file is
+/// published, by path. The client then reads the file from there, with its
+/// host's own ETag and caching.
+export const STOLAF_REDIRECTS: Record<string, string> = {
+	'/transit/bus': STOLAF('bus-times.json'),
+	'/transit/modes': STOLAF('transportation.json'),
+	'/printing/color-printers': STOLAF('color-printers.json'),
+	'/reports/stav': 'https://stolaf.dev/stav-mealtimes/two-weeks.json',
+	'/food/named/menu/the-pause': STOLAF('pause-menu.json'),
+	'/courses/catalog.db': 'https://stolaf.dev/course-data/catalog-recent.db',
+}
+
+/// Carleton's published data files, by path, each answered with a temporary
+/// redirect to where it is published.
 export const CARLETON_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: CARLETON('contact-info.json')},
 	'/dictionary': {url: CARLETON('dictionary-carls.json')},
@@ -40,4 +59,12 @@ export const CARLETON_FILES: Record<string, PagesRoute> = {
 	'/spaces/hours': {url: CARLETON('building-hours.json')},
 	'/map': {url: CARLETON_MAP('map.json')},
 	'/map/geojson': {url: CARLETON_MAP('map.geojson')},
+}
+
+/// What Carleton answers with a temporary redirect to where the file is
+/// published, by path.
+export const CARLETON_REDIRECTS: Record<string, string> = {
+	'/transit/bus': CARLETON('bus-times.json'),
+	'/transit/modes': CARLETON('transportation.json'),
+	'/food/named/menu/the-pause': CARLETON('pause-menu.json'),
 }

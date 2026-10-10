@@ -1,9 +1,10 @@
 import {deprecatedEvents} from '../../calendar/deprecated.ts'
 import {DISCUSSION_URL, RETIRED_TITLE, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
+import {A_TO_Z_TEXT, deprecatedLinkGroups} from './deprecated-shape.ts'
 import {FeedItemSchema} from '../../feeds/types.ts'
 import {ONE_DAY} from '../../ccc-lib/constants.ts'
 import type {Context} from '../../ccc-server/context.ts'
-import {z} from 'zod'
+export {A_TO_Z_TEXT, deprecatedLinkGroups} from './deprecated-shape.ts'
 import {RETIRED_JOBS_TEXT, deprecatedJobs} from '../../student-work/retired-jobs.ts'
 
 export {deprecatedJobs} from '../../student-work/retired-jobs.ts'
@@ -19,22 +20,11 @@ export {deprecatedJobs} from '../../student-work/retired-jobs.ts'
 /// client change, which is the point — the clients that see it cannot be
 /// changed.
 
-const LinkGroupSchema = z.object({
-	title: z.string(),
-	data: z.array(z.object({label: z.string(), url: z.url()})),
-})
-
-export function deprecatedLinkGroups(text: string) {
-	return LinkGroupSchema.array().parse([
-		{title: UNAVAILABLE_TITLE, data: [{label: text, url: DISCUSSION_URL}]},
-	])
-}
-
 export function atoz(ctx: Context) {
 	ctx.cacheControl(ONE_DAY)
 	if (ctx.cached(ONE_DAY)) return
 
-	ctx.body = deprecatedLinkGroups("The A–Z index can't be loaded right now. Tap for details.")
+	ctx.body = deprecatedLinkGroups(A_TO_Z_TEXT)
 }
 
 /// The student job listings moved to Oracle Recruiting, which this server's
