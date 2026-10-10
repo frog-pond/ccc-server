@@ -44,15 +44,17 @@ async function serve(t: test.TestContext) {
 	return `http://localhost:${String(address.port)}`
 }
 
-void test('/util/html-to-md accepts its HTML by POST', async (t) => {
+void test('/util/html-to-md accepts its HTML by QUERY, and no longer by POST', async (t) => {
 	let base = await serve(t)
-	let response = await fetch(`${base}/v1/util/html-to-md`, {
-		method: 'POST',
+	let request = {
 		headers: {'content-type': 'application/json'},
 		body: JSON.stringify({text: '<b>hi</b>'}),
-	})
+	}
+	let response = await fetch(`${base}/v1/util/html-to-md`, {method: 'QUERY', ...request})
 	assert.equal(response.status, 200)
 	assert.equal(await response.text(), '**hi**')
+	let posted = await fetch(`${base}/v1/util/html-to-md`, {method: 'POST', ...request})
+	assert.equal(posted.status, 404)
 })
 
 void test('/orgs/uri/:uri refuses a slug Presence could not have, without asking Presence', async (t) => {

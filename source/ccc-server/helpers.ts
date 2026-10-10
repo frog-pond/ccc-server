@@ -1,6 +1,6 @@
 import type Router from '@koa/router'
 import * as Sentry from '@sentry/node'
-import type {ContextState, RouterState} from './context.ts'
+import type {Context, ContextState, RouterState} from './context.ts'
 
 export interface CacheAdmin {
 	keys(): IterableIterator<string>
@@ -50,4 +50,28 @@ export function setupHelpers(
 		})
 		ctx.status = 204
 	})
+}
+
+/// The sitemap: every route on an institution router, one entry per layer, so
+/// a path answering several methods appears once per method. HEAD is left
+/// out, since the router answers it for every GET without being asked.
+export function routeListing(api: Router<RouterState, ContextState>) {
+	return (ctx: Context) => {
+		const mountPrefix = ctx.path.replace(/\/v1\/routes\/?$/i, '')
+		const leadingVersionRegex = /^\/v[0-9]+(?:\.[0-9]+)*\//
+		// The listing changes with each deploy; without this a client's URL cache
+		// may judge an old copy fresh and never ask. The ETag keeps asking cheap.
+		ctx.cacheControl('no-cache')
+		ctx.body = api.stack
+			.filter((layer) => layer.methods.length > 0)
+			.map((layer) => ({
+				path: `${mountPrefix}${layer.path.toString()}`,
+				displayName: layer.path.toString().replace(leadingVersionRegex, ''),
+				methods: layer.methods.filter((method) => method !== 'HEAD'),
+				params: layer.paramNames.map((param) => param.name),
+			}))
+			.toSorted(
+				(a, b) => a.path.localeCompare(b.path) || a.methods.join().localeCompare(b.methods.join()),
+			)
+	}
 }
