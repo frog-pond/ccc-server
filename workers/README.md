@@ -27,16 +27,52 @@ Needs npm 12 (`npm install --global npm@12`): npm 10's resolver crashes on
 Vitest's peer dependencies. npm 12 also blocks dependency install scripts by
 default, and none are needed here, so none are approved.
 
+This is an npm workspace of the root package, so install once at the repo root
+(`npm ci`) and it can import from `../source/` (the BonApp extractor and schema
+resolve `zod` from the root `node_modules`). Import only modules that are pure
+or workerd-safe: not `ccc-lib/http.ts`, `@sentry/node` or `moment-timezone`.
+
 ```sh
-npm ci
+npm ci              # at the repo root
 npm test            # vitest, running inside workerd
 npm run typecheck   # regenerates worker-configuration.d.ts first
 ```
 
+## Routes
+
+- `GET /`: the cafés this knows, by BonApp id.
+- `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
+  `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
+  A 502 means BonApp failed with nothing stored. This is a look at the source,
+  not the apps' menu contract.
+
+## Sources
+
+- `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
+  validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
+  and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
+
+A source must be imported from `src/worker.ts`, or the object answers "unknown
+source".
+
 ## Notes
+
+- Whether a Worker's own egress can fetch the café page is unproven until the
+  first deploy.
 
 - `@cloudflare/vitest-plugin` is the renamed `@cloudflare/vitest-pool-workers`.
 - Storage is not reset between tests, so each test uses its own source key.
 - Time is `clock.now()`, not `Date.now()`; tests move it by assigning to it.
 - Reads return a value (`state: 'error'`) rather than throwing across RPC,
   because workerd reports every RPC exception as unhandled, caught or not.
+
+## Cloudflare builds
+
+Workers Builds runs from the repo root (`npm clean-install`, `npm run build`,
+then `npx wrangler preview`), and wrangler stops at a workspace root that has no
+config of its own. So the one wrangler config lives at the repo root
+(`wrangler.jsonc`, with `main` pointing into `workers/`). A Preview does not
+inherit its bindings, so `previews` repeats the `SOURCE` binding; a test checks
+the two match. This package's scripts and `vitest.config.ts` point at it with
+`-c ../wrangler.jsonc`. The root `npm run build` is the Node server's `tsc`; this package's own is
+`npm run build` here.

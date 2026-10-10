@@ -21,3 +21,6 @@ npm-debug.log*
 
 # flakiness.io test reports
 /flakiness-report/
+
+# wrangler scratch
+.wrangler/

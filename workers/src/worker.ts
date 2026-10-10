@@ -1,5 +1,7 @@
+import {route} from './router.ts'
+
 export {SourceDO} from './source-do.ts'
 
 export default {
-	fetch: () => new Response('not found', {status: 404}),
+	fetch: (request, env) => route(request, env),
 } satisfies ExportedHandler<Env>

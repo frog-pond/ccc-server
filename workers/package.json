@@ -7,9 +7,9 @@
     "npm": ">=12"
   },
   "scripts": {
-    "dev": "wrangler dev",
-    "typegen": "wrangler types",
-    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev -c ../wrangler.jsonc",
+    "typegen": "wrangler types -c ../wrangler.jsonc",
+    "build": "wrangler deploy --dry-run --outdir dist -c ../wrangler.jsonc",
     "test": "vitest run",
     "typecheck": "npm run typegen && tsc --noEmit"
   },
