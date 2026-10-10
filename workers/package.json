@@ -1,0 +1,24 @@
+{
+  "name": "@frogpond/ccc-workers",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "npm": ">=12"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "typegen": "wrangler types",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "test": "vitest run",
+    "typecheck": "npm run typegen && tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.0",
+    "@flakiness/vitest": "^1.10.1",
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.0",
+    "wrangler": "4.149.0"
+  }
+}
