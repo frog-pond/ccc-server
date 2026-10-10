@@ -41,8 +41,8 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
 ## Routes
 
 Every route is mounted under a campus, `/edu.stolaf` or `/edu.carleton`, and has
-no `/v1` prefix. Each campus has its own table in `src/campuses.ts` (its cafés and
-news feeds), so one can change without the other. The paths below are shown
+no `/v1` prefix. Each campus has its own table in `src/campuses.ts` (its cafés, news
+feeds and calendars), so one can change without the other. The paths below are shown
 without the prefix. The Node server's arbitrary-URL endpoints (`/news/rss`,
 `/news/wpjson`, `/calendar/ics`, `/calendar/google`) are not migrated: a route
 names its source.
@@ -68,6 +68,19 @@ names its source.
   route: fresh for an hour, kept a day if the site fails, a 502 if nothing was
   ever stored. One difference from Node: a Carletonian response that is not RSS
   (a bot-challenge page, say) is an error, not an empty feed.
+- `GET /calendar/:name`: a calendar as events, in the contract the Node server's
+  `/v1/calendar/named/:name` routes keep. The names are `carleton`, `upcoming-convos`
+  and `sumo-schedule` (Carleton's calendars, with the pictures their pages show),
+  `northfield` (an iCal feed), `krlx-schedule` (a Google calendar), `ksto-schedule`,
+  `stolaf`, and the retired `the-cave` and `oleville`. `ksto-schedule` and `stolaf`
+  are read differently by each campus's table, as on the Node servers: St. Olaf's
+  KSTO is the weekly schedule AAO-React-Native publishes and Carleton's is a
+  Google calendar; St. Olaf's `stolaf` is a "temporarily unavailable" notice kept a
+  minute, and Carleton's a retired notice kept a day. A retired calendar is a single
+  notice event, kept a day. The others are fresh for a minute and kept a day if the
+  site fails; a 502, kept a minute, if nothing has ever been stored. Shaped by
+  `source/calendar/*-shape.ts`, shared with the Node server.
+- `GET /convos/upcoming` (Carleton only): the same list as `upcoming-convos`.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
   A 502 means BonApp failed with nothing stored. This is a look at the source,
@@ -80,6 +93,13 @@ names its source.
   load.
 - `rss-news` (`src/sources/rss-news.ts`): an RSS feed as feed items, the same
   lifetimes; only `thecarletonian.com` loads.
+- `calendar-ical`, `calendar-carleton`, `calendar-google` and
+  `calendar-weekly-schedule` (`src/sources/calendars.ts`): a calendar's events,
+  fresh for a minute and kept a day. Only the hosts the routes name load
+  (`www.northfieldmn.gov`, `www.carleton.edu`, `www.googleapis.com`,
+  `stolaf.dev`). The Google source reads the Calendar API with the worker's
+  `GOOGLE_CALENDAR_API_KEY` secret, which has to be set on the worker (and on its
+  Previews); without it those calendars are a 502.
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
   validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
   and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.

@@ -19,5 +19,5 @@
 		"allowImportingTsExtensions": true,
 		"skipLibCheck": true
 	},
-	"include": ["src", "test", "vitest.config.ts", "worker-configuration.d.ts"]
+	"include": ["src", "test", "vitest.config.ts", "worker-configuration.d.ts", "../types"]
 }

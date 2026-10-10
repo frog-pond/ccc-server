@@ -13,6 +13,11 @@ declare module '*.json?raw' {
 	export default contents
 }
 
+declare module '*.ics?raw' {
+	const contents: string
+	export default contents
+}
+
 declare module '*.xml?raw' {
 	const contents: string
 	export default contents

@@ -1,3 +1,4 @@
+import {CARLETON_CALENDARS, CONVOS, STOLAF_CALENDARS, type Calendar} from './calendars.ts'
 import type {FeedItemType} from '../../source/feeds/types.ts'
 import {CAFES} from './cafes.ts'
 import type {Source} from './define-source.ts'
@@ -14,6 +15,10 @@ export type Campus = {
 	cafes: Record<string, string>
 	/// feed names, as in `/news/<name>`
 	news: Record<string, NewsFeed>
+	/// calendar names, as in `/calendar/<name>`
+	calendars: Record<string, Calendar>
+	/// the convocations list, where the campus has one
+	convos?: Calendar
 	/// data files the college publishes, passed through, by path
 	files: Record<string, PagesRoute>
 }
@@ -25,12 +30,15 @@ const CARLETONIAN: NewsFeed = {source: rssNews, url: CARLETONIAN_URL}
 const STOLAF: Campus = {
 	cafes: CAFES,
 	news: {stolaf: STOLAF_NEWS, 'carleton-now': CARLETON_NOW, carletonian: CARLETONIAN},
+	calendars: STOLAF_CALENDARS,
 	files: STOLAF_FILES,
 }
 
 const CARLETON: Campus = {
 	cafes: CAFES,
 	news: {stolaf: STOLAF_NEWS, 'carleton-now': CARLETON_NOW, carletonian: CARLETONIAN},
+	calendars: CARLETON_CALENDARS,
+	convos: CONVOS,
 	files: CARLETON_FILES,
 }
 
