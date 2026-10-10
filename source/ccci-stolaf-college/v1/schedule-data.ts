@@ -37,14 +37,21 @@ function scheduleStoreFor(app: object) {
 	return store
 }
 
-/** Translate store freshness into HTTP policy without creating a URL-specific response cache. */
-export async function getScheduleSnapshot(ctx: Context) {
+/**
+ * Translate store freshness into HTTP policy without creating a URL-specific response cache.
+ * `keepFor`, given the snapshot, can shorten how long a client keeps the response.
+ */
+export async function getScheduleSnapshot(
+	ctx: Context,
+	keepFor?: (responses: ScheduleResponses) => number,
+) {
 	let snapshot = await scheduleStoreFor(ctx.app).read()
 	if (snapshot.status === 'STALE') {
 		ctx.cacheControl(false)
 		ctx.set('X-Cached-Response', 'STALE')
 	} else {
 		let remaining = Math.max(0, snapshot.freshUntil - Date.now())
+		if (keepFor) remaining = Math.min(remaining, keepFor(snapshot.responses))
 		ctx.cacheControl(Math.floor(remaining / 1000) * 1000)
 		if (snapshot.status === 'HIT') ctx.set('X-Cached-Response', 'HIT')
 	}

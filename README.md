@@ -176,6 +176,11 @@ the last successful snapshot for up to 24 hours, with `X-Cached-Response: STALE`
 and `Cache-Control: private, no-cache, no-store`. Refresh failures are retried
 after one minute, including when no successful snapshot exists yet.
 
+`/v1/spaces/hours` answers for the current campus day: during a break, each
+space with a schedule for it serves that schedule and its exceptions in place of
+the usual ones, keeping `breakSchedule` whole, and the response is not kept past
+campus midnight. `/v1/breaks` lists the breaks for clients that look ahead.
+
 `/_cache` lists this snapshot under both route paths (with `/stolaf` in combined
 mode). Deleting either listed key invalidates the whole pair, including any
 failure retry window. Either key reports two evicted entries in `X-Cache-Deleted`
