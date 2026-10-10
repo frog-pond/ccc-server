@@ -7,5 +7,11 @@
 		"bindings": [{"name": "SOURCE", "class_name": "SourceDO"}],
 	},
 	"migrations": [{"tag": "v1", "new_sqlite_classes": ["SourceDO"]}],
-    "previews": {}
+	// A Preview does not inherit bindings, so it needs its own copy to have
+	// env.SOURCE. Each Preview gets its own Durable Object namespace and storage.
+	"previews": {
+		"durable_objects": {
+			"bindings": [{"name": "SOURCE", "class_name": "SourceDO"}],
+		},
+	},
 }

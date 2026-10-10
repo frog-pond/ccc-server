@@ -71,7 +71,8 @@ source".
 Workers Builds runs from the repo root (`npm clean-install`, `npm run build`,
 then `npx wrangler preview`), and wrangler stops at a workspace root that has no
 config of its own. So the one wrangler config lives at the repo root
-(`wrangler.jsonc`, with `main` pointing into `workers/`), and this package's
-scripts and `vitest.config.ts` point at it with `-c ../wrangler.jsonc`. The
-root `npm run build` is the Node server's `tsc`; this package's own is
+(`wrangler.jsonc`, with `main` pointing into `workers/`). A Preview does not
+inherit its bindings, so `previews` repeats the `SOURCE` binding; a test checks
+the two match. This package's scripts and `vitest.config.ts` point at it with
+`-c ../wrangler.jsonc`. The root `npm run build` is the Node server's `tsc`; this package's own is
 `npm run build` here.
