@@ -1,9 +1,12 @@
+import type {FeedItemType} from '../../source/feeds/types.ts'
 import {CafeMenuWithError, CustomCafe, cafeFrom, menuFrom} from '../../source/menus-bonapp/shape.ts'
 import {CAFES} from './cafes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
+import type {Source} from './define-source.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
-import {STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
+import {CARLETONIAN_URL, rssNews} from './sources/rss-news.ts'
+import {CARLETON_NOW_URL, STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -81,15 +84,19 @@ async function bonapp(cafeId: string, full: boolean, env: Env): Promise<Response
 	}
 }
 
-/// St. Olaf news as feed items. Unlike the Node server's stub for older builds,
-/// this is the real feed; with nothing stored and WordPress failing it is a 502,
-/// kept briefly, not a feed.
-async function stolafNews(env: Env): Promise<Response> {
+/// A news feed as feed items. Unlike the Node server (a stub for St. Olaf, and
+/// an empty list for a feed it cannot read), with nothing stored and the site
+/// failing this is a 502, kept briefly, not a feed.
+async function news(
+	env: Env,
+	source: Source<{url: string}, FeedItemType[]>,
+	url: string,
+): Promise<Response> {
 	try {
-		let {value} = await fetchSource(env, wpNews, {url: STOLAF_NEWS_URL})
+		let {value} = await fetchSource(env, source, {url})
 		return json(value, 200, ONE_HOUR)
 	} catch (err) {
-		console.error(err)
+		console.error(err, {url})
 		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
 	}
 }
@@ -100,7 +107,9 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	if (url.pathname === '/') return json({cafes: CAFES})
 
-	if (url.pathname === '/v1/news/named/stolaf') return stolafNews(env)
+	if (url.pathname === '/v1/news/named/stolaf') return news(env, wpNews, STOLAF_NEWS_URL)
+	if (url.pathname === '/v1/news/named/carleton-now') return news(env, wpNews, CARLETON_NOW_URL)
+	if (url.pathname === '/v1/news/named/carletonian') return news(env, rssNews, CARLETONIAN_URL)
 
 	let eating = /^\/v1\/food\/(menu|cafe)\/([^/]+)$/.exec(url.pathname)
 	if (eating?.[1] && eating[2]) return food(eating[1] as 'menu' | 'cafe', eating[2], env)

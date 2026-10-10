@@ -9,9 +9,14 @@ const DAY = 24 * HOUR
 /// Node server's IP, but not a Worker's, so this is served from here.
 export const STOLAF_NEWS_URL = 'https://wp.stolaf.edu/wp-json/wp/v2/posts?per_page=10&_embed=true'
 
+/// The posts the app reads for Carleton News, the way the Node server's
+/// `carleton-now` route does.
+export const CARLETON_NOW_URL =
+	'https://www.carleton.edu/news/wp-json/wp/v2/posts?per_page=10&_embed=true'
+
 /// Only WordPress sites we mean to read: the url comes from the caller, and
 /// this must not become a way to make the worker fetch anything.
-const WORDPRESS_HOSTS = new Set(['wp.stolaf.edu'])
+const WORDPRESS_HOSTS = new Set(['wp.stolaf.edu', 'www.carleton.edu'])
 
 export type WpNewsParams = {url: string}
 
