@@ -45,7 +45,7 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
   café info, in the contract the Node server's routes keep (an unknown id is a
   400; BonApp failing with nothing stored is a 200 with a stand-in). They share
   `menuFrom` and `cafeFrom` (`source/menus-bonapp/shape.ts`) with the Node
-  server. Successes are cacheable for an hour, stand-ins for a minute.
+  server. Successes are cacheable for an hour, or until campus midnight if that comes sooner (they are dated by the campus day); stand-ins for a minute.
 - `GET /v1/news/named/stolaf`: St. Olaf news as feed items, from
   `wp.stolaf.edu`'s WordPress (which blocks the Node server's IP but not a
   Worker's; the Node server only has a stub for older builds). Shaped by
