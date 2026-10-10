@@ -46,6 +46,13 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
   400; BonApp failing with nothing stored is a 200 with a stand-in). They share
   `menuFrom` and `cafeFrom` (`source/menus-bonapp/shape.ts`) with the Node
   server. Successes are cacheable for an hour, stand-ins for a minute.
+- `GET /v1/news/named/stolaf`: St. Olaf news as feed items, from
+  `wp.stolaf.edu`'s WordPress (which blocks the Node server's IP but not a
+  Worker's; the Node server only has a stub for older builds). Shaped by
+  `feedItemsFrom` (`source/feeds/wp-json-shape.ts`), shared with the Node
+  server. Fresh for an hour, kept a day if WordPress fails; a 502 if nothing
+  has ever been stored. `olafmessenger.com` is not served here: its Cloudflare
+  bot challenge blocks Worker egress.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
   A 502 means BonApp failed with nothing stored. This is a look at the source,
@@ -53,6 +60,8 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
 
 ## Sources
 
+- `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
+  fresh for 1 hour and kept a day; only `wp.stolaf.edu` loads.
 - `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
   validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
   and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
