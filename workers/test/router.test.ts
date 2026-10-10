@@ -1,6 +1,7 @@
 import {exports} from 'cloudflare:workers'
-import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, test, type MockInstance} from 'vitest'
 import {clock} from '../src/clock.ts'
+import {spyOnFetch} from './spy.ts'
 import stavHall from './fixtures/stav-hall.html?raw'
 
 const STOLAF = 'https://stolaf.cafebonappetit.com/cafe'
@@ -10,13 +11,13 @@ const page = (html: string, status = 200) =>
 
 const get = (path: string) => exports.default.fetch(new Request(`https://worker.test${path}`))
 
-let fetchSpy: ReturnType<typeof vi.spyOn<typeof globalThis, 'fetch'>>
+let fetchSpy: MockInstance<typeof fetch>
 
 // storage is not reset between tests, so each test reads a café of its own
 beforeEach(() => {
 	// the real time: a refresh alarm set from a clock in the past would be due at once
 	clock.now = () => Date.now()
-	fetchSpy = vi.spyOn(globalThis, 'fetch')
+	fetchSpy = spyOnFetch()
 	fetchSpy.mockImplementation(() => Promise.resolve(page(stavHall)))
 })
 afterEach(() => fetchSpy.mockRestore())

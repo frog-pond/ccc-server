@@ -41,6 +41,11 @@ npm run typecheck   # regenerates worker-configuration.d.ts first
 ## Routes
 
 - `GET /`: the cafés this knows, by BonApp id.
+- `GET /v1/food/menu/:cafeId` and `GET /v1/food/cafe/:cafeId`: the apps' menu and
+  café info, in the contract the Node server's routes keep (an unknown id is a
+  400; BonApp failing with nothing stored is a 200 with a stand-in). They share
+  `menuFrom` and `cafeFrom` (`source/menus-bonapp/shape.ts`) with the Node
+  server. Successes are cacheable for an hour, stand-ins for a minute.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
   A 502 means BonApp failed with nothing stored. This is a look at the source,

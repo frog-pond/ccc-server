@@ -1,0 +1,1556 @@
+{
+	"cor_icons": {
+		"1": {
+			"allergen": 0,
+			"description": "Vegetarian: Contains no meat, fish, poultry, shellfish or products derived from these sources but may contain dairy or eggs.",
+			"id": "1",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-c9d18b.png?v=1791591300",
+			"is_filter": "Y",
+			"label": "Vegetarian",
+			"position": "1",
+			"show_name_ds": "N",
+			"slug": "vegetarian",
+			"sort": "1",
+			"type": "diet"
+		},
+		"3": {
+			"allergen": 0,
+			"description": "Seafood Watch: Contains seafood that meets the Monterey Bay Aquarium&#039;s Seafood Watch guidelines for commercial buyers.",
+			"id": "3",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-43c4b7.png?v=1791591300",
+			"is_filter": "N",
+			"label": "Seafood Watch",
+			"position": "9",
+			"show_name_ds": "N",
+			"slug": "seafood-watch",
+			"sort": "9",
+			"type": "diet"
+		},
+		"4": {
+			"allergen": 0,
+			"description": "Vegan: Contains absolutely no animal or dairy products.",
+			"id": "4",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-668e3c.png?v=1791591300",
+			"is_filter": "Y",
+			"label": "Vegan",
+			"position": "2",
+			"show_name_ds": "N",
+			"slug": "vegan",
+			"sort": "2",
+			"type": "diet"
+		},
+		"6": {
+			"allergen": 0,
+			"description": "Farm to Fork: Contains seasonal, minimally processed ingredients from a local farm, ranch, or fishing boat.",
+			"id": "6",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-d58f59.png?v=1791591300",
+			"is_filter": "N",
+			"label": "Farm to Fork",
+			"position": "7",
+			"show_name_ds": "N",
+			"slug": "farm-to-fork",
+			"sort": "7",
+			"type": "diet"
+		},
+		"9": {
+			"allergen": 0,
+			"description": "Made without Gluten-Containing Ingredients: does not contain ingredients that are sources of gluten, but is prepared in an open kitchen where gluten is present.",
+			"id": "9",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-ce9d00.png?v=1791591300",
+			"is_filter": "Y",
+			"label": "Made without Gluten-Containing Ingredients",
+			"position": "3",
+			"show_name_ds": "N",
+			"slug": "made-without-gluten-containing-ingredients",
+			"sort": "3",
+			"type": "diet"
+		},
+		"10": {
+			"allergen": 0,
+			"description": "Halal: Contains meat prepared in accordance with Muslim dietary law",
+			"id": "10",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-48b8d2.png?v=1791591300",
+			"is_filter": "Y",
+			"label": "Halal",
+			"position": "5",
+			"show_name_ds": "N",
+			"slug": "halal",
+			"sort": "5",
+			"type": "diet"
+		},
+		"18": {
+			"allergen": 0,
+			"description": "Humane: Contains humanely raised meat, poultry, or eggs. Must be certified by a credible third-party animal welfare organization.\n",
+			"id": "18",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-ebce7b.png?v=1791591300",
+			"is_filter": "N",
+			"label": "Humane",
+			"position": "10",
+			"show_name_ds": "N",
+			"slug": "humane",
+			"sort": "10",
+			"type": "diet"
+		},
+		"252": {
+			"allergen": 0,
+			"description": "Contains specialty food items and/or fresh ingredients expertly prepared by women and/or minority-owned businesses.",
+			"id": "252",
+			"image": "https://assets.media.cafebonappetit.com/production/assets/cor_icons/menu-item-type-60223c.png?v=1791591300",
+			"is_filter": "N",
+			"label": "Supplier Diversity",
+			"position": "13",
+			"show_name_ds": "N",
+			"slug": "supplier-diversity",
+			"sort": "13",
+			"type": "diet"
+		}
+	},
+	"days": [
+		{
+			"date": "$DATE",
+			"cafe": {
+				"name": "Stav Hall",
+				"menu_id": "1",
+				"dayparts": [
+					[
+						{
+							"abbreviation": "B",
+							"endtime": "09:45",
+							"endtime_formatted": "9:45 am",
+							"id": "1",
+							"label": "Breakfast",
+							"message": "",
+							"starttime": "07:15",
+							"starttime_formatted": "7:15 am",
+							"time_formatted": "7:15 am - 9:45 am",
+							"stations": [
+								{
+									"order_id": "0001-1117",
+									"id": "1117",
+									"label": "Warm & Soulful",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"18759699",
+										"26202383",
+										"30721207",
+										"26202385"
+									]
+								},
+								{
+									"order_id": "0002-1118",
+									"id": "1118",
+									"label": "Bold & Spicy",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"31054431",
+										"31054430",
+										"31054432",
+										"31054433",
+										"31054434",
+										"31231448",
+										"31443013"
+									]
+								},
+								{
+									"order_id": "0003-27074",
+									"id": "27074",
+									"label": "Grate & Griddle",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"30986998",
+										"30986999",
+										"30987000",
+										"30987001",
+										"30987002"
+									]
+								},
+								{
+									"order_id": "0004-6588",
+									"id": "6588",
+									"label": "Home & Hearth",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125958",
+										"35889295",
+										"20037504",
+										"20037559",
+										"22832604",
+										"20038876",
+										"20038878"
+									]
+								},
+								{
+									"order_id": "0009-2075",
+									"id": "2075",
+									"label": "Butter & Sugar",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"31599750",
+										"31599752",
+										"31599753",
+										"31599754",
+										"31617353",
+										"31617483",
+										"31617484"
+									]
+								},
+								{
+									"order_id": "0012-5625",
+									"id": "5625",
+									"label": "Cereal",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"20038771",
+										"22040407",
+										"30821527",
+										"31231580",
+										"31231581",
+										"31231585",
+										"20038766",
+										"20038767",
+										"20038769",
+										"21574759",
+										"30821920",
+										"31231582",
+										"31231584",
+										"31231586"
+									]
+								},
+								{
+									"order_id": "0014-27071",
+									"id": "27071",
+									"label": "Toaster",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"26997069",
+										"30821614",
+										"20041312",
+										"31973628",
+										"20041229",
+										"31973272",
+										"20041231",
+										"20041232",
+										"20041292",
+										"31202573",
+										"26997070",
+										"31228394"
+									]
+								},
+								{
+									"order_id": "0015-1122",
+									"id": "1122",
+									"label": "Picked & Mixed",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"25493886",
+										"25493887",
+										"25493893",
+										"25493894",
+										"25493895",
+										"25493896",
+										"25493897",
+										"25493898",
+										"25493899",
+										"25494230",
+										"25493892"
+									]
+								},
+								{
+									"order_id": "0017-5595",
+									"id": "5595",
+									"label": "Beverages",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"21574532",
+										"21574534",
+										"21574852",
+										"21574857",
+										"22041297",
+										"22041359",
+										"22695940",
+										"22695941",
+										"21574190",
+										"21574193",
+										"21574191",
+										"21574188",
+										"21574192",
+										"21574186",
+										"21574189",
+										"21574542",
+										"21574543",
+										"21574544",
+										"21574546",
+										"21574859",
+										"21574969",
+										"22041256",
+										"22041361",
+										"22452568",
+										"22746976",
+										"22746977",
+										"23022809",
+										"23023176",
+										"30821355",
+										"30821391",
+										"31325699",
+										"32090012",
+										"32090016",
+										"32090017"
+									]
+								}
+							]
+						},
+						{
+							"abbreviation": "L",
+							"endtime": "14:00",
+							"endtime_formatted": "2:00 pm",
+							"id": "3",
+							"label": "Lunch",
+							"message": "",
+							"starttime": "10:30",
+							"starttime_formatted": "10:30 am",
+							"time_formatted": "10:30 am - 2:00 pm",
+							"stations": [
+								{
+									"order_id": "0001-1117",
+									"id": "1117",
+									"label": "Warm & Soulful",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125948",
+										"34125832"
+									]
+								},
+								{
+									"order_id": "0002-1118",
+									"id": "1118",
+									"label": "Bold & Spicy",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34485506",
+										"34125951",
+										"34125952",
+										"34125953",
+										"23027498",
+										"23027514",
+										"30640623",
+										"30640624",
+										"30722572",
+										"23027499",
+										"23027500",
+										"25633988",
+										"30922932",
+										"30922933"
+									]
+								},
+								{
+									"order_id": "0003-27074",
+									"id": "27074",
+									"label": "Grate & Griddle",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125963",
+										"30740524",
+										"30740525",
+										"30740526",
+										"30740527",
+										"30740528",
+										"30740529",
+										"20127601",
+										"30640352",
+										"30729279",
+										"30740399",
+										"30740406",
+										"30740413"
+									]
+								},
+								{
+									"order_id": "0004-6588",
+									"id": "6588",
+									"label": "Home & Hearth",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125959"
+									]
+								},
+								{
+									"order_id": "0005-28323",
+									"id": "28323",
+									"label": "SimplyOASIS",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125964",
+										"34125965",
+										"34125966",
+										"34125967",
+										"34125968"
+									]
+								},
+								{
+									"order_id": "0006-1121",
+									"id": "1121",
+									"label": "Near & Far",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125954",
+										"34125955",
+										"34485682",
+										"20038923",
+										"20038924"
+									]
+								},
+								{
+									"order_id": "0007-492",
+									"id": "492",
+									"label": "Stone & Sauce",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125945",
+										"30640976",
+										"30640977",
+										"30640978",
+										"31594169",
+										"31594170",
+										"31594171",
+										"31594172",
+										"31594173",
+										"31594175",
+										"31594176",
+										"30647893",
+										"30723878",
+										"31594204",
+										"31594225"
+									]
+								},
+								{
+									"order_id": "0008-10865",
+									"id": "10865",
+									"label": "Leaves & Greens",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"5317945",
+										"5317960",
+										"5317962",
+										"5317963",
+										"22062252",
+										"5317947",
+										"5317948",
+										"5317937",
+										"20138943",
+										"20138944",
+										"22744731",
+										"22744732",
+										"22744735",
+										"22744736",
+										"22744903",
+										"22744904",
+										"30407464",
+										"30732299",
+										"30732300",
+										"30732301",
+										"30732303",
+										"30732304",
+										"30732306",
+										"30732307",
+										"30732308",
+										"30732311",
+										"30732312",
+										"30732313",
+										"30732315",
+										"30732316",
+										"30732317",
+										"30732318",
+										"30732319",
+										"30732321",
+										"30732322",
+										"30732323",
+										"30732581",
+										"5317961",
+										"5317965",
+										"5317951",
+										"22062262",
+										"30732325",
+										"30828924",
+										"30828926",
+										"30828927",
+										"30932182",
+										"30932180"
+									]
+								},
+								{
+									"order_id": "0009-2075",
+									"id": "2075",
+									"label": "Butter & Sugar",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"20086267",
+										"20086268",
+										"20086271",
+										"20086272",
+										"20086273",
+										"30741113",
+										"30743445",
+										"31232869"
+									]
+								},
+								{
+									"order_id": "0012-5625",
+									"id": "5625",
+									"label": "Cereal",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"20038771",
+										"22040407",
+										"30821527",
+										"31231580",
+										"31231581",
+										"31231585",
+										"20038766",
+										"20038767",
+										"20038769",
+										"21574759",
+										"30821920",
+										"31231582",
+										"31231584",
+										"31231586"
+									]
+								},
+								{
+									"order_id": "0014-27071",
+									"id": "27071",
+									"label": "Toaster",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"26997069",
+										"30821614",
+										"20041312",
+										"31973628",
+										"20041229",
+										"31973272",
+										"20041231",
+										"20041232",
+										"20041292",
+										"31202573",
+										"26997070",
+										"31228394"
+									]
+								},
+								{
+									"order_id": "0015-1122",
+									"id": "1122",
+									"label": "Picked & Mixed",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"25493886",
+										"25493887",
+										"25493893",
+										"25493894",
+										"25493895",
+										"25493896",
+										"25493897",
+										"25493898",
+										"25493899",
+										"25494230",
+										"25493892"
+									]
+								},
+								{
+									"order_id": "0016-10724",
+									"id": "10724",
+									"label": "Bread & Pickles",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"20136568",
+										"20136570",
+										"20136571",
+										"20136672",
+										"20136579",
+										"20136580",
+										"20136582",
+										"20136583",
+										"20136586",
+										"22067371",
+										"30497453",
+										"30732541",
+										"30732543",
+										"19572230",
+										"20136577",
+										"20136575",
+										"31972365",
+										"19572228",
+										"20056051",
+										"20136584",
+										"26601256",
+										"30497659",
+										"30732537",
+										"30732540",
+										"30932069",
+										"30932070",
+										"31595570"
+									]
+								},
+								{
+									"order_id": "0017-5595",
+									"id": "5595",
+									"label": "Beverages",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"21574532",
+										"21574534",
+										"21574852",
+										"21574857",
+										"22041297",
+										"22041359",
+										"22695940",
+										"22695941",
+										"21574190",
+										"21574193",
+										"21574191",
+										"21574188",
+										"21574192",
+										"21574186",
+										"21574189",
+										"21574542",
+										"21574543",
+										"21574544",
+										"21574546",
+										"21574859",
+										"21574969",
+										"22041256",
+										"22041361",
+										"22452568",
+										"22746976",
+										"22746977",
+										"23022809",
+										"23023176",
+										"30821355",
+										"30821391",
+										"31325699",
+										"32090012",
+										"32090016",
+										"32090017"
+									]
+								}
+							]
+						},
+						{
+							"abbreviation": "D",
+							"endtime": "17:30",
+							"endtime_formatted": "5:30 pm",
+							"id": "4",
+							"label": "Dinner",
+							"message": "Have a well-deserved break!",
+							"starttime": "16:00",
+							"starttime_formatted": "4:00 pm",
+							"time_formatted": "4:00 pm - 5:30 pm",
+							"stations": [
+								{
+									"order_id": "0001-1117",
+									"id": "1117",
+									"label": "Warm & Soulful",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125948",
+										"34125832"
+									]
+								},
+								{
+									"order_id": "0002-1118",
+									"id": "1118",
+									"label": "Bold & Spicy",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34485506",
+										"34125951",
+										"34125952",
+										"34125953",
+										"23027498",
+										"23027514",
+										"30640623",
+										"30640624",
+										"30722572",
+										"23027499",
+										"23027500",
+										"25633988",
+										"30922932",
+										"30922933"
+									]
+								},
+								{
+									"order_id": "0003-27074",
+									"id": "27074",
+									"label": "Grate & Griddle",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125963",
+										"30740524",
+										"30740525",
+										"30740526",
+										"30740527",
+										"30740528",
+										"30740529",
+										"20127601",
+										"30640352",
+										"30729279",
+										"30740399",
+										"30740406",
+										"30740413"
+									]
+								},
+								{
+									"order_id": "0004-6588",
+									"id": "6588",
+									"label": "Home & Hearth",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125960",
+										"36107610"
+									]
+								},
+								{
+									"order_id": "0005-28323",
+									"id": "28323",
+									"label": "SimplyOASIS",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125964",
+										"34125965",
+										"34125966",
+										"34125967",
+										"34125968"
+									]
+								},
+								{
+									"order_id": "0006-1121",
+									"id": "1121",
+									"label": "Near & Far",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"36087459",
+										"20038923",
+										"20038924"
+									]
+								},
+								{
+									"order_id": "0007-492",
+									"id": "492",
+									"label": "Stone & Sauce",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"34125945",
+										"30640976",
+										"30640977",
+										"30640978",
+										"31594169",
+										"31594170",
+										"31594171",
+										"31594172",
+										"31594173",
+										"31594175",
+										"31594176",
+										"30647893",
+										"30723878",
+										"31594204",
+										"31594225"
+									]
+								},
+								{
+									"order_id": "0008-10865",
+									"id": "10865",
+									"label": "Leaves & Greens",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"5317945",
+										"5317960",
+										"5317962",
+										"5317963",
+										"22062252",
+										"5317947",
+										"5317948",
+										"5317937",
+										"20138943",
+										"20138944",
+										"22744731",
+										"22744732",
+										"22744735",
+										"22744736",
+										"22744903",
+										"22744904",
+										"30407464",
+										"30732299",
+										"30732300",
+										"30732301",
+										"30732303",
+										"30732304",
+										"30732306",
+										"30732307",
+										"30732308",
+										"30732311",
+										"30732312",
+										"30732313",
+										"30732315",
+										"30732316",
+										"30732317",
+										"30732318",
+										"30732319",
+										"30732321",
+										"30732322",
+										"30732323",
+										"30732581",
+										"5317961",
+										"5317965",
+										"5317951",
+										"22062262",
+										"30732325",
+										"30828924",
+										"30828926",
+										"30828927",
+										"30932182",
+										"30932180"
+									]
+								},
+								{
+									"order_id": "0009-2075",
+									"id": "2075",
+									"label": "Butter & Sugar",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"20086267",
+										"20086268",
+										"20086271",
+										"20086272",
+										"20086273",
+										"30741113",
+										"30743445",
+										"31232869"
+									]
+								},
+								{
+									"order_id": "0012-5625",
+									"id": "5625",
+									"label": "Cereal",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"20038771",
+										"22040407",
+										"30821527",
+										"31231580",
+										"31231581",
+										"31231585",
+										"20038766",
+										"20038767",
+										"20038769",
+										"21574759",
+										"30821920",
+										"31231582",
+										"31231584",
+										"31231586"
+									]
+								},
+								{
+									"order_id": "0014-27071",
+									"id": "27071",
+									"label": "Toaster",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"26997069",
+										"30821614",
+										"20041312",
+										"31973628",
+										"20041229",
+										"31973272",
+										"20041231",
+										"20041232",
+										"20041292",
+										"31202573",
+										"26997070",
+										"31228394"
+									]
+								},
+								{
+									"order_id": "0015-1122",
+									"id": "1122",
+									"label": "Picked & Mixed",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"25493886",
+										"25493887",
+										"25493893",
+										"25493894",
+										"25493895",
+										"25493896",
+										"25493897",
+										"25493898",
+										"25493899",
+										"25494230",
+										"25493892"
+									]
+								},
+								{
+									"order_id": "0016-10724",
+									"id": "10724",
+									"label": "Bread & Pickles",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"20136568",
+										"20136570",
+										"20136571",
+										"20136672",
+										"20136579",
+										"20136580",
+										"20136582",
+										"20136583",
+										"20136586",
+										"22067371",
+										"30497453",
+										"30732541",
+										"30732543",
+										"19572230",
+										"20136577",
+										"20136575",
+										"31972365",
+										"19572228",
+										"20056051",
+										"20136584",
+										"26601256",
+										"30497659",
+										"30732537",
+										"30732540",
+										"30932069",
+										"30932070",
+										"31595570"
+									]
+								},
+								{
+									"order_id": "0017-5595",
+									"id": "5595",
+									"label": "Beverages",
+									"price": "",
+									"note": "",
+									"soup": 0,
+									"items": [
+										"21574532",
+										"21574534",
+										"21574852",
+										"21574857",
+										"22041297",
+										"22041359",
+										"22695940",
+										"22695941",
+										"21574190",
+										"21574193",
+										"21574191",
+										"21574188",
+										"21574192",
+										"21574186",
+										"21574189",
+										"21574542",
+										"21574543",
+										"21574544",
+										"21574546",
+										"21574859",
+										"21574969",
+										"22041256",
+										"22041361",
+										"22452568",
+										"22746976",
+										"22746977",
+										"23022809",
+										"23023176",
+										"30821355",
+										"30821391",
+										"31325699",
+										"32090012",
+										"32090016",
+										"32090017"
+									]
+								}
+							]
+						}
+					]
+				]
+			}
+		}
+	],
+	"items": {
+		"5317937": {
+			"connector": "",
+			"cor_icon": {
+				"4": "Vegan",
+				"9": "Made without Gluten-Containing Ingredients"
+			},
+			"description": "1/4 cup",
+			"id": "5317937",
+			"label": "Quinoa",
+			"monotony": {},
+			"nutrition": {
+				"kcal": "70",
+				"well_being": "",
+				"well_being_image": ""
+			},
+			"nutrition_details": {
+				"calories": {
+					"label": "Calories",
+					"value": "70",
+					"unit": ""
+				},
+				"servingSize": {
+					"label": "Serving Size",
+					"value": "0.3",
+					"unit": "oz"
+				},
+				"fatContent": {
+					"label": "Total Fat",
+					"value": "1",
+					"unit": "g"
+				},
+				"saturatedFatContent": {
+					"label": "Saturated Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"transFatContent": {
+					"label": "Trans Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"cholesterolContent": {
+					"label": "Cholesterol",
+					"value": "0",
+					"unit": "mg"
+				},
+				"sodiumContent": {
+					"label": "Sodium",
+					"value": "0",
+					"unit": "mg"
+				},
+				"carbohydrateContent": {
+					"label": "Total Carbohydrate",
+					"value": "11",
+					"unit": "g"
+				},
+				"fiberContent": {
+					"label": "Dietary Fiber",
+					"value": "1",
+					"unit": "g"
+				},
+				"sugarContent": {
+					"label": "Sugars",
+					"value": "0",
+					"unit": "g"
+				},
+				"proteinContent": {
+					"label": "Protein",
+					"value": "3",
+					"unit": "g"
+				}
+			},
+			"nutrition_link": "nutrition information",
+			"options": [],
+			"price": "",
+			"rating": "",
+			"special": 0,
+			"station": "Leaves & Greens",
+			"sub_station": "Grains, Beans, Legumes",
+			"sub_station_id": "123505",
+			"sub_station_order": "36",
+			"tier": 3,
+			"zero_entree": "0"
+		},
+		"5317945": {
+			"connector": "",
+			"cor_icon": {
+				"1": "Vegetarian",
+				"9": "Made without Gluten-Containing Ingredients"
+			},
+			"description": "",
+			"id": "5317945",
+			"label": "Feta",
+			"monotony": {},
+			"nutrition": {
+				"kcal": "80",
+				"well_being": "",
+				"well_being_image": ""
+			},
+			"nutrition_details": {
+				"calories": {
+					"label": "Calories",
+					"value": "80",
+					"unit": ""
+				},
+				"servingSize": {
+					"label": "Serving Size",
+					"value": "1.0",
+					"unit": "oz"
+				},
+				"fatContent": {
+					"label": "Total Fat",
+					"value": "6",
+					"unit": "g"
+				},
+				"saturatedFatContent": {
+					"label": "Saturated Fat",
+					"value": "4",
+					"unit": "g"
+				},
+				"transFatContent": {
+					"label": "Trans Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"cholesterolContent": {
+					"label": "Cholesterol",
+					"value": "25",
+					"unit": "mg"
+				},
+				"sodiumContent": {
+					"label": "Sodium",
+					"value": "320",
+					"unit": "mg"
+				},
+				"carbohydrateContent": {
+					"label": "Total Carbohydrate",
+					"value": "1",
+					"unit": "g"
+				},
+				"fiberContent": {
+					"label": "Dietary Fiber",
+					"value": "0",
+					"unit": "g"
+				},
+				"sugarContent": {
+					"label": "Sugars",
+					"value": "0",
+					"unit": "g"
+				},
+				"proteinContent": {
+					"label": "Protein",
+					"value": "4",
+					"unit": "g"
+				}
+			},
+			"nutrition_link": "nutrition information",
+			"options": [],
+			"price": "",
+			"rating": "",
+			"special": 0,
+			"station": "Leaves & Greens",
+			"sub_station": "Cheese",
+			"sub_station_id": "123506",
+			"sub_station_order": "37",
+			"tier": 3,
+			"zero_entree": "0"
+		},
+		"5317947": {
+			"connector": "",
+			"cor_icon": {
+				"1": "Vegetarian",
+				"6": "Farm to Fork",
+				"9": "Made without Gluten-Containing Ingredients",
+				"18": "Humane"
+			},
+			"description": "",
+			"id": "5317947",
+			"label": "Cage-Free Hard-Boiled Egg",
+			"monotony": {},
+			"nutrition": {
+				"kcal": "40",
+				"well_being": "",
+				"well_being_image": ""
+			},
+			"nutrition_details": {
+				"calories": {
+					"label": "Calories",
+					"value": "40",
+					"unit": ""
+				},
+				"servingSize": {
+					"label": "Serving Size",
+					"value": "1.0",
+					"unit": "oz"
+				},
+				"fatContent": {
+					"label": "Total Fat",
+					"value": "2.5",
+					"unit": "g"
+				},
+				"saturatedFatContent": {
+					"label": "Saturated Fat",
+					"value": "1",
+					"unit": "g"
+				},
+				"transFatContent": {
+					"label": "Trans Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"cholesterolContent": {
+					"label": "Cholesterol",
+					"value": "105",
+					"unit": "mg"
+				},
+				"sodiumContent": {
+					"label": "Sodium",
+					"value": "40",
+					"unit": "mg"
+				},
+				"carbohydrateContent": {
+					"label": "Total Carbohydrate",
+					"value": "0",
+					"unit": "g"
+				},
+				"fiberContent": {
+					"label": "Dietary Fiber",
+					"value": "0",
+					"unit": "g"
+				},
+				"sugarContent": {
+					"label": "Sugars",
+					"value": "0",
+					"unit": "g"
+				},
+				"proteinContent": {
+					"label": "Protein",
+					"value": "4",
+					"unit": "g"
+				}
+			},
+			"nutrition_link": "nutrition information",
+			"options": [],
+			"price": "",
+			"rating": "",
+			"special": 0,
+			"station": "Leaves & Greens",
+			"sub_station": "Proteins",
+			"sub_station_id": "123504",
+			"sub_station_order": "35",
+			"tier": 3,
+			"zero_entree": "0"
+		},
+		"5317948": {
+			"connector": "",
+			"cor_icon": {
+				"4": "Vegan",
+				"6": "Farm to Fork",
+				"9": "Made without Gluten-Containing Ingredients",
+				"252": "Supplier Diversity"
+			},
+			"description": "",
+			"id": "5317948",
+			"label": "Minntofu Tofu",
+			"monotony": {},
+			"nutrition": {
+				"kcal": "20",
+				"well_being": "",
+				"well_being_image": ""
+			},
+			"nutrition_details": {
+				"calories": {
+					"label": "Calories",
+					"value": "20",
+					"unit": ""
+				},
+				"servingSize": {
+					"label": "Serving Size",
+					"value": "1.0",
+					"unit": "oz"
+				},
+				"fatContent": {
+					"label": "Total Fat",
+					"value": "1.5",
+					"unit": "g"
+				},
+				"saturatedFatContent": {
+					"label": "Saturated Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"transFatContent": {
+					"label": "Trans Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"cholesterolContent": {
+					"label": "Cholesterol",
+					"value": "0",
+					"unit": "mg"
+				},
+				"sodiumContent": {
+					"label": "Sodium",
+					"value": "0",
+					"unit": "mg"
+				},
+				"carbohydrateContent": {
+					"label": "Total Carbohydrate",
+					"value": "< 1",
+					"unit": "g"
+				},
+				"fiberContent": {
+					"label": "Dietary Fiber",
+					"value": "0",
+					"unit": "g"
+				},
+				"sugarContent": {
+					"label": "Sugars",
+					"value": "0",
+					"unit": "g"
+				},
+				"proteinContent": {
+					"label": "Protein",
+					"value": "2",
+					"unit": "g"
+				}
+			},
+			"nutrition_link": "nutrition information",
+			"options": [],
+			"price": "",
+			"rating": "",
+			"special": 0,
+			"station": "Leaves & Greens",
+			"sub_station": "Proteins",
+			"sub_station_id": "123504",
+			"sub_station_order": "35",
+			"tier": 3,
+			"zero_entree": "0"
+		},
+		"5317951": {
+			"connector": "",
+			"cor_icon": {
+				"6": "Farm to Fork",
+				"9": "Made without Gluten-Containing Ingredients"
+			},
+			"description": "",
+			"id": "5317951",
+			"label": "Fischer Family Farms Ham",
+			"monotony": {},
+			"nutrition": {
+				"kcal": "35",
+				"well_being": "",
+				"well_being_image": ""
+			},
+			"nutrition_details": {
+				"calories": {
+					"label": "Calories",
+					"value": "35",
+					"unit": ""
+				},
+				"servingSize": {
+					"label": "Serving Size",
+					"value": "1.0",
+					"unit": "oz"
+				},
+				"fatContent": {
+					"label": "Total Fat",
+					"value": "1.5",
+					"unit": "g"
+				},
+				"saturatedFatContent": {
+					"label": "Saturated Fat",
+					"value": "0.5",
+					"unit": "g"
+				},
+				"transFatContent": {
+					"label": "Trans Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"cholesterolContent": {
+					"label": "Cholesterol",
+					"value": "15",
+					"unit": "mg"
+				},
+				"sodiumContent": {
+					"label": "Sodium",
+					"value": "330",
+					"unit": "mg"
+				},
+				"carbohydrateContent": {
+					"label": "Total Carbohydrate",
+					"value": "0",
+					"unit": "g"
+				},
+				"fiberContent": {
+					"label": "Dietary Fiber",
+					"value": "0",
+					"unit": "g"
+				},
+				"sugarContent": {
+					"label": "Sugars",
+					"value": "0",
+					"unit": "g"
+				},
+				"proteinContent": {
+					"label": "Protein",
+					"value": "5",
+					"unit": "g"
+				}
+			},
+			"nutrition_link": "nutrition information",
+			"options": [],
+			"price": "",
+			"rating": "",
+			"special": 0,
+			"station": "Leaves & Greens",
+			"sub_station": "Proteins",
+			"sub_station_id": "123504",
+			"sub_station_order": "35",
+			"tier": 3,
+			"zero_entree": "0"
+		},
+		"5317960": {
+			"connector": "",
+			"cor_icon": {
+				"4": "Vegan",
+				"9": "Made without Gluten-Containing Ingredients"
+			},
+			"description": "",
+			"id": "5317960",
+			"label": "Raisins",
+			"monotony": {},
+			"nutrition": {
+				"kcal": "80",
+				"well_being": "",
+				"well_being_image": ""
+			},
+			"nutrition_details": {
+				"calories": {
+					"label": "Calories",
+					"value": "80",
+					"unit": ""
+				},
+				"servingSize": {
+					"label": "Serving Size",
+					"value": "1.0",
+					"unit": "oz"
+				},
+				"fatContent": {
+					"label": "Total Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"saturatedFatContent": {
+					"label": "Saturated Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"transFatContent": {
+					"label": "Trans Fat",
+					"value": "0",
+					"unit": "g"
+				},
+				"cholesterolContent": {
+					"label": "Cholesterol",
+					"value": "0",
+					"unit": "mg"
+				},
+				"sodiumContent": {
+					"label": "Sodium",
+					"value": "5",
+					"unit": "mg"
+				},
+				"carbohydrateContent": {
+					"label": "Total Carbohydrate",
+					"value": "22",
+					"unit": "g"
+				},
+				"fiberContent": {
+					"label": "Dietary Fiber",
+					"value": "1",
+					"unit": "g"
+				},
+				"sugarContent": {
+					"label": "Sugars",
+					"value": "18",
+					"unit": "g"
+				},
+				"proteinContent": {
+					"label": "Protein",
+					"value": "< 1",
+					"unit": "g"
+				}
+			},
+			"nutrition_link": "nutrition information",
+			"options": [],
+			"price": "",
+			"rating": "",
+			"special": 0,
+			"station": "Leaves & Greens",
+			"sub_station": "Toppings",
+			"sub_station_id": "123503",
+			"sub_station_order": "39",
+			"tier": 3,
+			"zero_entree": "0"
+		}
+	}
+}
