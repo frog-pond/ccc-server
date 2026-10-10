@@ -176,6 +176,9 @@ names its source.
   Shaping is in `source/student-work/carleton-shape.ts`; the rows and queries
   in `src/carleton-board.ts`.
 
+Every upstream request goes through `upstream` (`src/upstream.ts`), which sends
+`User-Agent: ccc-server/2.0` and never follows a redirect.
+
 A source must be imported from `src/worker.ts`, or the object answers "unknown
 source".
 
