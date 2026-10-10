@@ -45,7 +45,7 @@ describe('GET /edu.stolaf/news/stolaf', () => {
 	test('is the feed items the Node code makes of the same posts', async () => {
 		let response = await get('/edu.stolaf/news/stolaf')
 		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		expect(await response.json()).toEqual(JSON.parse(golden))
 		expect(newsFetches()).toEqual([STOLAF_NEWS_URL])
 	})

@@ -54,24 +54,27 @@ request whose `If-None-Match` names it is answered with a `304` and no body
 (`src/etag.ts`). So once a response's `max-age` runs out, a client re-checks
 and downloads again only if the body changed.
 
+Successes are cacheable for ten minutes and errors for a minute
+(`src/lifetimes.ts`). Behind them, each source is fresh for an hour and kept a
+day if its host fails; student work keeps its own schedule, below.
+
 - `GET /food/menu/:cafeId` and `GET /food/cafe/:cafeId`: the apps' menu and
   café info, in the contract the Node server's routes keep (an unknown id is a
   400; BonApp failing with nothing stored is a 200 with a stand-in). They share
   `menuFrom` and `cafeFrom` (`source/menus-bonapp/shape.ts`) with the Node
-  server. Successes are cacheable for an hour, or until campus midnight if that comes sooner (they are dated by the campus day); stand-ins for a minute.
+  server. Successes are cacheable for ten minutes, or until campus midnight if
+  that comes sooner (they are dated by the campus day); stand-ins for a minute.
 - `GET /news/stolaf`: St. Olaf news as feed items, from
   `wp.stolaf.edu`'s WordPress (which blocks the Node server's IP but not a
   Worker's; the Node server only has a stub for older builds). Shaped by
   `feedItemsFrom` (`source/feeds/wp-json-shape.ts`), shared with the Node
-  server. Fresh for an hour, kept a day if WordPress fails; a 502 if nothing
-  has ever been stored. `olafmessenger.com` is not served here: its Cloudflare
+  server. A 502 if nothing has ever been stored. `olafmessenger.com` is not served here: its Cloudflare
   bot challenge blocks Worker egress.
 - `GET /news/carleton-now` and `GET /news/carletonian`: Carleton
   News (the `carleton.edu/news` WordPress) and The Carletonian (its RSS feed), as
   feed items, shaped by `feedItemsFrom` and `feedItemsFromRss`
   (`source/feeds/`), shared with the Node server. Same behavior as the St. Olaf
-  route: fresh for an hour, kept a day if the site fails, a 502 if nothing was
-  ever stored. One difference from Node: a Carletonian response that is not RSS
+  route: a 502 if nothing was ever stored. One difference from Node: a Carletonian response that is not RSS
   (a bot-challenge page, say) is an error, not an empty feed.
 - `GET /calendar/:name`: a calendar as events, in the contract the Node server's
   `/v1/calendar/named/:name` routes keep. The names are `carleton`, `upcoming-convos`
@@ -79,8 +82,7 @@ and downloads again only if the body changed.
   `northfield` (an iCal feed), `krlx-schedule` (a Google calendar), `ksto-schedule` (the weekly schedule
   AAO-React-Native publishes, `ksto-schedule.json`), `stolaf`, and the retired
   `the-cave` and `oleville`. `stolaf` is described below. A retired calendar is a single
-  notice event, kept a day. The others are fresh for a minute and kept a day if the
-  site fails; a 502, kept a minute, if nothing has ever been stored. Shaped by
+  notice event. The others are a 502 if nothing has ever been stored. Shaped by
   `source/calendar/*-shape.ts`, shared with the Node server.
 - `GET /calendar/stolaf` is the college calendar, on The Events
   Calendar (Tribe) at `wp.stolaf.edu/calendar`: the next month in campus dates,
@@ -88,7 +90,7 @@ and downloads again only if the body changed.
   is an error rather than a short calendar). `GET /calendar/student-orgs` (St.
   Olaf) is the events student organizations post to Presence
   (`api.presence.io/stolaf/v1/events`), those on now or still to come, with
-  cover images and the organizers' contact (name and email) in `metadata`; it is kept five minutes, the list being large. Both read events
+  cover images and the organizers' contact (name and email) in `metadata`. Both read events
   the way AAO-React-Native's own parsers do, and an event that cannot be read is
   skipped unless none can.
 - `GET /convos/upcoming` (Carleton only): the same list as `upcoming-convos`.
@@ -148,8 +150,8 @@ and downloads again only if the body changed.
   lifetimes; only `thecarletonian.com` loads.
 - `calendar-ical`, `calendar-carleton`, `calendar-google`,
   `calendar-weekly-schedule`, `calendar-tec` and `calendar-presence`
-  (`src/sources/calendars.ts`): a calendar's events, fresh for a minute (five for
-  Presence) and kept a day. Only the hosts the routes name load
+  (`src/sources/calendars.ts`): a calendar's events, fresh for an hour and kept a
+  day. Only the hosts the routes name load
   (`www.northfieldmn.gov`, `www.carleton.edu`, `www.googleapis.com`,
   `stolaf.dev`, `wp.stolaf.edu`, `api.presence.io`). The Google source reads the Calendar API with the worker's
   `GOOGLE_CALENDAR_API_KEY` secret, which has to be set on the worker (and on its
@@ -219,6 +221,5 @@ The small JSON files each college publishes on GitHub Pages (faqs, contacts,
 help, webcams, hours, dictionary, the campus map) are passed through as they
 are, by `pagesJson` (`src/sources/pages-json.ts`), from each campus's `files`
 table (`src/campuses.ts`, with the paths and urls in `src/pages-routes.ts`).
-Fresh for an hour, kept a day if the host fails, a 502 if nothing has ever been
-stored; the apps are told to keep them as long as the Node routes told them to.
+A 502 if nothing has ever been stored.
 Examples: `/edu.stolaf/faqs`, `/edu.carleton/spaces/hours`.

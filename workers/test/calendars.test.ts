@@ -85,7 +85,7 @@ describe.each(['edu.stolaf', 'edu.carleton'])('%s calendars', (campus) => {
 		serve(CARLETON_SUMO)
 		let response = await get(`/${campus}/calendar/sumo-schedule`)
 		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		let events = (await response.json()) as {title: string; image?: string}[]
 		expect(events.map((e) => [e.title, e.image])).toEqual([
 			[
@@ -244,11 +244,11 @@ describe.each(['edu.stolaf', 'edu.carleton'])('%s calendars', (campus) => {
 		expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('test-calendar-key')
 	})
 
-	test('a retired calendar is a notice, kept for a day', async () => {
+	test('a retired calendar is a notice', async () => {
 		for (let name of ['the-cave', 'oleville']) {
 			let response = await get(`/${campus}/calendar/${name}`)
 			expect(response.status).toBe(200)
-			expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
+			expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 			expect(await response.json()).toMatchObject([
 				{
 					dataSource: 'deprecated',
@@ -332,7 +332,7 @@ describe("St. Olaf's own calendars", () => {
 			})
 			let response = await get('/edu.stolaf/calendar/student-orgs')
 			expect(response.status).toBe(200)
-			expect(response.headers.get('cache-control')).toBe('public, max-age=300')
+			expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 			let events = (await response.json()) as Record<string, unknown>[]
 			expect(events.map((e) => e['title'])).toEqual(['Bare', 'OUTS Fall Camping Trip'])
 			expect(events[0]).toEqual({
@@ -428,7 +428,7 @@ describe("St. Olaf's own calendars", () => {
 			servePages()
 			let response = await get(`/${campus}/calendar/stolaf`)
 			expect(response.status).toBe(200)
-			expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+			expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 			let events = (await response.json()) as Record<string, unknown>[]
 			expect(events.map((e) => e['title'])).toEqual(['Exhibition', 'Lion’s Pause & Friends'])
 			expect(events[0]).toEqual({

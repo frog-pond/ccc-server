@@ -1,5 +1,6 @@
 import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
+import {SOURCE_TTL} from '../lifetimes.ts'
 
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
@@ -29,7 +30,7 @@ export const pagesJson = defineSource({
 		}
 		return (await response.json()) as unknown
 	},
-	ttl: HOUR,
+	ttl: SOURCE_TTL,
 	staleIfError: DAY,
 })
 registerSource(pagesJson)

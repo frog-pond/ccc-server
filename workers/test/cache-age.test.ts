@@ -50,15 +50,15 @@ describe('how long a food response may be kept', () => {
 	}
 
 	test('a menu is kept no longer than the campus day it is for', async () => {
-		campusTime('2030-01-15T05:30:00Z') // 11:30 PM CST on the 14th
+		campusTime('2030-01-15T05:55:00Z') // 11:55 PM CST on the 14th
 		let response = await get('/edu.stolaf/food/menu/261')
-		expect(response.headers.get('cache-control')).toBe('public, max-age=1800')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=300')
 	})
 
 	test('café info is kept no longer than the campus day it is for', async () => {
-		campusTime('2030-01-15T05:30:00Z')
+		campusTime('2030-01-15T05:55:00Z')
 		let response = await get('/edu.stolaf/food/cafe/262')
-		expect(response.headers.get('cache-control')).toBe('public, max-age=1800')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=300')
 	})
 
 	// a fetch that starts before campus midnight and ends after it
@@ -75,8 +75,8 @@ describe('how long a food response may be kept', () => {
 		let response = await get('/edu.stolaf/food/menu/35')
 		let body = await response.json<{days: {date: string}[]}>()
 		expect(body.days[0]?.date).toBe('2030-01-15')
-		// the new day has nearly all of it left, so an hour, not the one second the old day had
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		// the new day has nearly all of it left, so ten minutes, not the one second the old day had
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 	})
 
 	test('a stand-in made after campus midnight is dated by the day it was made', async () => {
@@ -85,9 +85,9 @@ describe('how long a food response may be kept', () => {
 		expect(body.days[0]?.date).toBe('2030-01-15')
 	})
 
-	test('earlier in the day it is still kept an hour', async () => {
+	test('earlier in the day it is kept ten minutes', async () => {
 		campusTime('2030-01-15T18:00:00Z') // noon CST
 		let response = await get('/edu.stolaf/food/menu/263')
-		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 	})
 })

@@ -13,6 +13,7 @@ import {
 	weeklyScheduleEvents,
 } from '../../../source/calendar/weekly-schedule-shape.ts'
 import {clock} from '../clock.ts'
+import {SOURCE_TTL} from '../lifetimes.ts'
 import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {eventsFromPresence} from './presence-shape.ts'
@@ -21,8 +22,8 @@ import {TecPageSchema, eventsFromTec} from './tec-shape.ts'
 const MINUTE = 60 * 1000
 const DAY = 24 * 60 * MINUTE
 
-/// A calendar is as fresh as the Node server kept it: a minute.
-const TTL = MINUTE
+/// A calendar is fresh for as long as every source is.
+const TTL = SOURCE_TTL
 
 /// Calendars are shaped against the time they are loaded, so the clock the
 /// sources go by is the one they are shaped by.
@@ -144,8 +145,7 @@ registerSource(weeklySchedule)
 
 export type PresenceParams = {url: string}
 
-/// St. Olaf's Presence events: a large list, so it is kept for five minutes
-/// rather than one.
+/// St. Olaf's Presence events.
 export const presence = defineSource({
 	name: 'calendar-presence',
 	key: ({url}: PresenceParams) => url,
@@ -153,7 +153,7 @@ export const presence = defineSource({
 		let response = await fetchFrom(new Set(['api.presence.io']), url)
 		return eventsFromPresence(await response.json(), now())
 	},
-	ttl: 5 * MINUTE,
+	ttl: TTL,
 	staleIfError: DAY,
 })
 registerSource(presence)

@@ -37,11 +37,11 @@ afterEach(() => {
 
 const fetched = () => fetchSpy.mock.calls.map(([input]) => String(input))
 
-describe.each(routes)('GET %s', (path, {url, maxAge}) => {
-	test('passes the published file through, kept as long as the Node route kept it', async () => {
+describe.each(routes)('GET %s', (path, {url}) => {
+	test('passes the published file through, cacheable for ten minutes', async () => {
 		let response = await get(path)
 		expect(response.status).toBe(200)
-		expect(response.headers.get('cache-control')).toBe(`public, max-age=${String(maxAge)}`)
+		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 		expect(await response.json()).toEqual({from: url})
 		expect(fetched()).toEqual([url])
 	})

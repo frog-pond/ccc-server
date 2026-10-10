@@ -1,10 +1,6 @@
 import {searchWords} from '../../source/student-work/posting-shape.ts'
+import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
 import type {CarletonFilters} from './carleton-board.ts'
-
-/// Kept ten minutes, then re-checked against its ETag, so a board that
-/// changes reaches the apps within ten minutes.
-const KEEP = 10 * 60
-const ONE_MINUTE = 60
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -83,7 +79,7 @@ export function parseCarletonFilters(params: URLSearchParams): CarletonFilters |
 
 const board = (env: Env) => env.STUDENT_WORK.getByName('carleton')
 const iso = (ms: number) => new Date(ms).toISOString()
-const failed = (message: string) => json({message}, 502, ONE_MINUTE)
+const failed = (message: string) => json({message}, 502, ERROR_MAX_AGE)
 
 /// `/student-work/postings` at Carleton: the jobs, narrowed by the query.
 export async function carletonPostings(env: Env, params: URLSearchParams) {
@@ -94,7 +90,7 @@ export async function carletonPostings(env: Env, params: URLSearchParams) {
 	return json(
 		{updatedAt: iso(result.updatedAt), count: result.postings.length, postings: result.postings},
 		200,
-		KEEP,
+		CLIENT_MAX_AGE,
 	)
 }
 
@@ -102,6 +98,6 @@ export async function carletonPostings(env: Env, params: URLSearchParams) {
 export async function carletonPosting(env: Env, id: string) {
 	let result = await board(env).carletonOne(id)
 	if (result.state === 'error') return failed(result.error)
-	if (!result.posting) return json({message: 'no such posting on the board'}, 404, ONE_MINUTE)
-	return json(result.posting, 200, KEEP)
+	if (!result.posting) return json({message: 'no such posting on the board'}, 404, ERROR_MAX_AGE)
+	return json(result.posting, 200, CLIENT_MAX_AGE)
 }

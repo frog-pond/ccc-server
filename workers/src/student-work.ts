@@ -1,14 +1,10 @@
 import {groupUnits, listedUnitsOf} from '../../source/student-work/areas.ts'
+import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
 import {fetchSource} from './client.ts'
 import {defineSource} from './define-source.ts'
 import {registerSource} from './registry.ts'
 import {pagesJson} from './sources/pages-json.ts'
 import {parseFilters, type AreaUnits, type PostingWithDescription} from './student-work-shape.ts'
-
-/// Kept ten minutes, then re-checked against its ETag, so a board that
-/// changes reaches the apps within ten minutes.
-const KEEP = 10 * 60
-const ONE_MINUTE = 60
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -18,7 +14,7 @@ const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 			: {headers: {'Cache-Control': `public, max-age=${cacheSeconds.toFixed(0)}`}}),
 	})
 
-const failed = (message: string) => json({message}, 502, ONE_MINUTE)
+const failed = (message: string) => json({message}, 502, ERROR_MAX_AGE)
 
 export interface StudentWork {
 	/// the published areas file, which says which units each area holds
@@ -88,7 +84,7 @@ export async function postings(env: Env, work: StudentWork, params: URLSearchPar
 	return json(
 		{updatedAt: iso(result.updatedAt), count: result.postings.length, postings: result.postings},
 		200,
-		KEEP,
+		CLIENT_MAX_AGE,
 	)
 }
 
@@ -97,9 +93,9 @@ export async function posting(env: Env, work: StudentWork, id: string) {
 	let areas = await readAreas(env, work.areasUrl)
 	let result = await board(env).one(id, pairs(areas?.areas ?? []))
 	if (result.state === 'error') return failed(result.error)
-	if (!result.posting) return json({message: 'no such posting on the board'}, 404, ONE_MINUTE)
+	if (!result.posting) return json({message: 'no such posting on the board'}, 404, ERROR_MAX_AGE)
 	let body: PostingWithDescription = {...result.posting, description: result.description}
-	return json(body, 200, KEEP)
+	return json(body, 200, CLIENT_MAX_AGE)
 }
 
 /// `/student-work/units`: each posting's unit by id, as the Node server's
@@ -108,5 +104,5 @@ export async function units(env: Env, work: StudentWork) {
 	let areas = await readAreas(env, work.areasUrl)
 	let result = await board(env).units()
 	if (result.state === 'error') return failed(result.error)
-	return json(groupUnits(result.units, areas && new Set(areas.listed)), 200, KEEP)
+	return json(groupUnits(result.units, areas && new Set(areas.listed)), 200, CLIENT_MAX_AGE)
 }
