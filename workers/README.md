@@ -76,6 +76,15 @@ day if its host fails; student work keeps its own schedule, below.
   (`source/feeds/`), shared with the Node server. Same behavior as the St. Olaf
   route: a 502 if nothing was ever stored. One difference from Node: a Carletonian response that is not RSS
   (a bot-challenge page, say) is an error, not an empty feed.
+- `GET /news/krlx`: KRLX's posts (`content.krlx.org`'s RSS feed) as feed
+  items, read and shaped like The Carletonian, with the same 502 when nothing
+  was ever stored.
+- `GET /news/oleville`, `/news/politicole`, `/news/ksto`, `/news/covid` and
+  `/news/nnb`: feeds that are no longer published. Each answers with one feed
+  item saying so, dated at the time of the request, the same notice the Node
+  routes send (`deprecatedWpJson` and `retiredNnb` in
+  `source/feeds/deprecated.ts`, shared with the Node server). Nothing is
+  fetched.
 - `GET /calendar/:name`: a calendar as events, in the contract the Node server's
   `/v1/calendar/named/:name` routes keep. The names are `carleton`, `upcoming-convos`
   and `sumo-schedule` (Carleton's calendars, with the pictures their pages show),
@@ -147,7 +156,7 @@ day if its host fails; student work keeps its own schedule, below.
   fresh for 1 hour and kept a day; only `wp.stolaf.edu` and `www.carleton.edu`
   load.
 - `rss-news` (`src/sources/rss-news.ts`): an RSS feed as feed items, the same
-  lifetimes; only `thecarletonian.com` loads.
+  lifetimes; only `thecarletonian.com` and `content.krlx.org` load.
 - `calendar-ical`, `calendar-carleton`, `calendar-google`,
   `calendar-weekly-schedule`, `calendar-tec` and `calendar-presence`
   (`src/sources/calendars.ts`): a calendar's events, fresh for an hour and kept a

@@ -94,12 +94,11 @@ async function bonapp(campus: Campus, cafeId: string, full: boolean, env: Env): 
 /// A news feed as feed items. Unlike the Node server (a stub for St. Olaf, and
 /// an empty list for a feed it cannot read), with nothing stored and the site
 /// failing this is a 502, kept briefly, not a feed.
-async function news(env: Env, {source, url}: NewsFeed): Promise<Response> {
+async function news(env: Env, {read}: NewsFeed): Promise<Response> {
 	try {
-		let {value} = await fetchSource(env, source, {url})
-		return json(value, 200, CLIENT_MAX_AGE)
+		return json(await read(env), 200, CLIENT_MAX_AGE)
 	} catch (err) {
-		console.error(err, {url})
+		console.error(err)
 		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
 	}
 }

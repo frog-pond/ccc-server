@@ -1,6 +1,7 @@
-import {DISCUSSION_URL, RETIRED_TITLE, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
-import {FeedItemSchema} from '../../feeds/types.ts'
+import {DISCUSSION_URL, UNAVAILABLE_TITLE} from '../../ccc-lib/deprecated.ts'
 import {SortableCarletonStudentOrgSchema} from './orgs.ts'
+
+export {retiredNnb} from '../../feeds/deprecated.ts'
 
 /// apps.carleton.edu answers every path with a bot challenge, so the scrapers
 /// reading it find no rows at all. Left alone, `/orgs` returns an empty list
@@ -28,24 +29,6 @@ export function unavailableOrgs() {
 			website: DISCUSSION_URL,
 			$sortableName: UNAVAILABLE_TITLE,
 			$groupableName: UNAVAILABLE_TITLE.slice(0, 1),
-		},
-	])
-}
-
-/// The Noon News Bulletin was published from apps.carleton.edu and is not
-/// coming back, so this says so rather than promising a return.
-export function retiredNnb() {
-	return FeedItemSchema.array().parse([
-		{
-			authors: [],
-			categories: [],
-			datePublished: new Date().toISOString(),
-			content: '',
-			excerpt:
-				'The Noon News Bulletin is no longer published. For campus announcements, see Carleton Now.',
-			link: DISCUSSION_URL,
-			title: RETIRED_TITLE,
-			featuredImage: null,
 		},
 	])
 }

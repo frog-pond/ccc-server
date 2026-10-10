@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	>
+
+<channel>
+	<title>KRLX</title>
+	<atom:link href="https://content.krlx.org/feed/" rel="self" type="application/rss+xml" />
+	<link>https://content.krlx.org</link>
+	<description>&#34;it&#039;s better on the bottom&#34;</description>
+	<lastBuildDate>Mon, 22 Apr 2030 10:48:38 +0000</lastBuildDate>
+	<language>en-US</language>
+	<item>
+		<title>From the Archives: Winter Program Guide</title>
+		<link>https://content.krlx.org/2030/04/22/from-the-archives-winter-program-guide/</link>
+		<dc:creator><![CDATA[KRLX Staff]]></dc:creator>
+		<pubDate>Mon, 22 Apr 2030 10:42:59 +0000</pubDate>
+		<category><![CDATA[Uncategorized]]></category>
+		<guid isPermaLink="false">https://content.krlx.org/?p=1</guid>
+		<description><![CDATA[this piece of paper is from the station&#8217;s archives [&#8230;]]]></description>
+		<content:encoded><![CDATA[<p>This piece of paper is from the station&#8217;s archives. <a href="https://content.krlx.org/">Read more</a></p>
+<figure><img src="https://content.krlx.org/wp-content/uploads/guide.jpg" alt="" /></figure>]]></content:encoded>
+	</item>
+	<item>
+		<title>Fall &amp; Winter Schedule</title>
+		<link>https://content.krlx.org/2030/01/05/schedule/</link>
+		<pubDate>Sat, 05 Jan 2030 18:00:00 +0000</pubDate>
+		<guid isPermaLink="false">https://content.krlx.org/?p=2</guid>
+		<description><![CDATA[<p>The new schedule is up.</p>]]></description>
+	</item>
+</channel>
+</rss>
