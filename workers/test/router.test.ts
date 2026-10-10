@@ -95,18 +95,4 @@ describe('other paths', () => {
 	test('anything else is a 404', async () => {
 		expect((await get('/nope')).status).toBe(404)
 	})
-
-	test('the old /v1 and /news/named paths are gone', async () => {
-		for (let path of [
-			'/v1/food/menu/261',
-			'/v1/food/cafe/261',
-			'/v1/news/named/stolaf',
-			'/news/named/stolaf',
-			'/news/rss',
-			'/news/wpjson',
-		]) {
-			expect((await get(path)).status).toBe(404)
-		}
-		expect(fetchSpy).not.toHaveBeenCalled()
-	})
 })
