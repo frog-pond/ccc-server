@@ -33,8 +33,13 @@ afterEach(() => {
 	errorSpy.mockRestore()
 })
 
-const newsFetches = () =>
-	fetchSpy.mock.calls.map(([input]) => String(input)).filter((u) => u.includes('wp.stolaf.edu'))
+// fetches of a host, by its parsed hostname rather than a match in the url
+const fetchesOf = (hostname: string) =>
+	fetchSpy.mock.calls
+		.map(([input]) => String(input))
+		.filter((u) => URL.canParse(u) && new URL(u).hostname === hostname)
+
+const newsFetches = () => fetchesOf('wp.stolaf.edu')
 
 describe('GET /v1/news/named/stolaf', () => {
 	test('is the feed items the Node code makes of the same posts', async () => {
@@ -88,8 +93,6 @@ describe('wp-news source', () => {
 		await expect(
 			fetchSource(env, wpNews, {url: 'https://example.com/wp-json/wp/v2/posts'}),
 		).rejects.toThrow(/not a WordPress/)
-		expect(
-			fetchSpy.mock.calls.map(([i]) => String(i)).filter((u) => u.includes('example.com')),
-		).toEqual([])
+		expect(fetchesOf('example.com')).toEqual([])
 	})
 })
