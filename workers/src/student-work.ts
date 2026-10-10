@@ -12,6 +12,8 @@ import {
 	type Term,
 } from '../../source/student-work/posting-shape.ts'
 import {fetchSource} from './client.ts'
+import {defineSource} from './define-source.ts'
+import {registerSource} from './registry.ts'
 import {pagesJson} from './sources/pages-json.ts'
 import type {StoredPosting} from './student-work-do.ts'
 
@@ -75,25 +77,44 @@ export type PostingWithDescription = Posting & {
 	description: (Description & {html: string}) | null
 }
 
-type Area = {slug: string; units: string[]}
+interface Area {
+	slug: string
+	units: string[]
+}
 
-/// The areas file's areas, or undefined when it cannot be read or is not the
-/// shape the app publishes.
-async function readAreas(
-	env: Env,
-	url: string,
-): Promise<{areas: Area[]; body: unknown} | undefined> {
-	try {
-		let {value} = await fetchSource(env, pagesJson, {url})
-		let data = (value as {data?: unknown} | null)?.data
-		if (!Array.isArray(data)) return undefined
+/// The published areas file, read as pages-json reads it, and kept only when
+/// it is the shape the app publishes, so a file that is not one leaves the
+/// last good copy in place.
+export const studentWorkAreas = defineSource({
+	name: 'student-work-areas',
+	key: ({url}: {url: string}) => url,
+	async load(params, env) {
+		let body = await pagesJson.load(params, env)
+		let data = (body as {data?: unknown} | null)?.data
+		let listed = listedUnitsOf(body)
+		if (!Array.isArray(data) || !listed) {
+			throw new Error('the Student Work areas file is not a list of areas')
+		}
 		let areas = data.flatMap((entry: unknown) => {
 			let {slug, units} = (entry ?? {}) as {slug?: unknown; units?: unknown}
 			return typeof slug === 'string' && Array.isArray(units)
 				? [{slug, units: units.filter((unit): unit is string => typeof unit === 'string')}]
 				: []
 		})
-		return {areas, body: value}
+		return {areas, listed: [...listed]}
+	},
+	ttl: pagesJson.ttl,
+	staleIfError: pagesJson.staleIfError,
+})
+registerSource(studentWorkAreas)
+
+/// The areas, or undefined when the file cannot be read.
+async function readAreas(
+	env: Env,
+	url: string,
+): Promise<{areas: Area[]; listed: string[]} | undefined> {
+	try {
+		return (await fetchSource(env, studentWorkAreas, {url})).value
 	} catch (err) {
 		console.warn('student-work: could not read the areas file', String(err))
 		return undefined
@@ -282,7 +303,7 @@ export async function units(env: Env, work: StudentWork) {
 		for (let stored of board.postings) {
 			if (stored.detail !== null) read[stored.board.id] = stored.unit
 		}
-		return json(groupUnits(read, areas && listedUnitsOf(areas.body)), 200, ONE_HOUR)
+		return json(groupUnits(read, areas && new Set(areas.listed)), 200, ONE_HOUR)
 	} catch (err) {
 		console.error(err)
 		return failed(err)

@@ -5,8 +5,8 @@ import {groupUnits, listedUnitsOf} from '../../source/student-work/areas.ts'
 import {readDescription} from '../../source/student-work/posting-shape.ts'
 import {clock} from '../src/clock.ts'
 import {STOLAF_FILES} from '../src/pages-routes.ts'
-import {pagesJson} from '../src/sources/pages-json.ts'
 import {DETAILS_PER_RUN, JITTER, REFRESH_EVERY} from '../src/student-work-do.ts'
+import {studentWorkAreas} from '../src/student-work.ts'
 import {spyOnFetch} from './spy.ts'
 import standard from '../../source/student-work/fixtures/detail-standard.json?raw'
 import summer from '../../source/student-work/fixtures/detail-summer.json?raw'
@@ -75,7 +75,7 @@ beforeEach(async () => {
 	board = FULL_BOARD
 	respond = () => undefined
 	await stub().purge()
-	await env.SOURCE.getByName(`${pagesJson.name}:${AREAS_URL}`).purge()
+	await env.SOURCE.getByName(`${studentWorkAreas.name}:${AREAS_URL}`).purge()
 
 	fetchSpy = spyOnFetch()
 	fetchSpy.mockImplementation((input) => {
@@ -219,6 +219,14 @@ describe('GET /edu.stolaf/student-work/postings', () => {
 			respond = (url) => (url.href === AREAS_URL ? new Response('', {status: 500}) : undefined)
 			let response = await get('/edu.stolaf/student-work/postings?area=athletics')
 			expect(response.status).toBe(502)
+		})
+
+		test('a file that is not a list of areas is not used for areas', async () => {
+			respond = (url) => (url.href === AREAS_URL ? Response.json({from: url.href}) : undefined)
+			let response = await get('/edu.stolaf/student-work/postings?area=athletics')
+			expect(response.status).toBe(502)
+			let body = await list()
+			expect(body.postings.every((posting) => (posting['areas'] as []).length === 0)).toBe(true)
 		})
 
 		test('without the areas file, postings list with no areas', async () => {

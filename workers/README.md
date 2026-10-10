@@ -93,7 +93,7 @@ names its source.
   (`displayTitle` without the term prefix or pay code, `term`, `level`,
   `payCode`), what its description says (`unit`, `department`, `wage`, `length`,
   `contact`, `classification`), its Student Work `areas` (slugs, from the
-  published `student-work-areas.json`; a unit no area lists goes to the area that
+  published `student-work-areas.json`, read by its own `student-work-areas` source that keeps only a list of areas; a unit no area lists goes to the area that
   lists `other`), its apply `url`, and when it was first seen and its detail last
   read. Query parameters narrow the list; values of one parameter (repeated or
   comma-separated) are alternatives, and parameters narrow together: `area`
