@@ -3,13 +3,13 @@ import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} fr
 import {fetchSource} from '../src/client.ts'
 import {clock} from '../src/clock.ts'
 import {registry} from '../src/registry.ts'
-import {CARLETONIAN_URL, rssNews} from '../src/sources/rss-news.ts'
-import {CARLETON_NOW_URL, wpNews} from '../src/sources/wp-news.ts'
+import {KRLX_URL, rssNews} from '../src/sources/rss-news.ts'
+import {CARLETONIAN_URL, CARLETON_NOW_URL, MESSENGER_URL, wpNews} from '../src/sources/wp-news.ts'
 import {spyOnFetch} from './spy.ts'
 import carletonPosts from './fixtures/carleton-posts.json?raw'
 import carletonNow from './fixtures/carleton-now.json?raw'
-import carletonianFeed from './fixtures/carletonian-feed.xml?raw'
-import carletonian from './fixtures/carletonian.json?raw'
+import krlxFeed from './fixtures/krlx-feed.xml?raw'
+import krlx from './fixtures/krlx.json?raw'
 
 const get = (path: string) => exports.default.fetch(new Request(`https://worker.test${path}`))
 
@@ -19,7 +19,7 @@ const answer = (body: string, type: string, status = 200) =>
 let fetchSpy: MockInstance<typeof fetch>
 let errorSpy: {mockRestore: () => void}
 
-// the two feeds differ only in where they come from and what they are shaped by
+// the feeds differ only in where they come from and what they are shaped by
 const FEEDS = [
 	{
 		name: 'Carleton News',
@@ -33,9 +33,25 @@ const FEEDS = [
 		name: 'The Carletonian',
 		path: '/edu.carleton/news/carletonian',
 		url: CARLETONIAN_URL,
-		source: `${rssNews.name}:${CARLETONIAN_URL}`,
-		upstream: () => answer(carletonianFeed, 'application/rss+xml'),
-		expected: carletonian,
+		source: `${wpNews.name}:${CARLETONIAN_URL}`,
+		upstream: () => answer(carletonPosts, 'application/json'),
+		expected: carletonNow,
+	},
+	{
+		name: 'The Olaf Messenger',
+		path: '/edu.stolaf/news/mess',
+		url: MESSENGER_URL,
+		source: `${wpNews.name}:${MESSENGER_URL}`,
+		upstream: () => answer(carletonPosts, 'application/json'),
+		expected: carletonNow,
+	},
+	{
+		name: 'KRLX',
+		path: '/edu.carleton/news/krlx',
+		url: KRLX_URL,
+		source: `${rssNews.name}:${KRLX_URL}`,
+		upstream: () => answer(krlxFeed, 'application/rss+xml'),
+		expected: krlx,
 	},
 ]
 

@@ -6,6 +6,7 @@ import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
 import {pagesJson} from './sources/pages-json.ts'
+import {wordpress as wordpressApi} from './sources/wordpress-api.ts'
 import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
@@ -94,12 +95,11 @@ async function bonapp(campus: Campus, cafeId: string, full: boolean, env: Env): 
 /// A news feed as feed items. Unlike the Node server (a stub for St. Olaf, and
 /// an empty list for a feed it cannot read), with nothing stored and the site
 /// failing this is a 502, kept briefly, not a feed.
-async function news(env: Env, {source, url}: NewsFeed): Promise<Response> {
+async function news(env: Env, {read}: NewsFeed): Promise<Response> {
 	try {
-		let {value} = await fetchSource(env, source, {url})
-		return json(value, 200, CLIENT_MAX_AGE)
+		return json(await read(env), 200, CLIENT_MAX_AGE)
 	} catch (err) {
-		console.error(err, {url})
+		console.error(err)
 		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
 	}
 }
@@ -142,6 +142,13 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let feed = /^\/news\/([^/]+)$/.exec(path)?.[1]
 	if (feed !== undefined && Object.hasOwn(campus.news, feed) && campus.news[feed]) {
 		return news(env, campus.news[feed])
+	}
+
+	let wordpress = /^\/news\/([^/]+)\/wp\/v2\/([^/]+)(?:\/([^/]+))?$/.exec(path)
+	let site = wordpress?.[1]
+	if (wordpress?.[2] && site !== undefined && Object.hasOwn(campus.wordpressNews, site)) {
+		let paper = campus.wordpressNews[site]
+		if (paper) return wordpressApi(paper, url, wordpress[2], wordpress[3], env)
 	}
 
 	let named = /^\/calendar\/([^/]+)$/.exec(path)?.[1]
