@@ -61,6 +61,30 @@ describe('how long a food response may be kept', () => {
 		expect(response.headers.get('cache-control')).toBe('public, max-age=1800')
 	})
 
+	// a fetch that starts before campus midnight and ends after it
+	const crossMidnight = (respond: () => Response) => {
+		campusTime('2030-01-15T05:59:59Z') // 11:59:59 PM CST on the 14th
+		fetchSpy.mockImplementation(() => {
+			campusTime('2030-01-15T06:00:05Z') // 12:00:05 AM on the 15th
+			return Promise.resolve(respond())
+		})
+	}
+
+	test('a fetch that ends after campus midnight is dated and kept by the day it ended', async () => {
+		crossMidnight(() => new Response(stavHall, {headers: {'content-type': 'text/html'}}))
+		let response = await get('/v1/food/menu/35')
+		let body = await response.json<{days: {date: string}[]}>()
+		expect(body.days[0]?.date).toBe('2030-01-15')
+		// the new day has nearly all of it left, so an hour, not the one second the old day had
+		expect(response.headers.get('cache-control')).toBe('public, max-age=3600')
+	})
+
+	test('a stand-in made after campus midnight is dated by the day it was made', async () => {
+		crossMidnight(() => new Response('boom', {status: 503}))
+		let body = await (await get('/v1/food/menu/36')).json<{days: {date: string}[]}>()
+		expect(body.days[0]?.date).toBe('2030-01-15')
+	})
+
 	test('earlier in the day it is still kept an hour', async () => {
 		campusTime('2030-01-15T18:00:00Z') // noon CST
 		let response = await get('/v1/food/menu/263')

@@ -32,17 +32,19 @@ async function food(kind: 'menu' | 'cafe', cafeId: string, env: Env): Promise<Re
 	let url = cafeUrl(cafeId)
 	if (url instanceof Response) return url
 
-	let now = new Date(clock.now())
-	let date = campusToday(now)
 	try {
 		let {value} = await fetchSource(env, bonappPage, {url})
-		// dated by the campus day, so not kept past its end
+		// read after the fetch, which can run across campus midnight: the response
+		// is dated by the day it is made on, and not kept past that day's end
+		let now = new Date(clock.now())
+		let date = campusToday(now)
 		let keep = Math.min(ONE_HOUR, secondsUntilCampusMidnight(now))
 		return kind === 'menu'
 			? json(menuFrom(value, date), 200, keep)
 			: json(cafeFrom(value, date), 200, keep)
 	} catch (err) {
 		console.error(err, {cafeId})
+		let date = campusToday(new Date(clock.now()))
 		return kind === 'menu'
 			? json(
 					CafeMenuWithError(
