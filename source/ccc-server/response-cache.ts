@@ -13,15 +13,27 @@ function routeOf(ctx: ExtendableContext): string {
 	return typeof route === 'string' ? route : 'unknown'
 }
 
+/// How long a copy is kept past its max age, to serve while its route fails.
+const STALE_IF_ERROR = 7 * ONE_DAY
+
 export function responseCache(
 	cache: QuickLRU<string, CacheObject | undefined>,
-	{institution}: {institution: string},
+	{
+		institution,
+		hash,
+	}: {
+		institution: string
+		/** The key a request is cached under, where it isn't its URL */
+		hash?: (ctx: ExtendableContext) => string | undefined
+	},
 ) {
 	setInterval(() => {
 		Sentry.metrics.gauge('cache.entries', cache.size, {attributes: {institution}})
 	}, 60_000).unref()
 	return cachable({
 		statusName: 'ccc-server',
+		staleIfError: STALE_IF_ERROR,
+		hash: (ctx) => hash?.(ctx) ?? ctx.request.url,
 		storedHeaders: STORED_HEADERS,
 		expiresIn: (key) => cache.expiresIn(key),
 		// for this percentage of bursts of concurrent misses for a key, share
@@ -51,6 +63,14 @@ export function responseCache(
 			Sentry.metrics.gauge('route.items', body.length, {
 				attributes: {institution, route: routeOf(ctx)},
 			})
+		},
+		// A failure answered with a stale copy never reaches the error handler,
+		// so it is reported here.
+		onFailure: (ctx, servedStale, error) => {
+			Sentry.metrics.count('cache.failure', 1, {
+				attributes: {institution, route: routeOf(ctx), outcome: servedStale ? 'stale' : 'error'},
+			})
+			if (servedStale && error !== undefined) Sentry.captureException(error)
 		},
 		get(key) {
 			return cache.get(key)

@@ -58,7 +58,17 @@ const CACHE_INFO_KEY: unique symbol = Symbol('koa-cache info key')
 const CACHE_FILL_KEY: unique symbol = Symbol('koa-cache fill key')
 const CACHE_WAITED_KEY: unique symbol = Symbol('koa-cache waited key')
 const CACHE_BYPASS_KEY: unique symbol = Symbol('koa-cache bypass key')
-const CACHE_DETAIL_KEY: unique symbol = Symbol('koa-cache detail key')
+const CACHE_STALE_KEY: unique symbol = Symbol('koa-cache stale key')
+
+/// How long a stale copy served for a failing route is fresh again: the route
+/// is asked again after this, rather than on every request in an outage.
+const STALE_TTL = 60_000
+
+/// The status a route's failure answers with: its own, if it set one, else 500.
+function statusOf(error: unknown): number {
+	let status = (error as {status?: unknown} | null)?.status
+	return typeof status === 'number' ? status : 500
+}
 
 /// How a fill ended, for the requests waiting on it.
 type FillOutcome =
@@ -135,14 +145,6 @@ declare module 'koa' {
 		 */
 		setCacheTTL(maxAge: number): void
 		/**
-		 * Says something about this response in its `Cache-Status` header, as
-		 * RFC 9211's `detail` parameter, such as `stale` for a last good copy
-		 * served in place of a failing upstream. A copy this response stores
-		 * says it on every hit too.
-		 * @param detail A token, such as `stale`
-		 */
-		cacheDetail(detail: string): void
-		/**
 		 * cacheKey stores the key used to cache this response
 		 */
 		[CACHE_KEY]: string
@@ -166,9 +168,9 @@ declare module 'koa' {
 		 */
 		[CACHE_BYPASS_KEY]?: object | undefined
 		/**
-		 * The `detail` this response's `Cache-Status` gives, set by `cacheDetail`
+		 * The expired copy this request missed, kept to serve if the route fails
 		 */
-		[CACHE_DETAIL_KEY]?: string | undefined
+		[CACHE_STALE_KEY]?: CacheObject | undefined
 	}
 }
 
@@ -180,8 +182,16 @@ export interface CacheObject {
 	gzip?: Buffer
 	/** The response headers named in `storedHeaders`, given back with this copy */
 	headers?: Record<string, string | string[]>
-	/** The `detail` its `Cache-Status` gives on every hit, as `cacheDetail` set it */
+	/** The `detail` its `Cache-Status` gives on every hit: `stale` for a stand-in */
 	detail?: string
+	/**
+	 * When this copy stops being fresh (ms since the epoch). After that it is
+	 * kept, until `staleUntil`, only to serve if its route fails. A copy
+	 * without one is fresh for as long as the store keeps it.
+	 */
+	freshUntil?: number
+	/** When this copy stops being served for a failing route (ms since the epoch) */
+	staleUntil?: number
 }
 
 interface Options {
@@ -189,6 +199,15 @@ interface Options {
 	 * Default max age (in milliseconds) for the cache if not set via `await ctx.cached(maxAge)`.
 	 */
 	maxAge?: number | undefined
+
+	/**
+	 * How long (in milliseconds) a copy is kept past its max age, to serve in
+	 * place of a route that throws or answers 5xx: RFC 5861's `stale-if-error`.
+	 * Such a copy says `detail=stale` in `Cache-Status`, and is fresh again for
+	 * a minute, so the route is not asked on every request while it fails.
+	 * @default 0, so a copy is never served stale
+	 */
+	staleIfError?: number | undefined
 
 	/**
 	 * HTTP methods to cache. Defaults to `HEAD` and `GET`.
@@ -263,6 +282,13 @@ interface Options {
 	onStore?(ctx: ExtendableContext, body: unknown): void
 
 	/**
+	 * Told each time a route that asked `ctx.cached()` fails -- throws, or
+	 * answers 5xx -- whether a stale copy was served in its place, with the
+	 * error it threw, if it threw.
+	 */
+	onFailure?(ctx: ExtendableContext, servedStale: boolean, error: unknown): void
+
+	/**
 	 * Get a value from a store.
 	 * @param key Cache key
 	 * @param maxAge Max age (in milliseconds) for the cache
@@ -293,6 +319,8 @@ export function cachable(options: Options): Middleware {
 		onLookup = () => undefined,
 		onFillEnd = () => undefined,
 		onStore = () => undefined,
+		onFailure = () => undefined,
+		staleIfError = 0,
 	} = options
 	/* eslint-enable @typescript-eslint/unbound-method */
 
@@ -300,11 +328,9 @@ export function cachable(options: Options): Middleware {
 	const storedHeaders = options.storedHeaders ?? []
 
 	/// Says how the cache handled this request, in a `Cache-Status` header
-	/// (RFC 9211) made of `params`, and of the `detail` the route or its stored
-	/// copy gave, if any.
+	/// (RFC 9211) made of `params`, and of the `detail` its copy gives, if any.
 	function setCacheStatus(ctx: ExtendableContext, params: string[], detail?: string): void {
 		if (statusName === undefined) return
-		detail ??= ctx[CACHE_DETAIL_KEY]
 		if (detail !== undefined) params = [...params, `detail=${detail}`]
 		ctx.response.set('Cache-Status', [statusName, ...params].join('; '))
 	}
@@ -406,21 +432,23 @@ export function cachable(options: Options): Middleware {
 		}
 	}
 
-	function cacheDetail(this: ExtendableContext, detail: string): void {
-		this[CACHE_DETAIL_KEY] = detail
-	}
-
 	// ctx.cached(maxAge) => boolean
 	function cached(this: ExtendableContext, maxAge: number | undefined): boolean {
 		// uncacheable request method
 		if (!methods[this.request.method]) return false
 
 		const obj = get(this[CACHE_KEY], maxAge ?? options.maxAge ?? 0)
-		const body = obj?.body
+		const now = Date.now()
+		const fresh = obj?.freshUntil === undefined || now < obj.freshUntil
+		const body = fresh ? obj?.body : undefined
 		report('onLookup', () => {
 			onLookup(this, Boolean(body))
 		})
-		if (!body) {
+		if (!obj || !body) {
+			// kept to stand in for the route, should it fail
+			if (obj?.body && obj.staleUntil !== undefined && now < obj.staleUntil) {
+				this[CACHE_STALE_KEY] = obj
+			}
 			// tell the upstream middleware to cache this response
 			this[CACHE_INFO_KEY] = {maxAge}
 			joinBurst(this)
@@ -443,7 +471,7 @@ export function cachable(options: Options): Middleware {
 		// A max-age the route declared counts down to the life its copy has left,
 		// rather than promising the whole of that life again on every hit. A
 		// route that declared none, or forbade shared caching, keeps its policy.
-		const ttl = expiresIn(this[CACHE_KEY])
+		const ttl = obj.freshUntil === undefined ? expiresIn(this[CACHE_KEY]) : obj.freshUntil - now
 		const policy = this.response.get('Cache-Control')
 		const forbidden = /\b(?:private|no-cache|no-store)\b/u.test(policy)
 		if (ttl !== undefined && Number.isFinite(ttl) && !forbidden && /\bmax-age=\d+/u.test(policy)) {
@@ -478,7 +506,6 @@ export function cachable(options: Options): Middleware {
 		ctx.cached = cached.bind(ctx)
 		ctx.evictCachedItem = evictCachedItem.bind(ctx)
 		ctx.setCacheTTL = setCacheTTL.bind(ctx)
-		ctx.cacheDetail = cacheDetail.bind(ctx)
 
 		if (methods[ctx.request.method]) {
 			// One key for the whole request, so the fill it may wait on and the
@@ -509,7 +536,27 @@ export function cachable(options: Options): Middleware {
 
 		let outcome: FillOutcome = {kind: 'own'}
 		try {
-			await next()
+			let failure: {error: unknown} | undefined
+			try {
+				await next()
+			} catch (error) {
+				if (!ctx[CACHE_INFO_KEY] || statusOf(error) < 500) throw error
+				failure = {error}
+			}
+			if (ctx[CACHE_INFO_KEY] && (failure || ctx.status >= 500)) {
+				let stale = ctx[CACHE_STALE_KEY]
+				let status = failure ? statusOf(failure.error) : ctx.status
+				report('onFailure', () => {
+					onFailure(ctx, Boolean(stale), failure?.error)
+				})
+				if (!stale) {
+					if (failure) throw failure.error
+				} else {
+					serveStale(ctx, stale, status)
+					outcome = {kind: 'stored'}
+					return
+				}
+			}
 			let stored = await store(ctx)
 			if (ctx[CACHE_INFO_KEY]) {
 				let params = ['fwd=uri-miss']
@@ -533,6 +580,36 @@ export function cachable(options: Options): Middleware {
 				bypassing.delete(ctx[CACHE_KEY])
 			}
 		}
+	}
+
+	/// Answers with `stale` in place of a route that failed with `status`, and
+	/// keeps it fresh for `STALE_TTL`, so the route is asked again only then.
+	function serveStale(ctx: ExtendableContext, stale: CacheObject, status: number): void {
+		let now = Date.now()
+		let staleUntil = stale.staleUntil ?? now
+		let copy: CacheObject = {...stale, freshUntil: now + STALE_TTL, detail: 'stale'}
+		set(ctx[CACHE_KEY], copy, Math.max(staleUntil - now, STALE_TTL))
+		filling.get(ctx[CACHE_KEY])?.settle({kind: 'stored'})
+		bypassing.delete(ctx[CACHE_KEY])
+
+		// headers the failure set about its own content say nothing of the copy
+		for (let name of storedHeaders) ctx.response.remove(name)
+		ctx.response.status = 200
+		if (stale.type) ctx.response.type = stale.type
+		if (stale.lastModified) ctx.response.lastModified = stale.lastModified
+		if (stale.etag) ctx.response.etag = stale.etag
+		if (stale.headers) ctx.response.set(stale.headers)
+		let policy = ctx.response.get('Cache-Control')
+		if (/\bmax-age=\d+/u.test(policy)) {
+			let left = `max-age=${(STALE_TTL / 1000).toFixed(0)}`
+			ctx.response.set('Cache-Control', policy.replace(/\bmax-age=\d+/u, left))
+		}
+		setCacheStatus(ctx, ['fwd=uri-miss', `fwd-status=${status.toFixed(0)}`, 'stored'], 'stale')
+		if (ctx.request.fresh) {
+			ctx.response.status = 304
+			return
+		}
+		ctx.response.body = stale.body
 	}
 
 	/// Waits on `fill` until it ends.
@@ -620,9 +697,6 @@ export function cachable(options: Options): Middleware {
 		if (Object.keys(headers).length > 0) {
 			obj.headers = headers
 		}
-		if (ctx[CACHE_DETAIL_KEY] !== undefined) {
-			obj.detail = ctx[CACHE_DETAIL_KEY]
-		}
 
 		// if the content-type was `text` or `text/plain` then don't cache
 		// (since it's likely cache poisoning or the default Koa `text` being used)
@@ -639,7 +713,14 @@ export function cachable(options: Options): Middleware {
 			throw new Error('cacheKey is undefined when trying to set cache')
 		}
 
-		set(ctx[CACHE_KEY], obj, ctx[CACHE_INFO_KEY].maxAge ?? options.maxAge ?? 0)
+		let maxAge = ctx[CACHE_INFO_KEY].maxAge ?? options.maxAge ?? 0
+		if (staleIfError > 0 && maxAge > 0) {
+			let now = Date.now()
+			obj.freshUntil = now + maxAge
+			obj.staleUntil = obj.freshUntil + staleIfError
+			maxAge += staleIfError
+		}
+		set(ctx[CACHE_KEY], obj, maxAge)
 		report('onStore', () => {
 			onStore(ctx, setBody)
 		})
