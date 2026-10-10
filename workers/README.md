@@ -71,12 +71,11 @@ names its source.
 - `GET /calendar/:name`: a calendar as events, in the contract the Node server's
   `/v1/calendar/named/:name` routes keep. The names are `carleton`, `upcoming-convos`
   and `sumo-schedule` (Carleton's calendars, with the pictures their pages show),
-  `northfield` (an iCal feed), `krlx-schedule` (a Google calendar), `ksto-schedule`,
-  `stolaf`, and the retired `the-cave` and `oleville`. `ksto-schedule` and `stolaf`
-  are read differently by each campus's table, as on the Node servers: St. Olaf's
-  KSTO is the weekly schedule AAO-React-Native publishes and Carleton's is a
-  Google calendar; St. Olaf's `stolaf` is a "temporarily unavailable" notice kept a
-  minute, and Carleton's a retired notice kept a day. A retired calendar is a single
+  `northfield` (an iCal feed), `krlx-schedule` (a Google calendar), `ksto-schedule` (the weekly schedule
+  AAO-React-Native publishes, `ksto-schedule.json`), `stolaf`, and the retired
+  `the-cave` and `oleville`. `stolaf` differs by campus's table, as on the Node
+  servers: at St. Olaf it is a "temporarily unavailable" notice kept a minute, at
+  Carleton a retired notice kept a day. A retired calendar is a single
   notice event, kept a day. The others are fresh for a minute and kept a day if the
   site fails; a 502, kept a minute, if nothing has ever been stored. Shaped by
   `source/calendar/*-shape.ts`, shared with the Node server.

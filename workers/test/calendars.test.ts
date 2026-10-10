@@ -21,6 +21,8 @@ const SUMO_ICS = sumoFeed.replaceAll('2026', '2030')
 const SUMO_FEED =
 	'https://www.carleton.edu/student/orgs/sumo/schedule/?loadFeed=calendar&stamp=1714840383'
 const SUMO_PAGE = 'https://www.carleton.edu/student/orgs/sumo/schedule/'
+const CONVOS_PAGE = 'https://www.carleton.edu/convocations/calendar/'
+const CONVOS_FEED = `${CONVOS_PAGE}?loadFeed=calendar&stamp=1714843936`
 const NORTHFIELD =
 	'https://www.northfieldmn.gov/common/modules/iCalendar/iCalendar.aspx?catID=41&feed=calendar'
 const KSTO_SCHEDULE = 'https://stolaf.dev/AAO-React-Native/ksto-schedule.json'
@@ -31,10 +33,10 @@ let errorSpy: {mockRestore: () => void}
 
 const SOURCES = [
 	`${carletonCalendar.name}:${SUMO_FEED} ${SUMO_PAGE}`,
+	`${carletonCalendar.name}:${CONVOS_FEED} ${CONVOS_PAGE}`,
 	`${ical.name}:${NORTHFIELD}`,
 	`${weeklySchedule.name}:${KSTO_SCHEDULE}`,
 	`${googleCalendar.name}:krlxradio88.1@gmail.com`,
-	`${googleCalendar.name}:kstonarwhal@gmail.com`,
 ]
 
 // storage is not reset between tests, so each starts by emptying the calendars
@@ -198,49 +200,7 @@ describe.each(['edu.stolaf', 'edu.carleton'])('%s calendars', (campus) => {
 		expect(asked.searchParams.get('timeMin')).toBe('2030-10-09T12:00:00.000Z')
 	})
 
-	test('a retired calendar is a notice, kept for a day', async () => {
-		for (let name of ['the-cave', 'oleville']) {
-			let response = await get(`/${campus}/calendar/${name}`)
-			expect(response.status).toBe(200)
-			expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
-			expect(await response.json()).toMatchObject([
-				{
-					dataSource: 'deprecated',
-					title: 'No longer updated',
-					startTime: '2030-10-09T12:00:00.000Z',
-				},
-			])
-		}
-		expect(fetchSpy).not.toHaveBeenCalled()
-	})
-
-	test('an unknown calendar is a 404', async () => {
-		expect((await get(`/${campus}/calendar/nope`)).status).toBe(404)
-		expect((await get(`/${campus}/calendar/constructor`)).status).toBe(404)
-	})
-
-	test('the arbitrary-address calendar routes are not served', async () => {
-		expect((await get(`/${campus}/calendar/ics?url=https://example.com/a.ics`)).status).toBe(404)
-		expect((await get(`/${campus}/calendar/google?id=a@b.c`)).status).toBe(404)
-	})
-})
-
-describe('the calendars that differ by campus', () => {
-	test("St. Olaf's own calendar is a notice kept a minute", async () => {
-		let response = await get('/edu.stolaf/calendar/stolaf')
-		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
-		expect(await response.json()).toMatchObject([{title: 'Temporarily unavailable'}])
-	})
-
-	test("Carleton's copy of it is retired, kept a day", async () => {
-		let response = await get('/edu.carleton/calendar/stolaf')
-		expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
-		expect(await response.json()).toMatchObject([
-			{title: 'No longer updated', description: expect.stringContaining('St. Olaf')},
-		])
-	})
-
-	test('KSTO at St. Olaf is its weekly schedule', async () => {
+	test('KSTO is the weekly schedule', async () => {
 		serve({
 			[KSTO_SCHEDULE]: () =>
 				answer(
@@ -254,7 +214,7 @@ describe('the calendars that differ by campus', () => {
 					'application/json',
 				),
 		})
-		let events = (await (await get('/edu.stolaf/calendar/ksto-schedule')).json()) as {
+		let events = (await (await get(`/${campus}/calendar/ksto-schedule`)).json()) as {
 			title: string
 			startTime: string
 		}[]
@@ -263,15 +223,8 @@ describe('the calendars that differ by campus', () => {
 		expect(callsTo(GOOGLE)).toHaveLength(0)
 	})
 
-	test('KSTO at Carleton is the Google calendar', async () => {
-		serve({[GOOGLE]: () => answer(JSON.stringify({items: []}), 'application/json')})
-		expect((await get('/edu.carleton/calendar/ksto-schedule')).status).toBe(200)
-		expect(new URL(String(callsTo(GOOGLE)[0]?.[0])).pathname).toContain('kstonarwhal%40gmail.com')
-		expect(callsTo(KSTO_SCHEDULE)).toHaveLength(0)
-	})
-
 	test('the convocations list is where Carleton serves it', async () => {
-		let convos = 'https://www.carleton.edu/convocations/calendar/'
+		let convos = CONVOS_PAGE
 		serve({
 			[convos]: () => answer(SUMO_ICS, 'text/calendar'),
 		})

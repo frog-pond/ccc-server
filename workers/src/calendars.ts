@@ -68,6 +68,9 @@ const SHARED: Record<string, Calendar> = {
 	'the-cave': THE_CAVE,
 	oleville: OLEVILLE,
 	northfield: fromIcal(NORTHFIELD),
+	// KSTO's Google Calendar stopped at spring 2019; the station's current
+	// schedule is published each week.
+	'ksto-schedule': fromWeeklySchedule('https://stolaf.dev/AAO-React-Native/ksto-schedule.json'),
 	'krlx-schedule': fromGoogle('krlxradio88.1@gmail.com'),
 	'upcoming-convos': CONVOS,
 	'sumo-schedule': fromCarleton('/student/orgs/sumo/schedule/'),
@@ -82,9 +85,6 @@ export const STOLAF_CALENDARS: Record<string, Calendar> = {
 		"The calendar can't be loaded right now. Open this event for details.",
 		MINUTE,
 	),
-	// KSTO's Google Calendar stopped at spring 2019; the station's current
-	// schedule is published each week.
-	'ksto-schedule': fromWeeklySchedule('https://stolaf.dev/AAO-React-Native/ksto-schedule.json'),
 }
 
 /// Carleton's calendars.
@@ -92,5 +92,4 @@ export const CARLETON_CALENDARS: Record<string, Calendar> = {
 	...SHARED,
 	// The Google calendar this mirrored St. Olaf's events through was deleted.
 	stolaf: notice(RETIRED_TITLE, 'St. Olaf events are no longer published to Carleton.', DAY),
-	'ksto-schedule': fromGoogle('kstonarwhal@gmail.com'),
 }
