@@ -292,7 +292,13 @@ streams soonest first within a page, as their live routes are (streams take
   those items are shaped from WordPress rather than RSS.
 
 Every upstream request goes through `upstream` (`src/upstream.ts`), which sends
-`User-Agent: ccc-server/2.0` and never follows a redirect.
+`User-Agent: ccc-server/2.0` and never follows a redirect. While a source
+loads, its GETs are conditional (`src/conditional.ts`): an answer that came
+with an `ETag` or `Last-Modified` is kept beside the value (up to 512 KB, by a
+digest of its address), the next load sends `If-None-Match` /
+`If-Modified-Since`, and a `304` is read as that kept answer, a fresh read of
+the same body. A `429` or `503` with a `Retry-After` holds the source off at
+least that long (at most a day) before it is asked again.
 
 A source must be imported from `src/worker.ts`, or the object answers "unknown
 source".

@@ -1,5 +1,6 @@
 import {DurableObject} from 'cloudflare:workers'
 import {clock} from './clock.ts'
+import {conditional, type Conditional, type KeptResponse} from './conditional.ts'
 import type {Served, SourceResult} from './define-source.ts'
 import {registry} from './registry.ts'
 
@@ -54,6 +55,16 @@ export class SourceDO extends DurableObject<Env> {
 		if (!columns.some(({name}) => name === 'ttl')) {
 			ctx.storage.sql.exec('ALTER TABLE entry ADD COLUMN ttl INTEGER')
 		}
+		// the answers the last load got, by a digest of their address, kept for
+		// their validators (`src/conditional.ts`)
+		ctx.storage.sql.exec(`
+			CREATE TABLE IF NOT EXISTS response (
+				key TEXT PRIMARY KEY,
+				etag TEXT,
+				last_modified TEXT,
+				headers TEXT NOT NULL,
+				body TEXT NOT NULL
+			)`)
 	}
 
 	#row(): Row | undefined {
@@ -109,6 +120,46 @@ export class SourceDO extends DurableObject<Env> {
 		return {state: 'error', error: row.last_error ?? 'upstream unavailable'}
 	}
 
+	#keptResponses(): Map<string, KeptResponse> {
+		let rows = this.ctx.storage.sql
+			.exec<{
+				key: string
+				etag: string | null
+				last_modified: string | null
+				headers: string
+				body: string
+			}>('SELECT * FROM response')
+			.toArray()
+		return new Map(
+			rows.map((r) => [
+				r.key,
+				{
+					etag: r.etag,
+					lastModified: r.last_modified,
+					headers: JSON.parse(r.headers) as [string, string][],
+					body: r.body,
+				},
+			]),
+		)
+	}
+
+	/// Keeps the answers a good load got, and only those: an address it no
+	/// longer asks for is not asked for conditionally again.
+	#keepResponses(used: ReadonlyMap<string, KeptResponse>) {
+		let sql = this.ctx.storage.sql
+		sql.exec('DELETE FROM response')
+		for (let [key, kept] of used) {
+			sql.exec(
+				'INSERT INTO response (key, etag, last_modified, headers, body) VALUES (?, ?, ?, ?, ?)',
+				key,
+				kept.etag,
+				kept.lastModified,
+				JSON.stringify(kept.headers),
+				kept.body,
+			)
+		}
+	}
+
 	/// Single-flight: readers that arrive while a fetch is out share it. Awaiting
 	/// `fetch` yields the object, so without this each of them would start its own.
 	#refresh(): Promise<Row> {
@@ -121,9 +172,11 @@ export class SourceDO extends DurableObject<Env> {
 		let row = this.#row()!
 		let spec = registry[row.name]!
 		let now = clock.now()
+		let context: Conditional = {kept: this.#keptResponses(), used: new Map(), retryAfter: 0}
 		try {
 			let params = JSON.parse(row.params) as never
-			let value = await spec.load(params, this.env)
+			let value = await conditional.run(context, () => spec.load(params, this.env))
+			this.#keepResponses(context.used)
 			this.ctx.storage.sql.exec(
 				`UPDATE entry SET value = ?, fetched_at = ?, epoch = ?, ttl = ?,
 					failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1`,
@@ -146,7 +199,9 @@ export class SourceDO extends DurableObject<Env> {
 			this.ctx.storage.sql.exec(
 				'UPDATE entry SET failures = ?, backoff_until = ?, last_error = ? WHERE id = 1',
 				failures,
-				now + Math.min(MIN_BACKOFF * 2 ** (failures - 1), MAX_BACKOFF),
+				// at least as long as the site asked, when it said
+				now +
+					Math.max(Math.min(MIN_BACKOFF * 2 ** (failures - 1), MAX_BACKOFF), context.retryAfter),
 				String(err),
 			)
 			throw err
@@ -185,6 +240,7 @@ export class SourceDO extends DurableObject<Env> {
 
 	async purge() {
 		this.ctx.storage.sql.exec('DELETE FROM entry')
+		this.ctx.storage.sql.exec('DELETE FROM response')
 		await this.ctx.storage.deleteAlarm()
 	}
 }

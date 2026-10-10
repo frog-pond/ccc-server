@@ -62,6 +62,13 @@ async function readJson(url: string): Promise<unknown> {
 	return response.json()
 }
 
+/// A feed whose failure only leaves out what it adds: logged, so a site
+/// blocking the worker shows, and read as nothing.
+const leftOut = (feed: string) => (err: unknown) => {
+	console.warn(`athletics: left out ${feed}:`, err instanceof Error ? err.message : String(err))
+	return null
+}
+
 /// A college's games, as the Node server's `/athletics/scores` makes them
 /// (`source/athletics/shape.ts`, shared with it): the scores feed, with the
 /// livestats feed's scores for games under way and the calendar's results for
@@ -76,8 +83,8 @@ export const athleticsScores = defineSource({
 		let now = new Date(clock.now())
 		let [scoresJson, livestatsJson, calendarJson] = await Promise.all([
 			readJson(scoresUrl),
-			readJson(livestatsUrlFromScoresUrl(scoresUrl)).catch(() => null),
-			readJson(yesterdayCalendarUrl(scoresUrl, now)).catch(() => null),
+			readJson(livestatsUrlFromScoresUrl(scoresUrl)).catch(leftOut('livestats')),
+			readJson(yesterdayCalendarUrl(scoresUrl, now)).catch(leftOut('yesterday’s calendar')),
 		])
 		let school = {origin: new URL(scoresUrl).origin, teamName}
 		return withYesterday(
