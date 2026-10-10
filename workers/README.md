@@ -81,8 +81,8 @@ day if its host fails; student work keeps its own schedule, below.
   was ever stored.
 - `GET /news/oleville`, `/news/politicole`, `/news/ksto`, `/news/covid` and
   `/news/nnb`: feeds that are no longer published. Each answers with one feed
-  item saying so, dated at the time of the request, the same notice the Node
-  routes send (`deprecatedWpJson` and `retiredNnb` in
+  item saying so, dated at the start of the hour (so its ETag holds for the
+  hour), the same notice the Node routes send (`deprecatedWpJson` and `retiredNnb` in
   `source/feeds/deprecated.ts`, shared with the Node server). Nothing is
   fetched.
 - `GET /calendar/:name`: a calendar as events, in the contract the Node server's

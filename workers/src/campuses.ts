@@ -39,9 +39,13 @@ const fromRss = (url: string): NewsFeed => ({
 	read: async (env) => (await fetchSource(env, rssNews, {url})).value,
 })
 
+const HOUR = 60 * 60 * 1000
+
 /// A notice in place of a feed that is no longer published, as feed items.
+/// It is dated at the start of the hour, so its body, and so its ETag, holds
+/// for that hour and a client re-checking it is answered with a 304.
 const notice = (items: (now: Date) => FeedItemType[]): NewsFeed => ({
-	read: () => Promise.resolve(items(new Date(clock.now()))),
+	read: () => Promise.resolve(items(new Date(Math.floor(clock.now() / HOUR) * HOUR))),
 })
 
 const STOLAF_NEWS = fromWordPress(STOLAF_NEWS_URL)
