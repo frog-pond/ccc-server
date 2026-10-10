@@ -27,13 +27,30 @@ Needs npm 12 (`npm install --global npm@12`): npm 10's resolver crashes on
 Vitest's peer dependencies. npm 12 also blocks dependency install scripts by
 default, and none are needed here, so none are approved.
 
+This is an npm workspace of the root package, so install once at the repo root
+(`npm ci`) and it can import from `../source/` (the BonApp extractor and schema
+resolve `zod` from the root `node_modules`). Import only modules that are pure
+or workerd-safe: not `ccc-lib/http.ts`, `@sentry/node` or `moment-timezone`.
+
 ```sh
-npm ci
+npm ci              # at the repo root
 npm test            # vitest, running inside workerd
 npm run typecheck   # regenerates worker-configuration.d.ts first
 ```
 
+## Sources
+
+- `bonapp-page` (`src/sources/bonapp.ts`): one BonApp café page, parsed and
+  validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
+  and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
+
+A source must be imported from `src/worker.ts`, or the object answers "unknown
+source".
+
 ## Notes
+
+- Whether a Worker's own egress can fetch the café page is unproven until the
+  first deploy.
 
 - `@cloudflare/vitest-plugin` is the renamed `@cloudflare/vitest-pool-workers`.
 - Storage is not reset between tests, so each test uses its own source key.
