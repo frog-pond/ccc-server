@@ -5,6 +5,8 @@ import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import type {Source} from './define-source.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
+import {PAGES_ROUTES} from './pages-routes.ts'
+import {pagesJson} from './sources/pages-json.ts'
 import {CARLETONIAN_URL, rssNews} from './sources/rss-news.ts'
 import {CARLETON_NOW_URL, STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
 
@@ -101,11 +103,26 @@ async function news(
 	}
 }
 
+/// A data file the colleges publish, passed through as it is. A failure with
+/// nothing stored is a 502, kept briefly, as for the news feeds.
+async function dataFile(env: Env, url: string, maxAge: number): Promise<Response> {
+	try {
+		let {value} = await fetchSource(env, pagesJson, {url})
+		return json(value, 200, maxAge)
+	} catch (err) {
+		console.error(err, {url})
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
 export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
 	if (url.pathname === '/') return json({cafes: CAFES})
+
+	let file = PAGES_ROUTES.get(url.pathname)
+	if (file) return dataFile(env, file.url, file.maxAge)
 
 	if (url.pathname === '/v1/news/named/stolaf') return news(env, wpNews, STOLAF_NEWS_URL)
 	if (url.pathname === '/v1/news/named/carleton-now') return news(env, wpNews, CARLETON_NOW_URL)

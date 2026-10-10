@@ -106,3 +106,21 @@ workspace's dependencies, so a package imported from `source/` has to be declare
 in `workers/package.json` too. The `workers-standalone-build` CI job installs and
 builds that way, because the `workers` job installs from the root and cannot see
 a missing one.
+
+## Data files, by college
+
+The small JSON files each college publishes on GitHub Pages (faqs, contacts,
+help, webcams, hours, dictionary, the campus map) are passed through as they
+are, by `pagesJson` (`src/sources/pages-json.ts`), from the table in
+`src/pages-routes.ts`. Fresh for an hour, kept a day if the host fails, a 502
+if nothing has ever been stored; the apps are told to keep them as long as the
+Node routes told them to.
+
+There is no `/v1` prefix. A route both colleges have, with a different file
+behind each, is served under `/edu.stolaf` and `/edu.carleton` (for example
+`/edu.stolaf/faqs`, `/edu.carleton/spaces/hours`), and the bare path is a 404
+rather than an answer for only one of them. A route only one college has keeps
+its plain path (`/sources`, `/spaces/directory`, `/a-to-z/extras`,
+`/orgs/category-styles`, `/map/categories`, `/map/style`, `/map/style-dark`,
+`/student-work/areas`, `/student-work/wages`). The routes from the first
+worker commits (`/v1/food/...`, `/v1/news/named/...`) are unchanged for now.
