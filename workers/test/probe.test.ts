@@ -55,13 +55,3 @@ test('only the named targets can be probed', async () => {
 	expect(response.status).toBe(404)
 	expect(probed()).toEqual([])
 })
-
-test("?as=node sends the Node server's user agent, and by default none is set", async () => {
-	fetchSpy.mockImplementation(() => Promise.resolve(new Response('[]', {status: 200})))
-	await get('/probe/olafmessenger')
-	await get('/probe/olafmessenger?as=node')
-	let agents = fetchSpy.mock.calls
-		.filter(([input]) => !String(input).startsWith('https://worker.test'))
-		.map(([, init]) => new Headers(init?.headers).get('user-agent'))
-	expect(agents).toEqual([null, 'ccc-server/0.2.0'])
-})

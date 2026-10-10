@@ -34,13 +34,13 @@ const PROBES: Record<string, string> = {
 	olafmessenger: 'https://www.olafmessenger.com/wp-json/wp/v2/posts/?per_page=1',
 }
 
-async function probe(name: string, asNode: boolean): Promise<Response> {
+async function probe(name: string): Promise<Response> {
 	let url = Object.hasOwn(PROBES, name) ? PROBES[name] : undefined
 	if (url === undefined)
 		return json({error: `unknown probe ${name}`, known: Object.keys(PROBES)}, 404)
 
 	try {
-		let response = await fetch(url, asNode ? {headers: {'User-Agent': 'ccc-server/0.2.0'}} : {})
+		let response = await fetch(url)
 		let text = await response.text()
 		let isJson = true
 		try {
@@ -51,7 +51,6 @@ async function probe(name: string, asNode: boolean): Promise<Response> {
 		return json({
 			name,
 			url,
-			as: asNode ? 'node' : 'worker default',
 			status: response.status,
 			server: response.headers.get('server'),
 			contentType: response.headers.get('content-type'),
@@ -74,7 +73,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (match?.[1]) return bonapp(match[1], url.searchParams.get('full') === '1', env)
 
 	let probing = /^\/probe\/([^/]+)$/.exec(url.pathname)
-	if (probing?.[1]) return probe(probing[1], url.searchParams.get('as') === 'node')
+	if (probing?.[1]) return probe(probing[1])
 
 	return json({error: 'not found'}, 404)
 }
