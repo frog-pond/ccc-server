@@ -125,12 +125,6 @@ export class StudentWorkDO extends DurableObject<Env> {
 				last_read INTEGER NOT NULL
 			);
 			INSERT OR IGNORE INTO state (id, last_read) VALUES (1, 0);`)
-		// a board recorded as read with no rows to show for it (an earlier
-		// layout's table, since dropped) is read afresh on the next request
-		ctx.storage.sql.exec('DROP TABLE IF EXISTS posting')
-		ctx.storage.sql.exec(
-			'UPDATE state SET board_fetched_at = NULL WHERE NOT EXISTS (SELECT 1 FROM postings)',
-		)
 	}
 
 	#state(): StateRow {
