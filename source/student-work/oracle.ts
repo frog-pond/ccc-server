@@ -1,13 +1,7 @@
 import {z} from 'zod'
 import {getJson} from '../ccc-lib/http.ts'
+import {API, LIMIT, SITE, query} from './oracle-shape.ts'
 import {unitNumberOfDescription} from './unit-number.ts'
-
-const API = 'https://fa-ewur-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest'
-/// St. Olaf's Candidate Experience site.
-const SITE = 'CX_1'
-
-/// Every posting the board lists, well under this.
-const LIMIT = '200'
 
 const BoardSchema = z.object({
 	items: z.array(z.object({requisitionList: z.array(z.object({Id: z.string()}))})).min(1),
@@ -16,10 +10,6 @@ const BoardSchema = z.object({
 const DetailSchema = z.object({
 	items: z.array(z.object({ExternalDescriptionStr: z.string().nullish()})).min(1),
 })
-
-function query(params: [string, string][]): string {
-	return params.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&')
-}
 
 export async function boardIds(): Promise<string[]> {
 	let params = query([

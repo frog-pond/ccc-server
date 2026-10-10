@@ -17,14 +17,18 @@ const config = JSON.parse(
 // deployed preview has no env.SOURCE and every read of it fails, which no test
 // run against the top-level config can see.
 test('a Preview has the same Durable Object bindings as production', () => {
-	expect(config.durable_objects?.bindings).toEqual([{name: 'SOURCE', class_name: 'SourceDO'}])
+	expect(config.durable_objects?.bindings).toEqual([
+		{name: 'SOURCE', class_name: 'SourceDO'},
+		{name: 'STUDENT_WORK', class_name: 'StudentWorkDO'},
+	])
 	expect(config.previews.durable_objects?.bindings).toEqual(config.durable_objects?.bindings)
 })
 
 // Previews do not inherit observability either, so a Preview would otherwise
 // run without logs, which is the one place we most want them.
 test('production and Previews both persist logs, including invocation logs', () => {
-	const logs = {enabled: true, invocation_logs: true, persist: true}
+	const logs = {enabled: true, head_sampling_rate: 1, invocation_logs: true, persist: true}
 	expect(config.observability?.logs).toEqual(logs)
 	expect(config.previews.observability?.logs).toEqual(logs)
+	expect(config.previews.observability).toEqual(config.observability)
 })

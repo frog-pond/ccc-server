@@ -3,6 +3,7 @@ import type {FeedItemType} from '../../source/feeds/types.ts'
 import {CAFES} from './cafes.ts'
 import type {Source} from './define-source.ts'
 import {CARLETON_FILES, STOLAF_FILES, type PagesRoute} from './pages-routes.ts'
+import type {StudentWork} from './student-work.ts'
 import {CARLETONIAN_URL, rssNews} from './sources/rss-news.ts'
 import {CARLETON_NOW_URL, STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
 
@@ -21,6 +22,8 @@ export type Campus = {
 	convos?: Calendar
 	/// data files the college publishes, passed through, by path
 	files: Record<string, PagesRoute>
+	/// the Student Work board's routes, where the campus has them
+	studentWork?: StudentWork
 }
 
 const STOLAF_NEWS: NewsFeed = {source: wpNews, url: STOLAF_NEWS_URL}
@@ -32,6 +35,7 @@ const STOLAF: Campus = {
 	news: {stolaf: STOLAF_NEWS, 'carleton-now': CARLETON_NOW, carletonian: CARLETONIAN},
 	calendars: STOLAF_CALENDARS,
 	files: STOLAF_FILES,
+	studentWork: {areasUrl: STOLAF_FILES['/student-work/areas']!.url},
 }
 
 const CARLETON: Campus = {

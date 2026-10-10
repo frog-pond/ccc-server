@@ -87,6 +87,33 @@ names its source.
   the way AAO-React-Native's own parsers do, and an event that cannot be read is
   skipped unless none can.
 - `GET /convos/upcoming` (Carleton only): the same list as `upcoming-convos`.
+- `GET /student-work/postings` (St. Olaf only): the Oracle Recruiting Student
+  Work board, newest first, as `{updatedAt, count, postings}`. Each posting has
+  the board's listing (`title`, `postedDate`, `location`), what its title says
+  (`displayTitle` without the term prefix or pay code, `term`, `level`,
+  `payCode`), what its description says (`unit`, `department`, `wage`, `length`,
+  `contact`, `classification`), its Student Work `areas` (slugs, from the
+  published `student-work-areas.json`, read by its own `student-work-areas` source that keeps only a list of areas; a unit no area lists goes to the area that
+  lists `other`), its apply `url`, and when it was first seen and its detail last
+  read. Query parameters narrow the list; values of one parameter (repeated or
+  comma-separated) are alternatives, and parameters narrow together: `area`
+  (slug), `unit` (five digits, or `none`), `level` (`entry`, `experienced`,
+  `lead`, `none`), `term` (`academic-year`, `fall`, `spring`, `summer`, `none`),
+  `posted_since` (`YYYY-MM-DD`), `q` (every word starts a word of the title or
+  the description, ignoring case and accents), `title` (the same, in the title
+  a student sees only), and `sort` (`newest`, the default, or `relevance`, best
+  match for `q` or `title` first, a title match counting more). The filters and
+  searches run as SQL in the object (FTS5 for the searches), and only the
+  postings that match leave it. An unknown parameter or value is a 400. Cacheable for an hour; a 502, kept a minute, if Oracle has never been
+  read, or if `area` is asked for and the areas file cannot be read.
+- `GET /student-work/postings/:id`: one posting, as above, with its
+  `description`: `markdown` (what is neither one of the named fields nor on every
+  posting), every labelled line as `fields`, and the original `html`. A 404 if it
+  is not on the board.
+- `GET /student-work/units`: each posting's unit by id, in the contract the
+  Node server's `/v1/student-work/units` keeps (`groupUnits` in
+  `source/student-work/areas.ts`). A posting whose detail has not been read is
+  left out.
 - `GET /bonapp/:cafeId`: what the `bonapp-page` object holds for a café, with
   `state` and `fetchedAt`, a summary, and the whole parsed page with `?full=1`.
   A 502 means BonApp failed with nothing stored. This is a look at the source,
@@ -111,6 +138,22 @@ names its source.
   validated, `null` when the café is closed. Fresh for 1 hour, kept for a day,
   and the epoch is the campus date. Only `*.cafebonappetit.com` urls load.
 
+- `StudentWorkDO` (`src/student-work-do.ts`): not a source but its own Durable
+  Object (binding `STUDENT_WORK`), holding the St. Olaf Oracle Recruiting board
+  as one SQLite row per posting, with the columns the routes filter on and an
+  FTS5 index of each posting's title and description. Its alarm reads the board every four hours plus
+  up to thirty minutes of random jitter; postings no longer listed are dropped.
+  A posting's detail is read when it is new, an hour after a read that found no
+  unit, and a day after the last read, at most twenty a run and four at a time; a
+  run that leaves some unread comes back two minutes later. A failed board read
+  keeps the stored postings and backs off (five minutes, doubling, up to four
+  hours), as does Oracle answering 403 or 429. An empty board in place of a full
+  one is treated as a failure. Only Oracle's own origin is fetched, and a
+  redirect is not followed. It stops refreshing after two days without a read,
+  and the next read resumes it. Shaping is in `source/student-work/oracle-shape.ts`
+  and `posting-shape.ts`; the unit is read by `unit-number.ts`, shared with the
+  Node server.
+
 A source must be imported from `src/worker.ts`, or the object answers "unknown
 source".
 
@@ -131,8 +174,9 @@ Workers Builds runs from the repo root (`npm clean-install`, `npm run build`,
 then `npx wrangler preview`), and wrangler stops at a workspace root that has no
 config of its own. So the one wrangler config lives at the repo root
 (`wrangler.jsonc`, with `main` pointing into `workers/`). A Preview does not
-inherit its bindings, so `previews` repeats the `SOURCE` binding; a test checks
-the two match. This package's scripts and `vitest.config.ts` point at it with
+inherit its bindings or observability settings, so `previews` repeats the
+`SOURCE` and `STUDENT_WORK` bindings and the `observability` block; a test
+checks they match. This package's scripts and `vitest.config.ts` point at it with
 `-c ../wrangler.jsonc`. The root `npm run build` is the Node server's `tsc`; this package's own is
 `npm run build` here.
 
