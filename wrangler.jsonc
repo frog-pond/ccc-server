@@ -6,10 +6,16 @@
 	"durable_objects": {
 		"bindings": [{"name": "SOURCE", "class_name": "SourceDO"}],
 	},
+	"observability": {
+		"logs": {"enabled": true, "invocation_logs": true, "persist": true},
+	},
 	"migrations": [{"tag": "v1", "new_sqlite_classes": ["SourceDO"]}],
 	// A Preview does not inherit bindings, so it needs its own copy to have
-	// env.SOURCE. Each Preview gets its own Durable Object namespace and storage.
+	// env.SOURCE or observability. Each Preview gets its own Durable Object namespace and storage.
 	"previews": {
+		"observability": {
+			"logs": {"enabled": true, "invocation_logs": true, "persist": true},
+		},
 		"durable_objects": {
 			"bindings": [{"name": "SOURCE", "class_name": "SourceDO"}],
 		},

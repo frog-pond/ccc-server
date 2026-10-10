@@ -1,7 +1,10 @@
 import {expect, test} from 'vitest'
 import wranglerConfig from '../../wrangler.jsonc?raw'
 
-type Bindings = {durable_objects?: {bindings?: {name: string; class_name: string}[]}}
+type Bindings = {
+	observability?: {logs?: {enabled?: boolean; invocation_logs?: boolean; persist?: boolean}}
+	durable_objects?: {bindings?: {name: string; class_name: string}[]}
+}
 
 // the file has line comments and trailing commas, which JSON.parse refuses
 const config = JSON.parse(
@@ -16,4 +19,12 @@ const config = JSON.parse(
 test('a Preview has the same Durable Object bindings as production', () => {
 	expect(config.durable_objects?.bindings).toEqual([{name: 'SOURCE', class_name: 'SourceDO'}])
 	expect(config.previews.durable_objects?.bindings).toEqual(config.durable_objects?.bindings)
+})
+
+// Previews do not inherit observability either, so a Preview would otherwise
+// run without logs, which is the one place we most want them.
+test('production and Previews both persist logs, including invocation logs', () => {
+	const logs = {enabled: true, invocation_logs: true, persist: true}
+	expect(config.observability?.logs).toEqual(logs)
+	expect(config.previews.observability?.logs).toEqual(logs)
 })
