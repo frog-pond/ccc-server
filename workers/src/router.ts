@@ -5,7 +5,7 @@ import type {PagesRoute} from './pages-routes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {pagesJson} from './sources/pages-json.ts'
-import {probeOracle} from './probe-oracle.ts'
+import {posting, postings, units} from './student-work.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -132,7 +132,6 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
 	if (url.pathname === '/') return json({campuses: [...CAMPUSES.keys()]})
-	if (url.pathname === '/_probe/oracle') return probeOracle(request)
 
 	// every other route is under a campus: /edu.stolaf/..., /edu.carleton/...
 	let mounted = /^\/([^/]+)(\/.*)$/.exec(url.pathname)
@@ -154,6 +153,14 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
 	if (file) return dataFile(env, file)
+
+	if (campus.studentWork) {
+		if (path === '/student-work/postings')
+			return postings(env, campus.studentWork, url.searchParams)
+		if (path === '/student-work/units') return units(env, campus.studentWork)
+		let id = /^\/student-work\/postings\/(\d{1,12})$/.exec(path)?.[1]
+		if (id) return posting(env, campus.studentWork, id)
+	}
 
 	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(path)
 	if (eating?.[1] && eating[2]) return food(campus, eating[1] as 'menu' | 'cafe', eating[2], env)
