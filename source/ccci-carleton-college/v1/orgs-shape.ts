@@ -1,0 +1,122 @@
+import {parseHtml} from '../../ccc-lib/dom.ts'
+import {groupableName, sortOrgs, sortableName} from '../../student-orgs/names.ts'
+import {z} from 'zod'
+
+/// Carleton's student orgs, as its orgs page lists them, shaped for the app.
+/// Nothing here fetches, so the Node server and the Cloudflare Worker share it.
+
+export const CARLETON_ORGS_URL = 'https://apps.carleton.edu/student/orgs/'
+
+/// An org with no website, or none we may administer, is ordinary rather than
+/// malformed, and `domToOrg` says so with ''. Demanding a URL outright threw on
+/// those, and `getOrgs` parses in an unguarded loop, so one such org emptied the
+/// whole list.
+const UrlOrBlank = z.union([z.url(), z.literal('')])
+
+export type CarletonStudentOrgType = z.infer<typeof CarletonStudentOrgSchema>
+export const CarletonStudentOrgSchema = z.object({
+	id: z.string(),
+	contacts: z.string().array(),
+	categories: z.string().array(),
+	socialLinks: z.url().array(),
+	adminLink: UrlOrBlank,
+	description: z.string(),
+	website: UrlOrBlank,
+	name: z.string().min(1),
+})
+
+export type SortableCarletonStudentOrgType = z.infer<typeof SortableCarletonStudentOrgSchema>
+export const SortableCarletonStudentOrgSchema = CarletonStudentOrgSchema.extend({
+	/** The name, folded for sorting: no leading prefix such as "The", no accents, no opening punctuation */
+	$sortableName: z.string(),
+	$groupableName: z.string(),
+})
+
+export function domToOrg(orgNode: Element, sortableRegex: RegExp): SortableCarletonStudentOrgType {
+	let name =
+		orgNode
+			.querySelector('h4')
+			?.textContent.replace(/ Manage$/, '')
+			.trim() ?? ''
+
+	let adminLink = orgNode.querySelector('h4 > a')?.getAttribute('href')
+	adminLink = adminLink ? `https://apps.carleton.edu${adminLink}` : ''
+
+	const ids = Array.from(orgNode.querySelectorAll('a[name]')).map((n) => n.getAttribute('name'))
+	const id = ids[0] ?? name
+
+	const description = orgNode.querySelector('.orgDescription')?.textContent.trim() ?? ''
+
+	let contacts = Array.from(
+		new Set(
+			orgNode
+				.querySelector('.contacts')
+				?.textContent.trim()
+				.replace(/^Contact: /, '')
+				.split(', ') ?? [],
+		),
+	)
+
+	const websiteEls = Array.from(orgNode.querySelectorAll('.site a')).flatMap((n) => {
+		let href = n.getAttribute('href')
+		return href ? [href] : []
+	})
+	let website = websiteEls[0] ?? ''
+	if (website.length && !/^https?:\/\//.test(website)) {
+		website = `http://${website}`
+	}
+
+	const socialLinks = Array.from(orgNode.querySelectorAll('a > img')).flatMap((n) => {
+		let href = n.parentElement?.getAttribute('href')
+		return href ? [href] : []
+	})
+
+	let sortable = sortableName(name, sortableRegex)
+
+	let orgObj: SortableCarletonStudentOrgType = {
+		id,
+		contacts,
+		description,
+		name,
+		website,
+		categories: [],
+		socialLinks,
+		adminLink,
+		$sortableName: sortable,
+		$groupableName: groupableName(sortable),
+	}
+
+	return SortableCarletonStudentOrgSchema.parse(orgObj)
+}
+
+/// Every org on the page, in list order, each with the headings it is listed under.
+export function orgsFromHtml(body: string): SortableCarletonStudentOrgType[] {
+	let dom = parseHtml(body)
+
+	const allOrgWrappers = dom.querySelectorAll('.orgContainer, .careerField')
+
+	const allOrgs = new Map<string, SortableCarletonStudentOrgType>()
+	const sortableRegex = /^(Carleton( College)?|The) +/i
+	let currentCategory = null
+	for (const orgNode of allOrgWrappers) {
+		if (orgNode.classList.contains('careerField')) {
+			currentCategory = orgNode.textContent.trim()
+			continue
+		}
+
+		const org = domToOrg(orgNode, sortableRegex)
+		if (!allOrgs.has(org.id)) {
+			allOrgs.set(org.id, org)
+		}
+
+		const stored = allOrgs.get(org.id)
+		if (!stored || !currentCategory) {
+			continue
+		}
+		if (!stored.categories.includes(currentCategory)) {
+			stored.categories.push(currentCategory)
+		}
+	}
+
+	return sortOrgs(Array.from(allOrgs.values()))
+}

@@ -1,0 +1,37 @@
+[
+	{
+		"catIdh": "SpIn",
+		"name": "Special Interest",
+		"organizationUri": "chess-club"
+	},
+	{
+		"catIdh": "Mult",
+		"name": "Multicultural",
+		"organizationUri": "presente-2"
+	},
+	{
+		"catIdh": "CSpC",
+		"name": "Club Sports - Competitive",
+		"organizationUri": "ultimate-frisbee"
+	},
+	{
+		"catIdh": "SpIn",
+		"name": "Special Interest",
+		"organizationUri": "ultimate-frisbee"
+	},
+	{
+		"catIdh": "Perf",
+		"name": "Performance",
+		"organizationUri": "90-degrees-north"
+	},
+	{
+		"catIdh": "Demo",
+		"name": "Demo",
+		"organizationUri": "demo-org"
+	},
+	{
+		"catIdh": "SpIn",
+		"name": "Special Interest",
+		"organizationUri": "demo-org"
+	}
+]

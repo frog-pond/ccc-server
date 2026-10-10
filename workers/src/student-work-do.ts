@@ -9,6 +9,7 @@ import {
 } from '../../source/student-work/oracle-shape.ts'
 import {unitNumberOfDescription} from '../../source/student-work/unit-number.ts'
 import {
+	carletonJobsAsListed,
 	createCarletonTables,
 	listCarleton,
 	oneCarleton,
@@ -19,7 +20,7 @@ import {
 	type CarletonJob,
 	type CarletonListing,
 } from './carleton-board.ts'
-import {clock} from './clock.ts'
+import {BoardSchedule, type BoardResult} from './board-schedule.ts'
 import {
 	listingOf,
 	NONE,
@@ -55,14 +56,17 @@ export const DETAILS_PER_RUN = 20
 const FOLLOW_UP = 2 * MINUTE
 /// Oracle sits behind its own bot protection; a few at a time is gentle.
 const CONCURRENCY = 4
-const MIN_BACKOFF = 5 * MINUTE
-/// Stop reading Oracle for a board nobody has asked about in this long.
-const IDLE_AFTER = 2 * DAY
-const TOUCH_EVERY = 10 * MINUTE
+const TIMING = {
+	every: REFRESH_EVERY,
+	jitter: JITTER,
+	followUp: FOLLOW_UP,
+	minBackoff: 5 * MINUTE,
+	// stop reading a board nobody has asked about in this long
+	idleAfter: 2 * DAY,
+	touchEvery: 10 * MINUTE,
+}
 
-/// What a read answers, or why there is nothing to answer with.
-export type BoardResult<T> =
-	({state: 'ok'; updatedAt: number} & T) | {state: 'error'; error: string}
+export type {BoardResult} from './board-schedule.ts'
 
 type PostingRow = {
 	id: string
@@ -71,14 +75,6 @@ type PostingRow = {
 	unit: string | null
 	detail_fetched_at: number | null
 	first_seen: number
-}
-
-type StateRow = {
-	board_fetched_at: number | null
-	failures: number
-	backoff_until: number
-	last_error: string | null
-	last_read: number
 }
 
 /// Oracle answered with something that says to slow down.
@@ -118,9 +114,11 @@ async function getJson(url: string): Promise<unknown> {
 /// site lists every job whole.
 export class StudentWorkDO extends DurableObject<Env> {
 	#inflight: Promise<void> | null = null
+	readonly #schedule: BoardSchedule
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env)
+		this.#schedule = new BoardSchedule(ctx.storage, TIMING)
 		ctx.storage.sql.exec(`
 			CREATE TABLE IF NOT EXISTS postings (
 				id TEXT PRIMARY KEY,
@@ -139,15 +137,6 @@ export class StudentWorkDO extends DurableObject<Env> {
 			CREATE VIRTUAL TABLE IF NOT EXISTS postings_fts USING fts5 (
 				id UNINDEXED, title, description, tokenize = 'unicode61 remove_diacritics 2'
 			);
-			CREATE TABLE IF NOT EXISTS state (
-				id INTEGER PRIMARY KEY CHECK (id = 1),
-				board_fetched_at INTEGER,
-				failures INTEGER NOT NULL DEFAULT 0,
-				backoff_until INTEGER NOT NULL DEFAULT 0,
-				last_error TEXT,
-				last_read INTEGER NOT NULL
-			);
-			INSERT OR IGNORE INTO state (id, last_read) VALUES (1, 0);
 			CREATE TABLE IF NOT EXISTS kind (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				kind TEXT NOT NULL
@@ -162,40 +151,12 @@ export class StudentWorkDO extends DurableObject<Env> {
 		return sql.exec<{kind: BoardKind}>('SELECT kind FROM kind WHERE id = 1').toArray()[0]?.kind
 	}
 
-	#state(): StateRow {
-		return this.ctx.storage.sql.exec<StateRow>('SELECT * FROM state WHERE id = 1').one()
-	}
-
-	/// Makes sure there is a board to answer from. With nothing stored yet, it
-	/// is read first; a stored board past its refresh is answered at once and
-	/// refreshed behind.
+	/// Makes sure there is a board to answer from, as `BoardSchedule.ensure` does.
 	async #ensure(asked: BoardKind): Promise<BoardResult<object>> {
 		let kind = this.#kind(asked)
 		if (kind !== asked)
 			return {state: 'error', error: `this object holds the ${String(kind)} board`}
-		let now = clock.now()
-		let state = this.#state()
-		if (now - state.last_read > TOUCH_EVERY) {
-			this.ctx.storage.sql.exec('UPDATE state SET last_read = ? WHERE id = 1', now)
-		}
-
-		if (state.board_fetched_at === null) {
-			if (state.backoff_until <= now) {
-				try {
-					await this.#refresh()
-				} catch {
-					// recorded in the state row
-				}
-			}
-			state = this.#state()
-			if (state.board_fetched_at === null) {
-				return {state: 'error', error: state.last_error ?? UNAVAILABLE[kind]}
-			}
-		} else if ((await this.ctx.storage.getAlarm()) === null) {
-			// a board that went quiet: refresh now if it is due, else on schedule
-			await this.ctx.storage.setAlarm(Math.max(now, state.board_fetched_at + REFRESH_EVERY))
-		}
-		return {state: 'ok', updatedAt: state.board_fetched_at}
+		return this.#schedule.ensure(() => this.#refresh(), UNAVAILABLE[kind])
 	}
 
 	/// The postings that pass the filters, newest first, each with its areas.
@@ -338,24 +299,25 @@ export class StudentWorkDO extends DurableObject<Env> {
 		return {...ready, posting: oneCarleton(this.ctx.storage.sql, id)}
 	}
 
+	/// Carleton's jobs as the Node server's `/jobs` lists them.
+	async carletonJobs(): Promise<BoardResult<{jobs: ReturnType<typeof carletonJobsAsListed>}>> {
+		let ready = await this.#ensure('carleton')
+		if (ready.state === 'error') return ready
+		return {...ready, jobs: carletonJobsAsListed(this.ctx.storage.sql)}
+	}
+
 	#refresh(): Promise<void> {
 		return (this.#inflight ??= this.#run().finally(() => {
 			this.#inflight = null
 		}))
 	}
 
-	async #run(): Promise<void> {
-		let now = clock.now()
-		let unread = 0
-		try {
+	#run(): Promise<void> {
+		return this.#schedule.run(async (now) => {
 			if (this.#kind() === 'carleton') {
 				saveCarletonBoard(this.ctx.storage.sql, await readCarletonBoard(), now)
-				this.ctx.storage.sql.exec(
-					`UPDATE state SET board_fetched_at = ?, failures = 0, backoff_until = 0,
-						last_error = NULL WHERE id = 1`,
-					now,
-				)
-				return
+				this.#schedule.stored(now)
+				return 0
 			}
 			let board = boardPostings(await getJson(boardUrl()))
 			let stored = this.ctx.storage.sql
@@ -367,22 +329,8 @@ export class StudentWorkDO extends DurableObject<Env> {
 				throw new Error('Oracle Recruiting listed no postings')
 			}
 			this.#saveBoard(board, now)
-			unread = await this.#readDetails(now)
-			this.ctx.storage.sql.exec(
-				'UPDATE state SET failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1',
-			)
-		} catch (err) {
-			let failures = this.#state().failures + 1
-			this.ctx.storage.sql.exec(
-				'UPDATE state SET failures = ?, backoff_until = ?, last_error = ? WHERE id = 1',
-				failures,
-				now + Math.min(MIN_BACKOFF * 2 ** (failures - 1), REFRESH_EVERY),
-				err instanceof Error ? err.message : String(err),
-			)
-			throw err
-		} finally {
-			await this.#schedule(unread)
-		}
+			return this.#readDetails(now)
+		})
 	}
 
 	/// Stores a posting with what the routes answer and filter on.
@@ -434,7 +382,7 @@ export class StudentWorkDO extends DurableObject<Env> {
 		let listed = JSON.stringify(board.map(({id}) => id))
 		sql.exec('DELETE FROM postings WHERE id NOT IN (SELECT value FROM json_each(?))', listed)
 		sql.exec('DELETE FROM postings_fts WHERE id NOT IN (SELECT value FROM json_each(?))', listed)
-		sql.exec('UPDATE state SET board_fetched_at = ? WHERE id = 1', now)
+		this.#schedule.stored(now)
 	}
 
 	/// Reads the details that are missing, unitless, or old, a batch at a
@@ -484,21 +432,8 @@ export class StudentWorkDO extends DurableObject<Env> {
 		return due.length - batch.length
 	}
 
-	async #schedule(unread: number) {
-		let state = this.#state()
-		let now = clock.now()
-		if (now - state.last_read > IDLE_AFTER) return this.ctx.storage.deleteAlarm()
-		let next =
-			state.backoff_until > now
-				? state.backoff_until
-				: unread > 0
-					? now + FOLLOW_UP
-					: now + REFRESH_EVERY + Math.random() * JITTER
-		await this.ctx.storage.setAlarm(next)
-	}
-
 	override async alarm() {
-		if (clock.now() - this.#state().last_read > IDLE_AFTER) return
+		if (this.#schedule.idle()) return
 		try {
 			await this.#refresh()
 		} catch {
@@ -511,10 +446,6 @@ export class StudentWorkDO extends DurableObject<Env> {
 		this.ctx.storage.sql.exec('DELETE FROM postings_fts')
 		this.ctx.storage.sql.exec('DELETE FROM kind')
 		purgeCarleton(this.ctx.storage.sql)
-		this.ctx.storage.sql.exec(
-			`UPDATE state SET board_fetched_at = NULL, failures = 0, backoff_until = 0,
-				last_error = NULL, last_read = 0 WHERE id = 1`,
-		)
-		await this.ctx.storage.deleteAlarm()
+		await this.#schedule.purge()
 	}
 }

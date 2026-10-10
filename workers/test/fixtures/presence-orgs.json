@@ -1,0 +1,96 @@
+[
+	{
+		"subdomain": "stolaf",
+		"campusName": "St. Olaf College",
+		"name": "The Chess Club",
+		"description": "Plays chess &amp; other board games on Tuesdays.",
+		"uri": "chess-club",
+		"hasCoverImage": true,
+		"photoUri": "chess-club.png",
+		"photoType": "upload",
+		"photoUriWithVersion": "chess-club.png?v=0",
+		"memberCount": 7,
+		"categories": [
+			"Special Interest"
+		],
+		"orgMember": false,
+		"newOrg": false,
+		"hasUpcomingEvents": true,
+		"regularMeetingLocation": "Buntrock 143",
+		"regularMeetingTime": "7pm"
+	},
+	{
+		"subdomain": "stolaf",
+		"campusName": "St. Olaf College",
+		"name": "¡Presente!",
+		"description": "Celebrates Latinx cultures through discussion, music and art.",
+		"uri": "presente-2",
+		"hasCoverImage": true,
+		"photoUri": "presente-2.png",
+		"photoType": "upload",
+		"photoUriWithVersion": "presente-2.png?v=0",
+		"memberCount": 7,
+		"categories": [
+			"Multicultural"
+		],
+		"orgMember": false,
+		"newOrg": false,
+		"hasUpcomingEvents": true,
+		"website": "presente.example.org"
+	},
+	{
+		"subdomain": "stolaf",
+		"campusName": "St. Olaf College",
+		"name": "Ultimate Frisbee",
+		"description": "Competes in regional tournaments.",
+		"uri": "ultimate-frisbee",
+		"hasCoverImage": false,
+		"photoUri": "",
+		"photoType": "default",
+		"photoUriWithVersion": "",
+		"memberCount": 7,
+		"categories": [
+			"Club Sports - Competitive",
+			"Special Interest"
+		],
+		"orgMember": false,
+		"newOrg": false,
+		"hasUpcomingEvents": true
+	},
+	{
+		"subdomain": "stolaf",
+		"campusName": "St. Olaf College",
+		"name": "90 Degrees North",
+		"description": "An a cappella group. Sings at Café Olé.",
+		"uri": "90-degrees-north",
+		"hasCoverImage": true,
+		"photoUri": "90-degrees-north.png",
+		"photoType": "upload",
+		"photoUriWithVersion": "90-degrees-north.png?v=0",
+		"memberCount": 7,
+		"categories": [
+			"Performance"
+		],
+		"orgMember": false,
+		"newOrg": false,
+		"hasUpcomingEvents": true
+	},
+	{
+		"subdomain": "stolaf",
+		"campusName": "St. Olaf College",
+		"name": "Demo Org",
+		"description": "A sample org for trying Presence out.",
+		"uri": "demo-org",
+		"hasCoverImage": true,
+		"photoUri": "demo-org.png",
+		"photoType": "upload",
+		"photoUriWithVersion": "demo-org.png?v=0",
+		"memberCount": 7,
+		"categories": [
+			"Demo"
+		],
+		"orgMember": false,
+		"newOrg": false,
+		"hasUpcomingEvents": true
+	}
+]

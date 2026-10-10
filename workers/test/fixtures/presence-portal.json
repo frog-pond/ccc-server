@@ -1,0 +1,44 @@
+{
+	"fieldData": [
+		{
+			"label": "Statement of Purpose",
+			"value": "<p>We play <b>chess</b>.</p><p>All are welcome.</p>"
+		},
+		{
+			"items": [
+				{
+					"label": "Primary Organization Contact",
+					"value": "Ada Example"
+				},
+				{
+					"label": "Primary Organization Contact Email",
+					"value": "ada@example.edu"
+				},
+				{
+					"label": "Advisor Name",
+					"value": "Grace Example"
+				},
+				{
+					"label": "Advisor Email",
+					"value": "grace@example.edu"
+				},
+				{
+					"label": "Oracle Fund Number",
+					"value": "12345-SECRET"
+				}
+			]
+		},
+		{
+			"label": "Instagram Handle",
+			"value": "@examplechess"
+		},
+		{
+			"label": "Organization Constitution Link",
+			"value": "https://example.org/constitution"
+		},
+		{
+			"label": "Office Hours",
+			"value": ""
+		}
+	]
+}

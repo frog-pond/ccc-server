@@ -158,7 +158,7 @@ export function markdownOf(html: string): string {
 		let words = heading.textContent.trim().split(/\s+/u)
 		if (words.length > MAX_HEADING_WORDS) {
 			let paragraph = document.createElement('p')
-			paragraph.append(...heading.childNodes)
+			for (let child of [...heading.childNodes]) paragraph.appendChild(child)
 			heading.replaceWith(paragraph)
 		}
 	}
@@ -169,7 +169,7 @@ export function markdownOf(html: string): string {
 	}
 
 	return (
-		htmlToMarkdown(root.innerHTML)
+		htmlToMarkdown(root)
 			// A list item's own paragraph leaves lines holding only indentation.
 			.replace(/^[ \t]+$/gmu, '')
 			.replace(/\n{3,}/gu, '\n\n')
