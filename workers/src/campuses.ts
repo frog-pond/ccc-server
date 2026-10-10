@@ -19,7 +19,9 @@ import {
 } from '../../source/ccci-stolaf-college/v1/deprecated-shape.ts'
 import type {Jobs, Orgs} from './student-orgs.ts'
 import type {StudentWork} from './student-work.ts'
-import {KRLX_URL, rssNews} from './sources/rss-news.ts'
+import {KRLX_URL, RSS_POSTS, rssNews} from './sources/rss-news.ts'
+import {itemsBefore} from './archive.ts'
+import {newsArchive, postsEndpoint} from './archives/news.ts'
 import {
 	CARLETONIAN as CARLETONIAN_API,
 	MESSENGER as MESSENGER_API,
@@ -33,9 +35,11 @@ import {
 	wpNews,
 } from './sources/wp-news.ts'
 
-/// A news feed the apps read: its items.
+/// A news feed the apps read: its items, and its older items page by page.
 export type NewsFeed = {
 	read: (env: Env) => Promise<FeedItemType[]>
+	/// up to `limit` items published before `before` (milliseconds), newest first
+	history?: (env: Env, before: number, limit: number) => Promise<FeedItemType[]>
 }
 
 /// What one campus serves, under its own prefix. Each campus has its own
@@ -83,12 +87,19 @@ export type Campus = {
 	jobs?: Jobs
 }
 
+const historyOf =
+	(posts: string): NonNullable<NewsFeed['history']> =>
+	(env, before, limit) =>
+		itemsBefore(env, newsArchive, {posts}, before, limit)
+
 const fromWordPress = (url: string): NewsFeed => ({
 	read: async (env) => (await fetchSource(env, wpNews, {url})).value,
+	history: historyOf(postsEndpoint(url)),
 })
 
 const fromRss = (url: string): NewsFeed => ({
 	read: async (env) => (await fetchSource(env, rssNews, {url})).value,
+	...(RSS_POSTS[url] ? {history: historyOf(RSS_POSTS[url])} : {}),
 })
 
 /// A notice in place of a feed that is no longer published, as feed items.

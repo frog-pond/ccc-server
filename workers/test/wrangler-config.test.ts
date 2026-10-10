@@ -21,6 +21,7 @@ test('a Preview has the same Durable Object bindings as production', () => {
 		{name: 'SOURCE', class_name: 'SourceDO'},
 		{name: 'STUDENT_WORK', class_name: 'StudentWorkDO'},
 		{name: 'STUDENT_ORGS', class_name: 'StudentOrgsDO'},
+		{name: 'ARCHIVE', class_name: 'ArchiveDO'},
 	])
 	expect(config.previews.durable_objects?.bindings).toEqual(config.durable_objects?.bindings)
 })

@@ -6,6 +6,8 @@ import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {SOURCE_TTL} from '../lifetimes.ts'
 import {upstream} from '../upstream.ts'
+import {recordItems} from '../archive.ts'
+import {streamsArchive} from '../archives/streams.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -37,6 +39,21 @@ export const streams = defineSource({
 		}
 		return streamsFrom(await response.json())
 	},
+	// a list of upcoming streams covers its dates, so a future stream in them it
+	// no longer lists was called off; the span stops short of the dates' edges
+	record: (params, {streams}, env) =>
+		recordItems(
+			env,
+			streamsArchive,
+			{},
+			streams,
+			params.class === 'current' && !params.squery && params.date_from && params.date_to
+				? {
+						from: Date.parse(`${params.date_from}T00:00:00Z`) + DAY,
+						to: Date.parse(`${params.date_to}T00:00:00Z`),
+					}
+				: undefined,
+		),
 	ttl: SOURCE_TTL,
 	staleIfError: DAY,
 })

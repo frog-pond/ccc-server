@@ -1,6 +1,8 @@
 import {deprecatedEvents} from '../../source/calendar/deprecated.ts'
 import type {EventType} from '../../source/calendar/types.ts'
 import {RETIRED_TITLE} from '../../source/ccc-lib/deprecated.ts'
+import {itemsBefore} from './archive.ts'
+import {calendarArchive, type CalendarArchiveParams} from './archives/calendars.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {
@@ -12,37 +14,54 @@ import {
 	weeklySchedule,
 } from './sources/calendars.ts'
 
-/// A calendar the apps read: its events.
+/// A calendar the apps read: its events, and for one that is kept, its
+/// events from before a time, latest first.
 export type Calendar = {
 	read: (env: Env) => Promise<EventType[]>
+	history?: (env: Env, before: number, limit: number) => Promise<EventType[]>
 }
 
 const live = (read: Calendar['read']): Calendar => ({read})
 
-const fromIcal = (url: string) => live(async (env) => (await fetchSource(env, ical, {url})).value)
+/// A calendar whose events are kept as they are read, and whose history is
+/// read back to its start.
+const kept = (read: Calendar['read'], params: CalendarArchiveParams): Calendar => ({
+	read,
+	history: (env, before, limit) => itemsBefore(env, calendarArchive, params, before, limit),
+})
+
+const fromIcal = (url: string) =>
+	kept(async (env) => (await fetchSource(env, ical, {url})).value, {kind: 'ical', url})
 
 const fromGoogle = (calendarId: string) =>
-	live(async (env) => (await fetchSource(env, googleCalendar, {calendarId})).value)
+	kept(async (env) => (await fetchSource(env, googleCalendar, {calendarId})).value, {
+		kind: 'google',
+		calendarId,
+	})
 
 const fromWeeklySchedule = (url: string) =>
 	live(async (env) => (await fetchSource(env, weeklySchedule, {url})).value)
 
-const fromTec = (url: string) => live(async (env) => (await fetchSource(env, tec, {url})).value)
+const fromTec = (url: string) =>
+	kept(async (env) => (await fetchSource(env, tec, {url})).value, {kind: 'tec', url})
 
 const fromPresence = (url: string) =>
-	live(async (env) => (await fetchSource(env, presence, {url})).value)
+	kept(async (env) => (await fetchSource(env, presence, {url})).value, {kind: 'presence', url})
 
 /// One of Carleton's calendars, with the pictures its page shows.
-const fromCarleton = (path: string) =>
-	live(
+const fromCarleton = (path: string) => {
+	let feedUrl = `https://www.carleton.edu${path}?loadFeed=calendar&stamp=${STAMPS[path]}`
+	return kept(
 		async (env) =>
 			(
 				await fetchSource(env, carletonCalendar, {
-					feedUrl: `https://www.carleton.edu${path}?loadFeed=calendar&stamp=${STAMPS[path]}`,
+					feedUrl,
 					pageUrl: `https://www.carleton.edu${path}`,
 				})
 			).value,
+		{kind: 'ical', url: feedUrl},
 	)
+}
 
 /// The `stamp` each of Carleton's feeds is asked with, as the Node server asks.
 const STAMPS: Record<string, string> = {

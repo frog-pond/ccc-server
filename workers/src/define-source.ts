@@ -11,6 +11,8 @@ export interface Source<P, V> {
 	staleIfError: number
 	/** a value is only fresh within the epoch it was loaded in, such as the campus date */
 	epoch?: (now: Date) => string
+	/** keeps what each load found in the feed's history (`src/archive.ts`) */
+	record?: (params: P, value: V, env: Env, now: number) => Promise<void>
 }
 
 export const defineSource = <P, V>(source: Source<P, V>) => source

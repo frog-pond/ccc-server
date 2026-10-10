@@ -111,7 +111,8 @@ export class SourceDO extends DurableObject<Env> {
 		let spec = registry[row.name]!
 		let now = clock.now()
 		try {
-			let value = await spec.load(JSON.parse(row.params) as never, this.env)
+			let params = JSON.parse(row.params) as never
+			let value = await spec.load(params, this.env)
 			this.ctx.storage.sql.exec(
 				`UPDATE entry SET value = ?, fetched_at = ?, epoch = ?,
 					failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1`,
@@ -119,6 +120,14 @@ export class SourceDO extends DurableObject<Env> {
 				now,
 				spec.epoch?.(new Date(now)) ?? null,
 			)
+			// the history is kept beside the answer; failing to keep it does not fail the answer
+			if (spec.record) {
+				this.ctx.waitUntil(
+					spec.record(params, value, this.env, now).catch((err: unknown) => {
+						console.warn(`${row.name}: could not record the history`, String(err))
+					}),
+				)
+			}
 			return this.#row()!
 		} catch (err) {
 			let failures = row.failures + 1

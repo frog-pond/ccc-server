@@ -3,4 +3,6 @@
 interface Env {
 	/** the key the Google calendar routes read the Calendar API with */
 	GOOGLE_CALENDAR_API_KEY?: string
+	/** "off" keeps the archives from walking back through their feeds' history on their own, for the tests, which step them by hand */
+	ARCHIVE_BACKFILL?: string
 }

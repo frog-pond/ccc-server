@@ -62,10 +62,13 @@ export function upcomingFrom(body: string) {
 	}
 }
 
+/// Every convocation in the podcast feed, as the feed lists them.
+export function allConvosFrom(body: string) {
+	let dom = parseXml(body)
+	return Array.from(dom.querySelectorAll('rss channel item')).map(processConvo)
+}
+
 /// The latest hundred convocations in the podcast feed.
 export function archivedFrom(body: string) {
-	let dom = parseXml(body)
-	let convos = Array.from(dom.querySelectorAll('rss channel item')).map(processConvo)
-	convos = convos.slice(0, 100)
-	return convos
+	return allConvosFrom(body).slice(0, 100)
 }

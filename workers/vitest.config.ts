@@ -6,8 +6,14 @@ export default defineConfig({
 	plugins: [
 		cloudflareTest({
 			wrangler: {configPath: '../wrangler.jsonc'},
-			// a secret of the deployed worker; the Google calendar tests check it is sent
-			miniflare: {bindings: {GOOGLE_CALENDAR_API_KEY: 'test-calendar-key'}},
+			miniflare: {
+				bindings: {
+					// a secret of the deployed worker; the Google calendar tests check it is sent
+					GOOGLE_CALENDAR_API_KEY: 'test-calendar-key',
+					// an archive's walk back would fetch in the middle of other tests
+					ARCHIVE_BACKFILL: 'off',
+				},
+			},
 		}),
 	],
 	// moment-timezone is a CommonJS package that requires moment; workerd runs

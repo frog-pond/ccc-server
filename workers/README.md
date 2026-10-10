@@ -178,6 +178,16 @@ day if its host fails; student work keeps its own schedule, below.
   not a calendar code (letters and digits, up to 32) is a 404 with nothing
   fetched.
 
+The news feeds, the calendars (all but KSTO's weekly schedule and the
+notices), `/streams/archived` and `/convos/archived` also take `?before=`, an
+ISO 8601 date or time: the answer is the kept history from before it (ten
+news items, fifty events or streams, a hundred convocations), read from
+`ArchiveDO` below, with a `Link: <...>; rel="next"` to the page before when
+the page is full. News and convocations are latest first; calendars and
+streams soonest first within a page, as their live routes are (streams take
+`sort=descending`). A `before` that is not a time is a 400. Without
+`?before=`, every route answers as it did.
+
 ## Sources
 
 - `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
@@ -260,6 +270,23 @@ day if its host fails; student work keeps its own schedule, below.
 
   Both objects' schedules (when to read, backoff, idling) are in
   `src/board-schedule.ts`.
+
+- `ArchiveDO` (`src/archive-do.ts`, binding `ARCHIVE`): a feed's history,
+  one object per feed and one SQLite row per item (a post, an event, a stream,
+  a convocation), indexed by when it happens. Whatever a live source reads is
+  recorded behind its answer (`record` in `src/define-source.ts`), replacing
+  the stored copy. Nothing that has happened is removed; a future item that a
+  live read covering its date no longer lists is. The first time a feed is
+  recorded, the object's alarm starts walking its history back (two steps a
+  run, a minute apart; a failure backs off from a minute, doubling, up to an
+  hour) until it reaches the start, and keeps the live copy of anything it
+  finds already stored. How each feed is walked is in `src/archives/`: a news
+  site's WordPress posts twenty at a time; St. Olaf's whole streams
+  collection a hundred at a time; the convocations podcast in one read; an
+  iCal feed or Presence in one read of everything they publish; a Tribe
+  calendar a month at a time back until a year of empty months; a Google
+  calendar its last year. KRLX's history is read from its WordPress API, so
+  those items are shaped from WordPress rather than RSS.
 
 Every upstream request goes through `upstream` (`src/upstream.ts`), which sends
 `User-Agent: ccc-server/2.0` and never follows a redirect.

@@ -12,6 +12,11 @@ import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bon
 import {schedules, type ScheduleParams} from './sources/schedules.ts'
 import {imageUrl, isPublishedImage} from '../../source/ccc-lib/images-shape.ts'
 import {routeListing} from './routes.ts'
+import {historyPage, parseBefore} from './history.ts'
+import {itemsBefore} from './archive.ts'
+import {streamsArchive} from './archives/streams.ts'
+import {convosArchive} from './archives/convos.ts'
+import {asOf} from './archives/calendars.ts'
 import {needsFrequentRefresh} from '../../source/athletics/shape.ts'
 import {athleticsScores, type AthleticsParams} from './sources/athletics.ts'
 import {stolafDirectory} from './sources/stolaf-directory.ts'
@@ -96,11 +101,21 @@ async function bonapp(campus: Campus, cafeId: string, full: boolean, env: Env): 
 	}
 }
 
+/// Items in a page of a news feed's history, as many as the feed's own page.
+const NEWS_PAGE = 10
+
 /// A news feed as feed items. Unlike the Node server (a stub for St. Olaf, and
 /// an empty list for a feed it cannot read), with nothing stored and the site
 /// failing this is a 502, kept briefly, not a feed.
-async function news(env: Env, {read}: NewsFeed): Promise<Response> {
+async function news(env: Env, {read, history}: NewsFeed, url: URL): Promise<Response> {
+	let before = parseBefore(url)
+	if (before instanceof Response) return before
 	try {
+		if (before !== undefined && history) {
+			let items = await history(env, before, NEWS_PAGE)
+			let last = items.at(-1)?.datePublished
+			return historyPage(url, items, items.length, NEWS_PAGE, last ? Date.parse(last) : undefined)
+		}
 		return json(await read(env), 200, CLIENT_MAX_AGE)
 	} catch (err) {
 		console.error(err)
@@ -108,10 +123,29 @@ async function news(env: Env, {read}: NewsFeed): Promise<Response> {
 	}
 }
 
+/// Events in a page of a calendar's history.
+const CALENDAR_PAGE = 50
+
 /// A calendar as events. With nothing stored and the source failing this is a
-/// 502, kept briefly, as for the news feeds.
-async function calendar(env: Env, {read}: Calendar): Promise<Response> {
+/// 502, kept briefly, as for the news feeds. `?before=` pages back through its
+/// history, soonest first within a page as the calendar itself is.
+async function calendar(env: Env, {read, history}: Calendar, url: URL): Promise<Response> {
+	let before = parseBefore(url)
+	if (before instanceof Response) return before
 	try {
+		if (before !== undefined && history) {
+			let now = clock.now()
+			let latestFirst = await history(env, before, CALENDAR_PAGE)
+			let events = latestFirst.reverse().map((event) => asOf(event, now))
+			let first = events[0]?.startTime
+			return historyPage(
+				url,
+				events,
+				events.length,
+				CALENDAR_PAGE,
+				first ? Date.parse(first) : undefined,
+			)
+		}
 		return json(await read(env), 200, CLIENT_MAX_AGE)
 	} catch (err) {
 		console.error(err)
@@ -178,6 +212,54 @@ async function athletics(env: Env, params: AthleticsParams): Promise<Response> {
 	)
 }
 
+/// Convocations in a page of the history, as many as the archived route lists.
+const CONVOS_PAGE = 100
+
+/// The convocations from before `before`, newest first, from the kept history.
+async function convoHistory(env: Env, url: URL, before: number): Promise<Response> {
+	try {
+		let page = await itemsBefore(env, convosArchive, {}, before, CONVOS_PAGE)
+		let oldest = page.at(-1)
+		return historyPage(
+			url,
+			page,
+			page.length,
+			CONVOS_PAGE,
+			oldest ? Date.parse(oldest.pubDate) : undefined,
+		)
+	} catch (err) {
+		console.error(err)
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
+/// Streams in a page of the history.
+const STREAMS_PAGE = 50
+
+/// The streams from before `before`, from the kept history, in the order
+/// `sort` asks for (soonest first, as the archived route lists them, unless
+/// `descending`).
+async function streamHistory(env: Env, url: URL, before: number): Promise<Response> {
+	let sort = url.searchParams.get('sort') ?? 'ascending'
+	if (sort !== 'ascending' && sort !== 'descending') {
+		return json({message: 'sort must be ascending or descending'}, 400, ONE_MINUTE)
+	}
+	try {
+		let page = await itemsBefore(env, streamsArchive, {}, before, STREAMS_PAGE)
+		let oldest = page.at(-1)
+		return historyPage(
+			url,
+			sort === 'ascending' ? page.toReversed() : page,
+			page.length,
+			STREAMS_PAGE,
+			oldest ? Date.parse(oldest.starttime) : undefined,
+		)
+	} catch (err) {
+		console.error(err)
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
 /// St. Olaf's streams: the next two months, the last two, or a search, each
 /// read with the request's own parameters checked first. A search's `Link`
 /// header points at its other pages, as on the Node server.
@@ -205,6 +287,11 @@ async function streaming(env: Env, url: URL, which: string): Promise<Response> {
 			},
 		)
 	}
+	if (which === 'archived') {
+		let before = parseBefore(url)
+		if (before instanceof Response) return before
+		if (before !== undefined) return streamHistory(env, url, Math.min(before, now.getTime()))
+	}
 	let params
 	try {
 		params = listParams(which as 'upcoming' | 'archived', query, now)
@@ -229,7 +316,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	let feed = /^\/news\/([^/]+)$/.exec(path)?.[1]
 	if (feed !== undefined && Object.hasOwn(campus.news, feed) && campus.news[feed]) {
-		return news(env, campus.news[feed])
+		return news(env, campus.news[feed], url)
 	}
 
 	let wordpress = /^\/news\/([^/]+)\/wp\/v2\/([^/]+)(?:\/([^/]+))?$/.exec(path)
@@ -241,10 +328,10 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	let named = /^\/calendar\/([^/]+)$/.exec(path)?.[1]
 	if (named !== undefined && Object.hasOwn(campus.calendars, named) && campus.calendars[named]) {
-		return calendar(env, campus.calendars[named])
+		return calendar(env, campus.calendars[named], url)
 	}
 
-	if (path === '/convos/upcoming' && campus.convos) return calendar(env, campus.convos)
+	if (path === '/convos/upcoming' && campus.convos) return calendar(env, campus.convos, url)
 
 	if (path === '/routes') return json(routeListing(prefix, campus), 200, CLIENT_MAX_AGE)
 
@@ -268,6 +355,9 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	if (campus.convoDetails) {
 		if (path === '/convos/archived') {
+			let before = parseBefore(url)
+			if (before instanceof Response) return before
+			if (before !== undefined) return convoHistory(env, url, before)
 			return served(async () => (await fetchSource(env, archivedConvos, {})).value)
 		}
 		let convo = /^\/convos\/upcoming\/([^/]+)$/.exec(path)?.[1]
