@@ -6,6 +6,7 @@ import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {pagesJson} from './sources/pages-json.ts'
 import {posting, postings, units} from './student-work.ts'
+import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -154,12 +155,17 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
 	if (file) return dataFile(env, file)
 
-	if (campus.studentWork) {
-		if (path === '/student-work/postings')
-			return postings(env, campus.studentWork, url.searchParams)
-		if (path === '/student-work/units') return units(env, campus.studentWork)
+	let work = campus.studentWork
+	if (work?.board === 'oracle') {
+		if (path === '/student-work/postings') return postings(env, work, url.searchParams)
+		if (path === '/student-work/units') return units(env, work)
 		let id = /^\/student-work\/postings\/(\d{1,12})$/.exec(path)?.[1]
-		if (id) return posting(env, campus.studentWork, id)
+		if (id) return posting(env, work, id)
+	}
+	if (work?.board === 'wordpress') {
+		if (path === '/student-work/postings') return carletonPostings(env, url.searchParams)
+		let id = /^\/student-work\/postings\/(\d{1,12})$/.exec(path)?.[1]
+		if (id) return carletonPosting(env, id)
 	}
 
 	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(path)

@@ -22,8 +22,8 @@ export type Campus = {
 	convos?: Calendar
 	/// data files the college publishes, passed through, by path
 	files: Record<string, PagesRoute>
-	/// the Student Work board's routes, where the campus has them
-	studentWork?: StudentWork
+	/// the student jobs routes, where the campus has them, by where they are read
+	studentWork?: ({board: 'oracle'} & StudentWork) | {board: 'wordpress'}
 }
 
 const STOLAF_NEWS: NewsFeed = {source: wpNews, url: STOLAF_NEWS_URL}
@@ -35,7 +35,7 @@ const STOLAF: Campus = {
 	news: {stolaf: STOLAF_NEWS, 'carleton-now': CARLETON_NOW, carletonian: CARLETONIAN},
 	calendars: STOLAF_CALENDARS,
 	files: STOLAF_FILES,
-	studentWork: {areasUrl: STOLAF_FILES['/student-work/areas']!.url},
+	studentWork: {board: 'oracle', areasUrl: STOLAF_FILES['/student-work/areas']!.url},
 }
 
 const CARLETON: Campus = {
@@ -44,6 +44,7 @@ const CARLETON: Campus = {
 	calendars: CARLETON_CALENDARS,
 	convos: CONVOS,
 	files: CARLETON_FILES,
+	studentWork: {board: 'wordpress'},
 }
 
 /// The campuses, by the prefix they are mounted at.
