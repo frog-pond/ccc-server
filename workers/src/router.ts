@@ -5,6 +5,7 @@ import type {PagesRoute} from './pages-routes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {pagesJson} from './sources/pages-json.ts'
+import {probeOracle} from './probe-oracle.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -131,6 +132,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
 	if (url.pathname === '/') return json({campuses: [...CAMPUSES.keys()]})
+	if (url.pathname === '/_probe/oracle') return probeOracle(request)
 
 	// every other route is under a campus: /edu.stolaf/..., /edu.carleton/...
 	let mounted = /^\/([^/]+)(\/.*)$/.exec(url.pathname)
