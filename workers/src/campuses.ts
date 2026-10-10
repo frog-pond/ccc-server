@@ -12,6 +12,7 @@ import {
 	type PagesRoute,
 } from './pages-routes.ts'
 import type {ScheduleParams} from './sources/schedules.ts'
+import type {AthleticsParams} from './sources/athletics.ts'
 import {
 	A_TO_Z_TEXT,
 	deprecatedLinkGroups,
@@ -64,6 +65,15 @@ export type Campus = {
 	schedules?: ScheduleParams
 	/// whether `/images/:group/:name` redirects to the published app images
 	images: boolean
+	/// the athletics site `/athletics/scores` reads, where the campus has it
+	athletics?: AthleticsParams
+	/// directory lists passed through, by path
+	directory: Record<string, string>
+	/// whether `/streams/{upcoming,archived,search}` read St. Olaf's streams
+	streams: boolean
+	/// whether `/convos/upcoming/:id` and `/convos/archived` read the
+	/// convocations calendar and podcast
+	convoDetails: boolean
 	/// the student jobs routes, where the campus has them, by where they are read
 	studentWork?: ({board: 'oracle'} & StudentWork) | {board: 'wordpress'}
 	/// what the student orgs routes answer, where the campus has them
@@ -124,6 +134,16 @@ const STOLAF: Campus = {
 	notices: {'/a-to-z': deprecatedLinkGroups(A_TO_Z_TEXT)},
 	schedules: STOLAF_SCHEDULES,
 	images: true,
+	athletics: {
+		scoresUrl: 'https://athletics.stolaf.edu/services/scores_chris.aspx?format=json',
+		teamName: 'Oles',
+	},
+	directory: {
+		'/directory/departments': 'https://www.stolaf.edu/directory/departments?format=json',
+		'/directory/majors': 'https://www.stolaf.edu/directory/majors?format=json',
+	},
+	streams: true,
+	convoDetails: false,
 	studentWork: {board: 'oracle', areasUrl: STOLAF_FILES['/student-work/areas']!.url},
 	orgs: 'presence',
 	jobs: 'retired',
@@ -140,6 +160,13 @@ const CARLETON: Campus = {
 	redirects: CARLETON_REDIRECTS,
 	notices: {},
 	images: true,
+	athletics: {
+		scoresUrl: 'https://athletics.carleton.edu/services/scores_chris.aspx?format=json',
+		teamName: 'Knights',
+	},
+	directory: {},
+	streams: false,
+	convoDetails: true,
 	studentWork: {board: 'wordpress'},
 	orgs: 'unavailable',
 	jobs: 'carleton',

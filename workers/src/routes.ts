@@ -32,6 +32,10 @@ export function campusPaths(campus: Campus): string[] {
 		...Object.keys(campus.notices),
 	]
 	if (campus.convos) paths.push('/convos/upcoming')
+	if (campus.convoDetails) paths.push('/convos/upcoming/:id', '/convos/archived')
+	if (campus.athletics) paths.push('/athletics/scores')
+	paths.push(...Object.keys(campus.directory))
+	if (campus.streams) paths.push('/streams/upcoming', '/streams/archived', '/streams/search')
 	if (campus.schedules) paths.push('/spaces/hours', '/breaks')
 	if (campus.images) paths.push('/images/:group/:name')
 	if (campus.studentWork) paths.push('/student-work/postings', '/student-work/postings/:id')

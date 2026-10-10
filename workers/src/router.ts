@@ -14,6 +14,16 @@ import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bon
 import {schedules, type ScheduleParams} from './sources/schedules.ts'
 import {imageUrl, isPublishedImage} from '../../source/ccc-lib/images-shape.ts'
 import {routeListing} from './routes.ts'
+import {needsFrequentRefresh} from '../../source/athletics/shape.ts'
+import {athleticsScores, type AthleticsParams} from './sources/athletics.ts'
+import {stolafDirectory} from './sources/stolaf-directory.ts'
+import {streams} from './sources/streams.ts'
+import {
+	listParams,
+	pageLinks,
+	searchParams,
+} from '../../source/ccci-stolaf-college/v1/streams-shape.ts'
+import {CONVO_ID, archivedConvos, convoDetail} from './sources/convos.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -148,6 +158,76 @@ async function schedule(
 	}
 }
 
+/// A source's value as the response, or a 502 kept briefly when it fails with
+/// nothing stored. `respond` picks the body and any headers from the value.
+async function served<V>(
+	read: () => Promise<V>,
+	respond: (value: V) => {body: unknown; headers?: HeadersInit} = (value) => ({body: value}),
+): Promise<Response> {
+	try {
+		let {body, headers} = respond(await read())
+		let response = json(body, 200, CLIENT_MAX_AGE)
+		for (let [name, field] of new Headers(headers)) response.headers.set(name, field)
+		return response
+	} catch (err) {
+		console.error(err)
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
+const ONE_MINUTE_SECONDS = 60
+const FIVE_MINUTES_SECONDS = 5 * 60
+
+/// A college's games. Kept by clients for five minutes, as on the Node
+/// server, or one while a game is under way or about to start.
+async function athletics(env: Env, params: AthleticsParams): Promise<Response> {
+	return served(
+		async () => (await fetchSource(env, athleticsScores, params)).value,
+		(scores) => {
+			let keep = needsFrequentRefresh(scores, new Date(clock.now()))
+				? ONE_MINUTE_SECONDS
+				: FIVE_MINUTES_SECONDS
+			return {body: scores, headers: {'Cache-Control': `public, max-age=${keep.toFixed(0)}`}}
+		},
+	)
+}
+
+/// St. Olaf's streams: the next two months, the last two, or a search, each
+/// read with the request's own parameters checked first. A search's `Link`
+/// header points at its other pages, as on the Node server.
+async function streaming(env: Env, url: URL, which: string): Promise<Response> {
+	let query = Object.fromEntries(url.searchParams.entries())
+	let now = new Date(clock.now())
+	if (which === 'search') {
+		let parsed = searchParams(query, now)
+		if ('error' in parsed) return json({message: parsed.error}, 400, ONE_MINUTE)
+		let {params, count, offset} = parsed
+		return served(
+			async () => (await fetchSource(env, streams, params)).value,
+			({streams: list, available}) => {
+				let link =
+					available === undefined
+						? undefined
+						: pageLinks({
+								path: url.pathname,
+								querystring: url.search.slice(1),
+								count,
+								offset,
+								available,
+							})
+				return {body: list, headers: link ? {Link: link} : {}}
+			},
+		)
+	}
+	let params
+	try {
+		params = listParams(which as 'upcoming' | 'archived', query, now)
+	} catch (err) {
+		return json({message: err instanceof Error ? err.message : String(err)}, 400, ONE_MINUTE)
+	}
+	return served(async () => (await fetchSource(env, streams, params)).value.streams)
+}
+
 export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
@@ -190,6 +270,25 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (campus.schedules) {
 		if (path === '/spaces/hours') return schedule(env, campus.schedules, 'hours')
 		if (path === '/breaks') return schedule(env, campus.schedules, 'calendar')
+	}
+
+	if (path === '/athletics/scores' && campus.athletics) return athletics(env, campus.athletics)
+
+	let list = Object.hasOwn(campus.directory, path) ? campus.directory[path] : undefined
+	if (list) return served(async () => (await fetchSource(env, stolafDirectory, {url: list})).value)
+
+	let stream = /^\/streams\/(upcoming|archived|search)$/.exec(path)?.[1]
+	if (stream && campus.streams) return streaming(env, url, stream)
+
+	if (campus.convoDetails) {
+		if (path === '/convos/archived') {
+			return served(async () => (await fetchSource(env, archivedConvos, {})).value)
+		}
+		let convo = /^\/convos\/upcoming\/([^/]+)$/.exec(path)?.[1]
+		if (convo !== undefined) {
+			if (!CONVO_ID.test(convo)) return json({error: 'not found'}, 404)
+			return served(async () => (await fetchSource(env, convoDetail, {id: convo})).value)
+		}
 	}
 
 	// only the app's published images, and one address for each (Node keeps
