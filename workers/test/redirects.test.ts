@@ -35,11 +35,11 @@ afterEach(() => {
 describe.each([
 	{
 		name: 'the St. Olaf news feed',
-		path: '/v1/news/named/stolaf',
+		path: '/edu.stolaf/news/stolaf',
 		url: STOLAF_NEWS_URL,
 		field: 'message',
 	},
-	{name: 'a café page', path: '/bonapp/261', url: STAV, field: 'error'},
+	{name: 'a café page', path: '/edu.stolaf/bonapp/261', url: STAV, field: 'error'},
 ])('$name', ({path, url, field}) => {
 	test('is fetched without following redirects', async () => {
 		await get(path)

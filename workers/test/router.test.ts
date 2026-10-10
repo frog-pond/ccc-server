@@ -25,9 +25,9 @@ afterEach(() => fetchSpy.mockRestore())
 const fetched = (url: string) =>
 	fetchSpy.mock.calls.map(([input]) => String(input)).filter((u) => u === url)
 
-describe('GET /bonapp/:cafeId', () => {
+describe('GET /edu.stolaf/bonapp/:cafeId', () => {
 	test('summarises the café page, and says how it was served', async () => {
-		let response = await get('/bonapp/261')
+		let response = await get('/edu.stolaf/bonapp/261')
 		expect(response.status).toBe(200)
 		let body = await response.json<Record<string, unknown>>()
 		expect(body).toMatchObject({
@@ -43,27 +43,27 @@ describe('GET /bonapp/:cafeId', () => {
 	})
 
 	test('?full=1 includes the whole parsed page', async () => {
-		let response = await get('/bonapp/262?full=1')
+		let response = await get('/edu.stolaf/bonapp/262?full=1')
 		let body = await response.json<{page: {current_cafe: {name: string}; menu_items: object}}>()
 		expect(body.page.current_cafe.name).toBe('Stav Hall')
 		expect(Object.keys(body.page.menu_items)).toHaveLength(6)
 	})
 
 	test('a second request is served from the object, not BonApp', async () => {
-		await get('/bonapp/263')
-		let again = await get('/bonapp/263')
+		await get('/edu.stolaf/bonapp/263')
+		let again = await get('/edu.stolaf/bonapp/263')
 		expect(again.status).toBe(200)
 		expect(fetched(`${STOLAF}/the-kings-room/`)).toHaveLength(1)
 	})
 
 	test('a closed café has a null summary', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(page('<html>closed</html>')))
-		let body = await (await get('/bonapp/35')).json<{summary: unknown}>()
+		let body = await (await get('/edu.stolaf/bonapp/35')).json<{summary: unknown}>()
 		expect(body.summary).toBeNull()
 	})
 
 	test('an unknown café is a 404 that lists the known ids', async () => {
-		let response = await get('/bonapp/999')
+		let response = await get('/edu.stolaf/bonapp/999')
 		expect(response.status).toBe(404)
 		let body = await response.json<{known: string[]}>()
 		expect(body.known).toContain('261')
@@ -73,23 +73,33 @@ describe('GET /bonapp/:cafeId', () => {
 	})
 
 	test('an inherited property name is not a café', async () => {
-		expect((await get('/bonapp/__proto__')).status).toBe(404)
+		expect((await get('/edu.stolaf/bonapp/__proto__')).status).toBe(404)
 	})
 
 	test('BonApp being down with nothing stored is a 502, not a 200', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(page('boom', 503)))
-		let response = await get('/bonapp/36')
+		let response = await get('/edu.stolaf/bonapp/36')
 		expect(response.status).toBe(502)
 		expect(await response.json()).toMatchObject({error: expect.stringContaining('503')})
 	})
 })
 
 describe('other paths', () => {
-	test('/ lists the cafés', async () => {
+	test('/ lists the campuses', async () => {
 		let response = await get('/')
 		expect(response.status).toBe(200)
-		let body = await response.json<{cafes: Record<string, string>}>()
-		expect(body.cafes['261']).toBe(`${STOLAF}/stav-hall/`)
+		expect(await response.json()).toEqual({campuses: ['edu.stolaf', 'edu.carleton']})
+	})
+
+	test('routes are under a campus: a bare path or an unknown campus is a 404', async () => {
+		for (let path of ['/food/menu/261', '/news/stolaf', '/edu.nope/food/menu/261']) {
+			expect((await get(path)).status).toBe(404)
+		}
+		expect(fetchSpy).not.toHaveBeenCalled()
+	})
+
+	test('a campus serves its routes at its own prefix', async () => {
+		expect((await get('/edu.carleton/food/menu/35')).status).toBe(200)
 	})
 
 	test('anything else is a 404', async () => {

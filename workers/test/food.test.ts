@@ -40,9 +40,9 @@ const expected = (golden: string, date: string): unknown =>
 const dateOf = (body: {days?: {date: string}[]; cafe?: {days: {date: string}[]}}) =>
 	(body.days ?? body.cafe?.days)?.[0]?.date ?? ''
 
-describe('GET /v1/food/menu/:cafeId', () => {
+describe('GET /edu.stolaf/food/menu/:cafeId', () => {
 	test('is the menu the Node server sends for the same page', async () => {
-		let response = await get('/v1/food/menu/261')
+		let response = await get('/edu.stolaf/food/menu/261')
 		expect(response.status).toBe(200)
 		let body = await response.json<{days: {date: string}[]}>()
 		expect(CafeMenuResponseSchema.safeParse(body).success).toBe(true)
@@ -50,29 +50,29 @@ describe('GET /v1/food/menu/:cafeId', () => {
 	})
 
 	test('is dated by the campus calendar', async () => {
-		let body = await (await get('/v1/food/menu/262')).json<{days: {date: string}[]}>()
+		let body = await (await get('/edu.stolaf/food/menu/262')).json<{days: {date: string}[]}>()
 		let campus = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Chicago'}).format(new Date())
 		expect(dateOf(body)).toBe(campus)
 	})
 
 	test('is cacheable for an hour, and read from BonApp once', async () => {
-		let first = await get('/v1/food/menu/263')
+		let first = await get('/edu.stolaf/food/menu/263')
 		expect(first.headers.get('cache-control')).toBe('public, max-age=3600')
-		await get('/v1/food/menu/263')
+		await get('/edu.stolaf/food/menu/263')
 		expect(bonappFetches().filter((u) => u.includes('the-kings-room'))).toHaveLength(1)
 	})
 
 	test('a closed café is the closed menu', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(page('<html>closed</html>')))
 		let body = await (
-			await get('/v1/food/menu/35')
+			await get('/edu.stolaf/food/menu/35')
 		).json<{items: Record<string, {label: string}>}>()
 		expect(body.items['1']?.label).toBe('Closed')
 	})
 
 	test('BonApp down with nothing stored is the error menu, briefly cacheable', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(page('boom', 503)))
-		let response = await get('/v1/food/menu/36')
+		let response = await get('/edu.stolaf/food/menu/36')
 		expect(response.status).toBe(200)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
 		let body = await response.json<{items: Record<string, {label: string; description: string}>}>()
@@ -82,20 +82,20 @@ describe('GET /v1/food/menu/:cafeId', () => {
 	})
 
 	test('an unknown café is a 400 that lists the known ids, without fetching', async () => {
-		let response = await get('/v1/food/menu/999')
+		let response = await get('/edu.stolaf/food/menu/999')
 		expect(response.status).toBe(400)
 		expect(await response.text()).toContain('261')
 		expect(bonappFetches()).toEqual([])
 	})
 
 	test('an id inherited from Object is not a café', async () => {
-		expect((await get('/v1/food/menu/toString')).status).toBe(400)
+		expect((await get('/edu.stolaf/food/menu/toString')).status).toBe(400)
 	})
 })
 
-describe('GET /v1/food/cafe/:cafeId', () => {
+describe('GET /edu.stolaf/food/cafe/:cafeId', () => {
 	test('is the café info the Node server sends for the same page', async () => {
-		let response = await get('/v1/food/cafe/458')
+		let response = await get('/edu.stolaf/food/cafe/458')
 		expect(response.status).toBe(200)
 		let body = await response.json<{cafe: {days: {date: string}[]}}>()
 		expect(CafeInfoResponseSchema.safeParse(body).success).toBe(true)
@@ -105,7 +105,7 @@ describe('GET /v1/food/cafe/:cafeId', () => {
 
 	test('BonApp down with nothing stored is the stand-in café, briefly cacheable', async () => {
 		fetchSpy.mockImplementation(() => Promise.resolve(page('boom', 503)))
-		let response = await get('/v1/food/cafe/34')
+		let response = await get('/edu.stolaf/food/cafe/34')
 		expect(response.status).toBe(200)
 		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
 		let body = await response.json<{cafe: {message: string}}>()
@@ -113,6 +113,6 @@ describe('GET /v1/food/cafe/:cafeId', () => {
 	})
 
 	test('an unknown café is a 400', async () => {
-		expect((await get('/v1/food/cafe/999')).status).toBe(400)
+		expect((await get('/edu.stolaf/food/cafe/999')).status).toBe(400)
 	})
 })
