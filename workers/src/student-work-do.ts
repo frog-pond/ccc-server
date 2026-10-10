@@ -125,14 +125,12 @@ export class StudentWorkDO extends DurableObject<Env> {
 				last_read INTEGER NOT NULL
 			);
 			INSERT OR IGNORE INTO state (id, last_read) VALUES (1, 0);`)
-		// an earlier layout's rows: read the board afresh into the current one
-		let earlier = ctx.storage.sql
-			.exec("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'posting'")
-			.toArray()
-		if (earlier.length > 0) {
-			ctx.storage.sql.exec('DROP TABLE posting')
-			ctx.storage.sql.exec('UPDATE state SET board_fetched_at = NULL WHERE id = 1')
-		}
+		// a board recorded as read with no rows to show for it (an earlier
+		// layout's table, since dropped) is read afresh on the next request
+		ctx.storage.sql.exec('DROP TABLE IF EXISTS posting')
+		ctx.storage.sql.exec(
+			'UPDATE state SET board_fetched_at = NULL WHERE NOT EXISTS (SELECT 1 FROM postings)',
+		)
 	}
 
 	#state(): StateRow {
