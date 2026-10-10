@@ -287,8 +287,8 @@ for (let keys of [
 			: ''
 		let cleared = await send(`${base}/_cache${query}`, {method: 'DELETE'})
 		assert.equal(cleared.status, 204)
-		// Delete-all also removes the ordinary response-cache entry for the listing above.
-		let expectedCount = keys.length ? 2 : 3
+		// The listing above stored no entry of its own, so delete-all finds the same two.
+		let expectedCount = 2
 		assert.equal(cleared.headers.get('x-cache-deleted'), String(expectedCount))
 		let repeated = await send(`${base}/_cache${query}`, {method: 'DELETE'})
 		assert.equal(repeated.headers.get('x-cache-deleted'), '0')

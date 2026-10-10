@@ -31,8 +31,8 @@ export function setupHelpers(
 		ctx.body = 'pong'
 	})
 
+	// Not cached, so a listing right after a deletion shows what is left.
 	api.get('/_cache', (ctx) => {
-		if (ctx.cached(10000)) return
 		let result = new Map()
 		for (const store of additionalCache ? [cache, additionalCache(ctx)] : [cache]) {
 			for (const key of store.keys()) {

@@ -159,6 +159,38 @@ void test('deleting one cache key preserves other query variants', async (t) => 
 	assert.equal(upstream.mock.callCount(), 3)
 })
 
+void test('a cache listing after a keyed deletion shows only what is left', async (t) => {
+	t.mock.method(http, 'get', (url: string) => ({
+		json: () => Promise.resolve({source: url}),
+	}))
+	const base = await serve(t, 'all')
+	const removed = '/stolaf/v1/tools/help?edition=one'
+	const retained = '/stolaf/v1/tools/help?edition=two'
+	const elsewhere = '/carleton/v1/tools/help?edition=one'
+	await Promise.all(
+		[removed, retained, elsewhere].map(async (path) => {
+			assert.equal((await fetch(`${base}${path}`)).status, 200)
+		}),
+	)
+	const list = async (institution: string) => {
+		const response = await fetch(`${base}/${institution}/_cache`)
+		assert.equal(response.status, 200)
+		assert.equal(response.headers.get('Cache-Status'), null)
+		return Object.keys((await response.json()) as Record<string, string>)
+	}
+	const before = await list('stolaf')
+	assert.ok(before.includes(removed))
+	assert.ok(before.includes(retained))
+	const query = new URLSearchParams({key: removed})
+	const deleted = await fetch(`${base}/stolaf/_cache?${query.toString()}`, {method: 'DELETE'})
+	assert.equal(deleted.headers.get('X-Cache-Deleted'), '1')
+	const after = await list('stolaf')
+	assert.ok(!after.includes(removed))
+	assert.ok(after.includes(retained))
+	assert.ok(after.every((key) => !key.includes('/_cache')))
+	assert.ok((await list('carleton')).includes(elsewhere))
+})
+
 void test('apps mounting the same institution share its cache', async (t) => {
 	const upstream = t.mock.method(http, 'get', (url: string) => ({
 		json: () => Promise.resolve({source: url}),
