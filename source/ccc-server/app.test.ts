@@ -46,13 +46,13 @@ void test('all mounts both institutions with usable route listings and isolated 
 					.map((layer) => `/${institution}${layer.path.toString()}`),
 			)
 			assert.ok(routes.every((route) => !middlewarePaths.has(route.path)))
-			const post = await fetch(`${base}${prefix}/util/html-to-md`, {
-				method: 'POST',
+			const converted = await fetch(`${base}${prefix}/util/html-to-md`, {
+				method: 'QUERY',
 				headers: {'content-type': 'application/json'},
 				body: JSON.stringify({text: '<b>hi</b>'}),
 			})
-			assert.equal(post.status, 200)
-			assert.equal(await post.text(), '**hi**')
+			assert.equal(converted.status, 200)
+			assert.equal(await converted.text(), '**hi**')
 			const head = await fetch(`${base}${prefix}/routes`, {method: 'HEAD'})
 			assert.equal(head.status, 200)
 			const invalidMethod = await fetch(`${base}${prefix}/routes`, {method: 'POST'})
@@ -265,6 +265,39 @@ void test('endpoints can add dotted and major versions alongside v1 in single an
 		}),
 	)
 	assert.equal(upstream.mock.callCount(), 6)
+})
+/// The sitemap changes with each deploy. Sent without caching headers, a client
+/// such as iOS's URL cache judges it fresh on its own and keeps showing an old
+/// one; `no-cache` makes it ask again, which the ETag keeps cheap.
+void test('route listings tell clients to check with the server before reusing them', async (t) => {
+	const base = await serve(t, 'stolaf-college')
+	const response = await fetch(`${base}/v1/routes`)
+	assert.equal(response.headers.get('cache-control'), 'no-cache')
+	assert.ok(response.headers.get('etag'))
+})
+void test('route listings name each method a path answers, without the implied HEAD', async (t) => {
+	await Promise.all(
+		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
+			const base = await serve(t, mode)
+			const prefixes = mode === 'all' ? ['/stolaf', '/carleton'] : ['']
+			await Promise.all(
+				prefixes.map(async (prefix) => {
+					const routes = (await (await fetch(`${base}${prefix}/v1/routes`)).json()) as {
+						path: string
+						methods: string[]
+					}[]
+					const methodsAt = (path: string) =>
+						routes
+							.filter((route) => route.path === `${prefix}${path}`)
+							.map((route) => route.methods)
+					assert.deepEqual(methodsAt('/_cache'), [['DELETE'], ['GET']])
+					assert.deepEqual(methodsAt('/v1/util/html-to-md'), [['QUERY']])
+					assert.deepEqual(methodsAt('/ping'), [['GET']])
+					assert.ok(routes.every((route) => !route.methods.includes('HEAD')))
+				}),
+			)
+		}),
+	)
 })
 
 void test('mixed-case route listings return usable paths in single and combined modes', async (t) => {

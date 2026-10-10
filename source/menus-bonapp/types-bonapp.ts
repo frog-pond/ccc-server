@@ -117,3 +117,5 @@ export const BamcoPageContentsSchema = z.union([
 		dayparts: z.record(z.string(), BamcoDayPartSchema),
 	}),
 ])
+
+export type BamcoPageContents = NonNullable<z.infer<typeof BamcoPageContentsSchema>>

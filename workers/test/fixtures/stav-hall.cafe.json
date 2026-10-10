@@ -1,0 +1,48 @@
+{
+	"cafe": {
+		"name": "Stav Hall",
+		"address": "",
+		"city": "",
+		"state": "",
+		"zip": "",
+		"latitude": "",
+		"longitude": "",
+		"description": "",
+		"message": "",
+		"eod": "",
+		"timezone": "",
+		"menu_type": "",
+		"menu_html": "",
+		"weekly_schedule": "",
+		"days": [
+			{
+				"date": "$DATE",
+				"status": "",
+				"message": false,
+				"dayparts": [
+					{
+						"id": "1",
+						"endtime": "09:45",
+						"starttime": "07:15",
+						"label": "Breakfast",
+						"message": ""
+					},
+					{
+						"id": "3",
+						"endtime": "14:00",
+						"starttime": "10:30",
+						"label": "Lunch",
+						"message": ""
+					},
+					{
+						"id": "4",
+						"endtime": "17:30",
+						"starttime": "16:00",
+						"label": "Dinner",
+						"message": "Have a well-deserved break!"
+					}
+				]
+			}
+		]
+	}
+}
