@@ -5,7 +5,8 @@ import type {Context, ContextState, RouterState} from './context.ts'
 export interface CacheAdmin {
 	keys(): IterableIterator<string>
 	expiresIn(key: string): number | undefined
-	delete(key: string): boolean
+	/** Boolean stores evict one entry; grouped stores report the number of listed keys evicted. */
+	delete(key: string): boolean | number
 	clear(): void
 	readonly size: number
 }
@@ -14,7 +15,13 @@ export interface CacheAdmin {
 export function setupHelpers(
 	api: Router<RouterState, ContextState>,
 	cache: CacheAdmin,
-	{institution}: {institution: string},
+	{
+		institution,
+		additionalCache,
+	}: {
+		institution: string
+		additionalCache?: (ctx: Pick<Context, 'app' | 'path'>) => CacheAdmin
+	},
 ) {
 	api.get('/', (ctx) => {
 		ctx.body = 'Hello world!'
@@ -27,8 +34,10 @@ export function setupHelpers(
 	api.get('/_cache', (ctx) => {
 		if (ctx.cached(10000)) return
 		let result = new Map()
-		for (const key of cache.keys()) {
-			result.set(key, Math.floor((cache.expiresIn(key) ?? 0) / 1000).toFixed(0))
+		for (const store of additionalCache ? [cache, additionalCache(ctx)] : [cache]) {
+			for (const key of store.keys()) {
+				result.set(key, Math.floor((store.expiresIn(key) ?? 0) / 1000).toFixed(0))
+			}
 		}
 		ctx.body = Object.fromEntries(result.entries())
 	})
@@ -36,13 +45,18 @@ export function setupHelpers(
 	api.delete('/_cache', (ctx) => {
 		let requestedKeys = ctx.URL.searchParams.getAll('key')
 		let found = 0
+		let stores = additionalCache ? [cache, additionalCache(ctx)] : [cache]
 		if (requestedKeys.length) {
 			for (const key of requestedKeys) {
-				if (cache.delete(key)) found++
+				for (const store of stores) {
+					found += Number(store.delete(key))
+				}
 			}
 		} else {
-			found = cache.size
-			cache.clear()
+			for (const store of stores) {
+				found += store.size
+				store.clear()
+			}
 		}
 		ctx.response.set('X-Cache-Deleted', found.toFixed(0))
 		Sentry.metrics.count('cache.evicted', found, {

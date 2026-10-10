@@ -112,6 +112,31 @@ Other endpoints can stay on v1. Combined mode adds the institution prefix to bot
 paths, for example `/stolaf/v2/spaces/hours`. `/v1/routes` lists all registered
 endpoint versions for the institution.
 
+## Schedule snapshots
+
+St. Olaf's `/v1/spaces/hours` and `/v1/breaks` share one resolved snapshot per
+app instance, refreshed after an hour. If a refresh fails, both routes can serve
+the last successful snapshot for up to 24 hours, with `X-Cached-Response: STALE`
+and `Cache-Control: private, no-cache, no-store`. Refresh failures are retried
+after one minute, including when no successful snapshot exists yet.
+
+`/_cache` lists this snapshot under both route paths (with `/stolaf` in combined
+mode). Deleting either listed key invalidates the whole pair, including any
+failure retry window. Either key reports two evicted entries in `X-Cache-Deleted`
+and the `cache.evicted` metric, matching the listing; requesting both keys counts
+the pair once. Deleting all entries also clears the snapshot. An
+in-flight request may finish using its old data, but cannot refill an evicted
+snapshot. Query-string variants share the same snapshot and canonical admin keys.
+
+On refresh, the server fetches both inputs and expands their references before
+replacing either cached response. AAO validates authoring before publication;
+the server checks normalized containers and the references it expands. The upstream
+URLs do not expose a shared revision, so these checks cannot prove that both files
+belong to the same upstream publication. Separate
+client requests straddling a refresh can also observe different snapshots. A
+stronger consistency contract requires a shared upstream revision (or one combined
+artifact) and a way for clients to request or compare that revision.
+
 ## Images
 
 `GET /v1/images/<group>/<name>.webp` (both servers) proxies `img/<group>/<name>.webp` from the All About Olaf GitHub Pages site, which publishes the `images/` folder of [StoDevX/AAO-React-Native](https://github.com/StoDevX/AAO-React-Native). The groups are `contacts`, `news-sources`, `spaces`, `streaming` and `webcams`; any other group or file name is a 404.

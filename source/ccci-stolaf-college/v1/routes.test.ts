@@ -12,6 +12,8 @@ beforeEach(() => {
 /// The routes the app is pointed at; each must exist, or the app's
 /// request for it 404s.
 const ROUTES = [
+	'/v1/spaces/hours',
+	'/v1/breaks',
 	'/v1/a-to-z/extras',
 	'/v1/orgs/category-styles',
 	'/v1/map/categories',

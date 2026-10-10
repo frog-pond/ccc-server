@@ -4,8 +4,10 @@ import type {CacheObject} from '../ccc-koa/cache.ts'
 import {ONE_DAY} from '../ccc-lib/constants.ts'
 import {responseCache} from '../ccc-server/response-cache.ts'
 import {routeListing, setupHelpers} from '../ccc-server/helpers.ts'
+import {scheduleCacheAdmin} from './v1/schedule-data.ts'
 import * as appData from './v1/app-data.ts'
 import * as athletics from './v1/athletics.ts'
+import * as breaks from './v1/breaks.ts'
 import * as calendar from './v1/calendar.ts'
 import * as contacts from './v1/contacts.ts'
 import * as departments from './v1/departments.ts'
@@ -35,7 +37,7 @@ import type {ContextState, RouterState} from '../ccc-server/context.ts'
 const api = new Router<RouterState, ContextState>()
 const cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
 api.use(responseCache(cache, {institution: 'stolaf-college'}))
-setupHelpers(api, cache, {institution: 'stolaf-college'})
+setupHelpers(api, cache, {institution: 'stolaf-college', additionalCache: scheduleCacheAdmin})
 
 // food
 api.get('/v1/food/item/:itemId', menus.bonAppNutrition)
@@ -149,6 +151,7 @@ api.get('/v1/news/mess/wp/v2/:resource/:id', mess.wordpress)
 // hours
 api.get('/v1/spaces/hours', hours.buildingHours)
 api.get('/v1/spaces/directory', hours.campusDirectory)
+api.get('/v1/breaks', breaks.breaks)
 
 // transit
 api.get('/v1/transit/bus', transit.bus)
