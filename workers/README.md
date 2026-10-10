@@ -114,3 +114,13 @@ workspace's dependencies, so a package imported from `source/` has to be declare
 in `workers/package.json` too. The `workers-standalone-build` CI job installs and
 builds that way, because the `workers` job installs from the root and cannot see
 a missing one.
+
+## Data files, by college
+
+The small JSON files each college publishes on GitHub Pages (faqs, contacts,
+help, webcams, hours, dictionary, the campus map) are passed through as they
+are, by `pagesJson` (`src/sources/pages-json.ts`), from each campus's `files`
+table (`src/campuses.ts`, with the paths and urls in `src/pages-routes.ts`).
+Fresh for an hour, kept a day if the host fails, a 502 if nothing has ever been
+stored; the apps are told to keep them as long as the Node routes told them to.
+Examples: `/edu.stolaf/faqs`, `/edu.carleton/spaces/hours`.

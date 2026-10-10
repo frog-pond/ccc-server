@@ -1,6 +1,7 @@
 import type {FeedItemType} from '../../source/feeds/types.ts'
 import {CAFES} from './cafes.ts'
 import type {Source} from './define-source.ts'
+import {CARLETON_FILES, STOLAF_FILES, type PagesRoute} from './pages-routes.ts'
 import {CARLETONIAN_URL, rssNews} from './sources/rss-news.ts'
 import {CARLETON_NOW_URL, STOLAF_NEWS_URL, wpNews} from './sources/wp-news.ts'
 
@@ -13,6 +14,8 @@ export type Campus = {
 	cafes: Record<string, string>
 	/// feed names, as in `/news/<name>`
 	news: Record<string, NewsFeed>
+	/// data files the college publishes, passed through, by path
+	files: Record<string, PagesRoute>
 }
 
 const STOLAF_NEWS: NewsFeed = {source: wpNews, url: STOLAF_NEWS_URL}
@@ -22,11 +25,13 @@ const CARLETONIAN: NewsFeed = {source: rssNews, url: CARLETONIAN_URL}
 const STOLAF: Campus = {
 	cafes: CAFES,
 	news: {stolaf: STOLAF_NEWS, 'carleton-now': CARLETON_NOW, carletonian: CARLETONIAN},
+	files: STOLAF_FILES,
 }
 
 const CARLETON: Campus = {
 	cafes: CAFES,
 	news: {stolaf: STOLAF_NEWS, 'carleton-now': CARLETON_NOW, carletonian: CARLETONIAN},
+	files: CARLETON_FILES,
 }
 
 /// The campuses, by the prefix they are mounted at.

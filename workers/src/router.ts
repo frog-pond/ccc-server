@@ -1,7 +1,9 @@
 import {CafeMenuWithError, CustomCafe, cafeFrom, menuFrom} from '../../source/menus-bonapp/shape.ts'
 import {CAMPUSES, type Campus, type NewsFeed} from './campuses.ts'
+import type {PagesRoute} from './pages-routes.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
+import {pagesJson} from './sources/pages-json.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -100,6 +102,18 @@ async function news(env: Env, {source, url}: NewsFeed): Promise<Response> {
 	}
 }
 
+/// A data file the colleges publish, passed through as it is. A failure with
+/// nothing stored is a 502, kept briefly, as for the news feeds.
+async function dataFile(env: Env, {url, maxAge}: PagesRoute): Promise<Response> {
+	try {
+		let {value} = await fetchSource(env, pagesJson, {url})
+		return json(value, 200, maxAge)
+	} catch (err) {
+		console.error(err, {url})
+		return json({message: err instanceof Error ? err.message : String(err)}, 502, ONE_MINUTE)
+	}
+}
+
 export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
@@ -116,6 +130,9 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (feed !== undefined && Object.hasOwn(campus.news, feed) && campus.news[feed]) {
 		return news(env, campus.news[feed])
 	}
+
+	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
+	if (file) return dataFile(env, file)
 
 	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(path)
 	if (eating?.[1] && eating[2]) return food(campus, eating[1] as 'menu' | 'cafe', eating[2], env)
