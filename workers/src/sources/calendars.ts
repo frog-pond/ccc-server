@@ -28,15 +28,17 @@ const now = () => moment(clock.now())
 
 /// The url comes from this worker's own route table, and these sources must not
 /// become a way to make the worker fetch anything: the host is checked, and a
-/// redirect to another is not followed.
+/// redirect to another is not followed. Errors reach the apps and the logs, so
+/// they name the address without its query, which can carry the Google key.
 async function fetchFrom(hosts: ReadonlySet<string>, url: string, init: RequestInit = {}) {
 	let parsed = new URL(url)
+	let named = parsed.origin + parsed.pathname
 	if (parsed.protocol !== 'https:' || !hosts.has(parsed.hostname)) {
-		throw new Error(`${url} is not a calendar this reads`)
+		throw new Error(`${named} is not a calendar this reads`)
 	}
 	let response = await fetch(url, {...init, redirect: 'manual'})
 	if (!response.ok) {
-		throw new Error(`The calendar responded ${String(response.status)} for ${url}`)
+		throw new Error(`The calendar responded ${String(response.status)} for ${named}`)
 	}
 	return response
 }

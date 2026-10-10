@@ -29,7 +29,7 @@ const KSTO_SCHEDULE = 'https://stolaf.dev/AAO-React-Native/ksto-schedule.json'
 const GOOGLE = 'https://www.googleapis.com/calendar/v3/calendars/'
 
 let fetchSpy: MockInstance<typeof fetch>
-let errorSpy: {mockRestore: () => void}
+let errorSpy: MockInstance<typeof console.error>
 
 const SOURCES = [
 	`${carletonCalendar.name}:${SUMO_FEED} ${SUMO_PAGE}`,
@@ -221,6 +221,58 @@ describe.each(['edu.stolaf', 'edu.carleton'])('%s calendars', (campus) => {
 		// Wednesday 9 October 2030, 12:00Z: the next Thursday show is the 10th at 14:00 Central
 		expect(events[0]).toMatchObject({title: 'Golf Carts', startTime: '2030-10-10T19:00:00.000Z'})
 		expect(callsTo(GOOGLE)).toHaveLength(0)
+	})
+
+	test('a Google calendar that fails does not give the key away', async () => {
+		serve({[GOOGLE]: () => answer('forbidden', 'text/plain', 403)})
+		let response = await get(`/${campus}/calendar/krlx-schedule`)
+		expect(response.status).toBe(502)
+		let body = await response.text()
+		expect(body).toContain('403')
+		expect(body).not.toContain('test-calendar-key')
+		expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('test-calendar-key')
+	})
+
+	test('a retired calendar is a notice, kept for a day', async () => {
+		for (let name of ['the-cave', 'oleville']) {
+			let response = await get(`/${campus}/calendar/${name}`)
+			expect(response.status).toBe(200)
+			expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
+			expect(await response.json()).toMatchObject([
+				{
+					dataSource: 'deprecated',
+					title: 'No longer updated',
+					startTime: '2030-10-09T12:00:00.000Z',
+				},
+			])
+		}
+		expect(fetchSpy).not.toHaveBeenCalled()
+	})
+
+	test('an unknown calendar is a 404', async () => {
+		expect((await get(`/${campus}/calendar/nope`)).status).toBe(404)
+		expect((await get(`/${campus}/calendar/constructor`)).status).toBe(404)
+	})
+
+	test('the arbitrary-address calendar routes are not served', async () => {
+		expect((await get(`/${campus}/calendar/ics?url=https://example.com/a.ics`)).status).toBe(404)
+		expect((await get(`/${campus}/calendar/google?id=a@b.c`)).status).toBe(404)
+	})
+})
+
+describe('the calendars that differ by campus', () => {
+	test("St. Olaf's own calendar is a notice kept a minute", async () => {
+		let response = await get('/edu.stolaf/calendar/stolaf')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+		expect(await response.json()).toMatchObject([{title: 'Temporarily unavailable'}])
+	})
+
+	test("Carleton's copy of it is retired, kept a day", async () => {
+		let response = await get('/edu.carleton/calendar/stolaf')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=86400')
+		expect(await response.json()).toMatchObject([
+			{title: 'No longer updated', description: expect.stringContaining('St. Olaf')},
+		])
 	})
 
 	test('the convocations list is where Carleton serves it', async () => {
