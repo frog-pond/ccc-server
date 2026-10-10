@@ -144,7 +144,7 @@ names its source.
   FTS5 index of each posting's title and description. Its alarm reads the board every four hours plus
   up to thirty minutes of random jitter; postings no longer listed are dropped.
   A posting's detail is read when it is new, an hour after a read that found no
-  unit, and a day after the last read, at most forty a run and four at a time; a
+  unit, and a day after the last read, at most twenty a run and four at a time; a
   run that leaves some unread comes back two minutes later. A failed board read
   keeps the stored postings and backs off (five minutes, doubling, up to four
   hours), as does Oracle answering 403 or 429. An empty board in place of a full

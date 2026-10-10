@@ -37,8 +37,8 @@ export const DETAIL_TTL = DAY
 /// blank an editor may yet correct.
 const NO_UNIT_TTL = HOUR
 /// Details read in one run; the rest wait for a follow-up run soon after, so
-/// a first fill stays within one invocation's subrequest limit.
-export const DETAILS_PER_RUN = 40
+/// a first fill stays well within one invocation's subrequest and CPU limits.
+export const DETAILS_PER_RUN = 20
 /// When a run leaves details unread, the next one comes this soon.
 const FOLLOW_UP = 2 * MINUTE
 /// Oracle sits behind its own bot protection; a few at a time is gentle.
