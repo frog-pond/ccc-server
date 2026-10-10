@@ -158,6 +158,14 @@ describe.each(PAPERS)('GET /news/$name/wp/v2/:resource', ({name, site}) => {
 		expect(await response.json()).toEqual({message: `${site.paper} could not be reached for posts`})
 	})
 
+	test('an answer too big to store is a 502, measured in bytes as stored', async () => {
+		// a million two-byte characters: under the limit in characters, over it in bytes
+		let big = JSON.stringify(['é'.repeat(1_000_000)])
+		fetchSpy.mockImplementation(() => Promise.resolve(wordpress(big)))
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`)
+		expect(response.status).toBe(502)
+	})
+
 	test('JSON that does not parse is a 502, not kept', async () => {
 		fetchSpy.mockImplementation(() =>
 			Promise.resolve(wordpress('<b>Warning</b>: PHP ate the JSON')),
@@ -210,7 +218,9 @@ describe('the WordPress API source', () => {
 			/not a WordPress API this reads/,
 		)
 		expect(
-			fetchSpy.mock.calls.map(([i]) => String(i)).filter((u) => u.includes('example.com')),
+			fetchSpy.mock.calls
+				.map(([i]) => String(i))
+				.filter((u) => URL.canParse(u) && new URL(u).hostname === 'example.com'),
 		).toEqual([])
 		expect(paperFetches()).toEqual([])
 	})

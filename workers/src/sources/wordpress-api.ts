@@ -14,9 +14,10 @@ import {upstream} from '../upstream.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 
-/// A Durable Object keeps a value in one SQLite row, which holds at most 2 MB;
-/// an answer bigger than this is an error rather than a failed write.
-const MAX_BODY = 1_900_000
+/// A Durable Object keeps a value, as JSON, in one SQLite row, which holds at
+/// most 2 MB; an answer whose JSON is bigger than this many bytes is an error
+/// rather than a failed write.
+const MAX_STORED = 1_900_000
 
 /// A paper's WordPress REST API: where it is, and what a refusal calls it.
 /// The papers run the same WordPress plugins, so the app makes the same
@@ -82,7 +83,6 @@ export const wordpressApi = defineSource({
 		// a stray byte order mark from a theme's PHP file is dropped: JSON.parse
 		// refuses it, and the app needs none
 		if (hasBom(body)) body = body.slice(1)
-		if (body.length > MAX_BODY) throw new Error(`The answer for ${named} is too large`)
 		try {
 			JSON.parse(body)
 		} catch {
@@ -93,7 +93,11 @@ export const wordpressApi = defineSource({
 			let value = response.headers.get(name)
 			if (value !== null) headers[name] = value
 		}
-		return {status: response.status, type, body, headers} satisfies WordPressAnswer
+		let answer: WordPressAnswer = {status: response.status, type, body, headers}
+		if (new TextEncoder().encode(JSON.stringify(answer)).byteLength > MAX_STORED) {
+			throw new Error(`The answer for ${named} is too large`)
+		}
+		return answer
 	},
 	ttl: SOURCE_TTL,
 	staleIfError: DAY,

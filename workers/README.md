@@ -112,7 +112,7 @@ day if its host fails; student work keeps its own schedule, below.
   WordPress API, its answer kept as the paper sent it (status, content type,
   body, paging headers), the same lifetimes. Only the Messenger's and The
   Carletonian's APIs, and only paths and queries the app makes, load; an answer
-  over 1.9 MB is an error, as one SQLite row holds at most 2 MB.
+  whose stored JSON is over 1.9 MB is an error, as one SQLite row holds at most 2 MB.
 - `rss-news` (`src/sources/rss-news.ts`): an RSS feed as feed items, the same
   lifetimes; only `content.krlx.org` loads.
 - `calendar-ical`, `calendar-carleton`, `calendar-google`,
