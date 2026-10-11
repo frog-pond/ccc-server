@@ -1,8 +1,10 @@
 import {env, exports} from 'cloudflare:workers'
+import {runDurableObjectAlarm} from 'cloudflare:test'
 import {afterEach, beforeEach, describe, expect, test, vi, type MockInstance} from 'vitest'
 import {canonicalKey} from '../../source/ccci-stolaf-college/v1/mess-shape.ts'
 import {fetchSource} from '../src/client.ts'
 import {clock} from '../src/clock.ts'
+import {SOURCE_TTL} from '../src/lifetimes.ts'
 import {registry} from '../src/registry.ts'
 import {CARLETONIAN, MESSENGER, wordpressApi} from '../src/sources/wordpress-api.ts'
 import {spyOnFetch} from './spy.ts'
@@ -104,6 +106,37 @@ describe.each(PAPERS)('GET /news/$name/wp/v2/:resource', ({name, site}) => {
 		expect(again.status).toBe(200)
 		expect(await again.text()).toBe(POSTS)
 		expect(paperFetches()).toHaveLength(1)
+	})
+
+	test('a reordered, percent-encoded query reaches the paper as it came', async () => {
+		fetchSpy.mockImplementation(() => Promise.resolve(wordpress(POSTS)))
+		let query = '_embed=true&per_page=%31%30'
+		let response = await get(`/edu.stolaf/news/${name}/wp/v2/posts?${query}`)
+		expect(response.status).toBe(200)
+		expect(paperFetches()).toEqual([`${UPSTREAM}/posts?${query}`])
+	})
+
+	test('a copy standing in for a failing paper is marked stale, briefly cacheable', async () => {
+		let start = Date.now()
+		clock.now = () => start
+		let path = `/edu.stolaf/news/${name}/wp/v2/posts?per_page=10&_embed=true`
+		fetchSpy.mockImplementation(() => Promise.resolve(wordpress(POSTS)))
+		await get(path)
+
+		fetchSpy.mockImplementation(() => Promise.resolve(new Response('down', {status: 503})))
+		clock.now = () => start + SOURCE_TTL + 60_000
+		// past its ttl, but not yet known to be failing: refreshed behind, as usual
+		let stale = await get(path)
+		expect(stale.headers.get('cache-control')).toBe('public, max-age=600')
+		expect(stale.headers.get('cache-status')).toBeNull()
+
+		let key = canonicalKey('posts', new URLSearchParams('per_page=10&_embed=true'))
+		await runDurableObjectAlarm(env.SOURCE.getByName(`${wordpressApi.name}:${UPSTREAM}/${key}`))
+		let fallback = await get(path)
+		expect(fallback.status).toBe(200)
+		expect(await fallback.text()).toBe(POSTS)
+		expect(fallback.headers.get('cache-control')).toBe('public, max-age=60')
+		expect(fallback.headers.get('cache-status')).toBe('ccc-server; hit; detail=stale')
 	})
 
 	test('one post, by id', async () => {

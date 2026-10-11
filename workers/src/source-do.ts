@@ -113,7 +113,8 @@ export class SourceDO extends DurableObject<Env> {
 		// stale-while-revalidate: answer now, refresh from the alarm, which survives eviction
 		if (hasValue && sameEpoch && age < ttl + spec.staleIfError) {
 			if (!backedOff) await this.ctx.storage.setAlarm(now)
-			return this.#served(row, 'stale')
+			// a refresh that already failed makes this a stand-in for a failing upstream
+			return this.#served(row, row.failures > 0 ? 'stale-error' : 'stale')
 		}
 
 		// nothing usable: refresh before answering

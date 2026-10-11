@@ -58,6 +58,7 @@ const CACHE_INFO_KEY: unique symbol = Symbol('koa-cache info key')
 const CACHE_FILL_KEY: unique symbol = Symbol('koa-cache fill key')
 const CACHE_WAITED_KEY: unique symbol = Symbol('koa-cache waited key')
 const CACHE_BYPASS_KEY: unique symbol = Symbol('koa-cache bypass key')
+const CACHE_DETAIL_KEY: unique symbol = Symbol('koa-cache detail key')
 
 /// How a fill ended, for the requests waiting on it.
 type FillOutcome =
@@ -134,6 +135,14 @@ declare module 'koa' {
 		 */
 		setCacheTTL(maxAge: number): void
 		/**
+		 * Says something about this response in its `Cache-Status` header, as
+		 * RFC 9211's `detail` parameter, such as `stale` for a last good copy
+		 * served in place of a failing upstream. A copy this response stores
+		 * says it on every hit too.
+		 * @param detail A token, such as `stale`
+		 */
+		cacheDetail(detail: string): void
+		/**
 		 * cacheKey stores the key used to cache this response
 		 */
 		[CACHE_KEY]: string
@@ -156,6 +165,10 @@ declare module 'koa' {
 		 * doesn't share one fetch; cleared once it is done
 		 */
 		[CACHE_BYPASS_KEY]?: object | undefined
+		/**
+		 * The `detail` this response's `Cache-Status` gives, set by `cacheDetail`
+		 */
+		[CACHE_DETAIL_KEY]?: string | undefined
 	}
 }
 
@@ -167,6 +180,8 @@ export interface CacheObject {
 	gzip?: Buffer
 	/** The response headers named in `storedHeaders`, given back with this copy */
 	headers?: Record<string, string | string[]>
+	/** The `detail` its `Cache-Status` gives on every hit, as `cacheDetail` set it */
+	detail?: string
 }
 
 interface Options {
@@ -285,9 +300,12 @@ export function cachable(options: Options): Middleware {
 	const storedHeaders = options.storedHeaders ?? []
 
 	/// Says how the cache handled this request, in a `Cache-Status` header
-	/// (RFC 9211) made of `params`.
-	function setCacheStatus(ctx: ExtendableContext, params: string[]): void {
+	/// (RFC 9211) made of `params`, and of the `detail` the route or its stored
+	/// copy gave, if any.
+	function setCacheStatus(ctx: ExtendableContext, params: string[], detail?: string): void {
 		if (statusName === undefined) return
+		detail ??= ctx[CACHE_DETAIL_KEY]
+		if (detail !== undefined) params = [...params, `detail=${detail}`]
 		ctx.response.set('Cache-Status', [statusName, ...params].join('; '))
 	}
 
@@ -388,6 +406,10 @@ export function cachable(options: Options): Middleware {
 		}
 	}
 
+	function cacheDetail(this: ExtendableContext, detail: string): void {
+		this[CACHE_DETAIL_KEY] = detail
+	}
+
 	// ctx.cached(maxAge) => boolean
 	function cached(this: ExtendableContext, maxAge: number | undefined): boolean {
 		// uncacheable request method
@@ -430,14 +452,14 @@ export function cachable(options: Options): Middleware {
 		}
 		if (this[CACHE_WAITED_KEY]) {
 			// it waited on another request's fetch, then took the copy that fetch stored
-			setCacheStatus(this, ['fwd=uri-miss', 'collapsed', 'stored'])
+			setCacheStatus(this, ['fwd=uri-miss', 'collapsed', 'stored'], obj.detail)
 		} else {
 			let params = ['hit']
 			// an entry that never expires has no ttl to give
 			if (ttl !== undefined && Number.isFinite(ttl)) {
 				params.push(`ttl=${Math.floor(ttl / 1000).toFixed(0)}`)
 			}
-			setCacheStatus(this, params)
+			setCacheStatus(this, params, obj.detail)
 		}
 
 		if (this.request.fresh) {
@@ -456,6 +478,7 @@ export function cachable(options: Options): Middleware {
 		ctx.cached = cached.bind(ctx)
 		ctx.evictCachedItem = evictCachedItem.bind(ctx)
 		ctx.setCacheTTL = setCacheTTL.bind(ctx)
+		ctx.cacheDetail = cacheDetail.bind(ctx)
 
 		if (methods[ctx.request.method]) {
 			// One key for the whole request, so the fill it may wait on and the
@@ -596,6 +619,9 @@ export function cachable(options: Options): Middleware {
 		let headers = pickHeaders(ctx, storedHeaders)
 		if (Object.keys(headers).length > 0) {
 			obj.headers = headers
+		}
+		if (ctx[CACHE_DETAIL_KEY] !== undefined) {
+			obj.detail = ctx[CACHE_DETAIL_KEY]
 		}
 
 		// if the content-type was `text` or `text/plain` then don't cache

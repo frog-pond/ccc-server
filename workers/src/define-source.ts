@@ -22,6 +22,10 @@ export const defineSource = <P, V>(source: Source<P, V>) => source
 export type Served<V> = {
 	value: V
 	fetchedAt: number
+	/**
+	 * `stale` is past its ttl and being refreshed; `stale-error` stands in for
+	 * an upstream whose last refresh failed
+	 */
 	state: 'fresh' | 'stale' | 'stale-error'
 }
 
