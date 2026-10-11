@@ -36,7 +36,7 @@ import type {ContextState, RouterState} from '../ccc-server/context.ts'
 
 const api = new Router<RouterState, ContextState>()
 const cache = new QuickLRU<string, CacheObject | undefined>({maxSize: 10_000, maxAge: ONE_DAY})
-api.use(responseCache(cache, {institution: 'stolaf-college'}))
+api.use(responseCache(cache, {institution: 'stolaf-college', hash: mess.cacheKey}))
 setupHelpers(api, cache, {institution: 'stolaf-college', additionalCache: scheduleCacheAdmin})
 
 // food

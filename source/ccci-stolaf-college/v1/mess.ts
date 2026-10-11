@@ -1,7 +1,5 @@
 import {Buffer} from 'node:buffer'
 import QuickLRU from 'quick-lru'
-import * as Sentry from '@sentry/node'
-import {ONE_DAY, ONE_MINUTE} from '../../ccc-lib/constants.ts'
 import {http} from '../../ccc-lib/http.ts'
 import type {Context} from '../../ccc-server/context.ts'
 import {
@@ -29,8 +27,7 @@ export interface Answer {
 	status: number
 	type: string
 	/// Bytes, not a string: the response cache would store a string as a JSON
-	/// value, quoting it. It is the same Buffer the response cache keeps, so a
-	/// last good copy costs no memory while the cached copy lives.
+	/// value, quoting it.
 	body: Buffer
 	headers: Record<string, string>
 }
@@ -39,7 +36,7 @@ export interface Answer {
 const BYTE_ORDER_MARK = Buffer.from([0xef, 0xbb, 0xbf])
 
 /// How long the paper has to answer: well inside the app's own 10 seconds, so
-/// that while the paper hangs, the last good copy reaches the reader in time.
+/// that while the paper hangs, the stale copy reaches the reader in time.
 const UPSTREAM_TIMEOUT = 7_000
 
 /// How long a URL the paper failed to answer goes unasked: a phone in an
@@ -50,13 +47,16 @@ const FAILURE_MEMORY = 30_000
 /// How many URLs' failures are remembered at once.
 const FAILURES_KEPT = 1000
 
+/// Where the app reaches this route, on the St. Olaf server.
+export const PREFIX = '/v1/news/mess/wp/v2/'
+
 /// The paper's answer, or nothing when it could not give one: a timeout, a
 /// connection that never answered, a 5xx, a refusal in `OUTAGE_STATUSES`, or
 /// anything but JSON that parses -- a maintenance page, a bot check, or a PHP
 /// warning ahead of the JSON -- which must not be cached as the Messenger's data.
 async function fetchUpstream(url: string, timeout: number): Promise<Answer | undefined> {
 	try {
-		// no retries: a failure is answered from the last good copy, and the app retries on its own
+		// no retries: a failure is answered from the stale copy, and the app retries on its own
 		let response = await http.get(url, {
 			throwHttpErrors: false,
 			retry: 0,
@@ -106,23 +106,23 @@ function send(ctx: Context, answer: Answer, rules: Rules): void {
 	ctx.body = answer.body
 }
 
+/// The key the response cache keeps a request under: its path and its query
+/// decoded and in order of name, so every spelling of one request shares one
+/// copy, and in an outage one stale copy. Other routes keep their URL.
+export function cacheKey(ctx: {path: string; querystring: string}): string | undefined {
+	if (!ctx.path.startsWith(PREFIX)) return undefined
+	return canonicalKey(ctx.path, new URLSearchParams(ctx.querystring))
+}
+
 /// The Messenger's WordPress API, answered from the response cache, then the
-/// paper, then -- while the paper is failing -- the last good copy of each URL.
-/// A URL the paper just failed is not asked for again for `failureMemory`.
+/// paper. While the paper is failing, the response cache serves its stale copy
+/// of each URL; a URL the paper just failed is not asked for again for
+/// `failureMemory`.
 export function makeWordpressRoute({
 	timeout = UPSTREAM_TIMEOUT,
 	failureMemory = FAILURE_MEMORY,
 }: {timeout?: number; failureMemory?: number} = {}) {
 	let failed = new QuickLRU<string, true>({maxSize: FAILURES_KEPT, maxAge: failureMemory})
-	let copies = new Map<Rules, QuickLRU<string, Answer>>()
-	let lastGoodFor = (rules: Rules) => {
-		let store = copies.get(rules)
-		if (!store) {
-			store = new QuickLRU<string, Answer>({maxSize: rules.keep, maxAge: 7 * ONE_DAY})
-			copies.set(rules, store)
-		}
-		return store
-	}
 
 	return async function wordpress(ctx: Context): Promise<void> {
 		let {resource = '', id} = ctx.params
@@ -132,46 +132,28 @@ export function makeWordpressRoute({
 			return
 		}
 		let {ttl} = verdict.rules
-		let lastGood = lastGoodFor(verdict.rules)
 		let path = id === undefined ? resource : `${resource}/${id}`
 		let key = canonicalKey(path, new URLSearchParams(ctx.querystring))
 
 		// Declared before asking the cache, so a hit counts its max-age down to
-		// the life its copy has left: at most a minute for a last good copy.
+		// the life its copy has left: at most a minute for a stale copy.
 		ctx.cacheControl(ttl)
-		if (ctx.cached(ttl)) {
-			// a read keeps its last good copy among the most recent, so in an
-			// outage the stories read most are the ones still to hand
-			lastGood.get(key)
-			return
-		}
+		if (ctx.cached(ttl)) return
 
 		let url = `${UPSTREAM}/${path}${ctx.querystring ? `?${ctx.querystring}` : ''}`
 		let answer = failed.has(key) ? undefined : await fetchUpstream(url, timeout)
-
-		if (answer) {
-			if (answer.status === 200) {
-				lastGood.set(key, answer)
-			} else {
-				// a 4xx is passed on but not cached, so it says nothing of keeping it
-				ctx.remove('Cache-Control')
-			}
-			send(ctx, answer, verdict.rules)
-			return
-		}
-
-		if (!failed.has(key)) failed.set(key, true)
-		let copy = lastGood.get(key)
-		Sentry.metrics.count('mess.fallback', 1, {attributes: {outcome: copy ? 'stale' : '502'}})
-		if (!copy) {
+		if (!answer) {
+			if (!failed.has(key)) failed.set(key, true)
+			// the response cache answers with its stale copy, if it has one
 			ctx.throw(502, `the Olaf Messenger could not be reached for ${path}`)
 			return
 		}
-		// ask the paper again soon, rather than holding the old copy for the whole ttl
-		ctx.setCacheTTL(ONE_MINUTE)
-		ctx.cacheControl(ONE_MINUTE)
-		ctx.cacheDetail('stale')
-		send(ctx, copy, verdict.rules)
+
+		if (answer.status !== 200) {
+			// a 4xx is passed on but not cached, so it says nothing of keeping it
+			ctx.remove('Cache-Control')
+		}
+		send(ctx, answer, verdict.rules)
 	}
 }
 

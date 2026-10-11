@@ -12,7 +12,7 @@ export const UPSTREAM = 'https://olafmessenger.com/wp-json/wp/v2'
 // Each value has one meaning and a size WordPress serves, so anything the app
 // would not ask for is refused before it costs a fetch from the paper. Other
 // spellings of the same request -- percent-encoded, or in another order -- are
-// let through, and share one last good copy (see `canonicalKey`).
+// let through, and share one cached copy (see `canonicalKey`).
 const ID = '[1-9][0-9]{0,9}'
 /// `items` comma-separated, from one to `max` of them.
 const listOf = (items: string, max: number) =>
@@ -45,14 +45,10 @@ const EMBED = /^(?:true|wp:featuredmedia(?:,wp:term)?|wp:term)$/u
 const BOOLEAN = /^(?:true|false)$/u
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u
 
-/// The query parameters a request may carry, how long its answer is cached,
-/// and how many last good copies of its answers are kept for an outage. Each
-/// kind of request keeps its own, so stories read by the hundred cannot push
-/// out the one category tree every screen needs.
+/// The query parameters a request may carry, and how long its answer is cached.
 export interface Rules {
 	params: Record<string, RegExp>
 	ttl: number
-	keep: number
 }
 
 /// What the app asks the paper for, and nothing else: anything more would make
@@ -70,16 +66,14 @@ const RESOURCES: Record<string, {list: Rules; item?: Rules}> = {
 				staff_name: INTEGER,
 			},
 			ttl: 5 * ONE_MINUTE,
-			keep: 20,
 		},
-		item: {params: {_embed: EMBED, _fields: FIELDS}, ttl: ONE_HOUR, keep: 100},
+		item: {params: {_embed: EMBED, _fields: FIELDS}, ttl: ONE_HOUR},
 	},
-	categories: {list: {params: {per_page: PER_PAGE, _fields: FIELDS}, ttl: ONE_DAY, keep: 4}},
+	categories: {list: {params: {per_page: PER_PAGE, _fields: FIELDS}, ttl: ONE_DAY}},
 	media: {
 		list: {
 			params: {include: IDS, per_page: PER_PAGE, _fields: FIELDS},
 			ttl: ONE_DAY,
-			keep: 50,
 		},
 	},
 	staff_profile: {
@@ -93,17 +87,15 @@ const RESOURCES: Record<string, {list: Rules; item?: Rules}> = {
 				_fields: FIELDS,
 			},
 			ttl: ONE_DAY,
-			keep: 20,
 		},
 	},
 	staff_year: {
 		list: {
 			params: {hide_empty: BOOLEAN, per_page: PER_PAGE, _fields: FIELDS},
 			ttl: ONE_DAY,
-			keep: 4,
 		},
 	},
-	pages: {list: {params: {slug: SLUG, _fields: FIELDS}, ttl: ONE_DAY, keep: 4}},
+	pages: {list: {params: {slug: SLUG, _fields: FIELDS}, ttl: ONE_DAY}},
 }
 
 export type Verdict = {rules: Rules} | {refusal: {status: 400 | 404; message: string}}
@@ -171,7 +163,7 @@ export function paginationLinks(
 	return links.join(', ')
 }
 
-/// The key a request's last good copy is kept under: its path and its query
+/// The key a request's cached copy is kept under: its path and its query
 /// decoded and in order of name, so every spelling of one request shares one
 /// copy, and no number of them can push out the copy the app's own needs.
 export function canonicalKey(path: string, query: URLSearchParams): string {

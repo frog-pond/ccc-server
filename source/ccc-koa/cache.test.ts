@@ -710,3 +710,180 @@ void test('a hit keeps a Cache-Control the route set that forbids shared caching
 	let response = await get('/menu')
 	t.assert.equal(response.headers.get('Cache-Control'), 'private, no-store')
 })
+
+/// A server whose one route caches for a minute and keeps its copy an hour
+/// past that for a failing route, answering with whatever `route.answer` gives:
+/// a body, a thrown error, or a status. Its clock is `clock.now`.
+async function serveStaleIfError(t: test.TestContext) {
+	let clock = {now: 1_800_000_000_000}
+	let now = test.mock.method(Date, 'now', () => clock.now)
+	let failures: [boolean, unknown][] = []
+	let calls = {count: 0}
+	let route = {answer: (): unknown => ({fresh: true})}
+	let store = new Map<string, CacheObject>()
+	let app = new Koa()
+	app.use(
+		cachable({
+			get: (key) => store.get(key),
+			set: (key, value) => (value ? store.set(key, value) : store.delete(key)),
+			statusName: 'test-cache',
+			staleIfError: 60 * 60_000,
+			storedHeaders: ['link'],
+			onFailure: (_ctx, servedStale, error) => failures.push([servedStale, error]),
+		}),
+	)
+	app.use(async (ctx) => {
+		ctx.set('Cache-Control', 'public, max-age=60')
+		if (ctx.cached(60_000)) return
+		calls.count++
+		let answer: unknown = await route.answer()
+		if (typeof answer === 'number') {
+			ctx.status = answer
+			ctx.body = {failed: answer}
+			return
+		}
+		ctx.set('Link', '</next>; rel="next"')
+		ctx.etag = 'v1'
+		ctx.body = answer
+	})
+	app.silent = true
+
+	let server = app.listen(0)
+	t.after(() => {
+		now.mock.restore()
+		server.closeAllConnections()
+		server.close()
+	})
+	await new Promise((resolve) => server.once('listening', resolve))
+	let {port} = server.address() as AddressInfo
+	let get = (init?: RequestInit) => fetch(`http://localhost:${String(port)}/menu`, init)
+	return {get, clock, route, calls, failures}
+}
+
+const MINUTE = 60_000
+const fail = (status?: number) => () => {
+	throw Object.assign(new Error('upstream is down'), status === undefined ? {} : {status})
+}
+
+void test('a route that throws past its copy’s max age is answered with the stale copy', async (t) => {
+	let {get, clock, route, failures} = await serveStaleIfError(t)
+	await get()
+	clock.now += 2 * MINUTE
+	route.answer = fail(502)
+
+	let response = await get()
+	t.assert.equal(response.status, 200)
+	t.assert.deepEqual(await response.json(), {fresh: true})
+	t.assert.equal(response.headers.get('Link'), '</next>; rel="next"')
+	t.assert.equal(response.headers.get('Cache-Control'), 'public, max-age=60')
+	t.assert.equal(
+		response.headers.get('Cache-Status'),
+		'test-cache; fwd=uri-miss; fwd-status=502; stored; detail=stale',
+	)
+	t.assert.deepEqual(
+		failures.map(([stale]) => stale),
+		[true],
+	)
+})
+
+void test('a route that answers 5xx is answered with the stale copy', async (t) => {
+	let {get, clock, route} = await serveStaleIfError(t)
+	await get()
+	clock.now += 2 * MINUTE
+	route.answer = () => 503
+
+	let response = await get()
+	t.assert.equal(response.status, 200)
+	t.assert.deepEqual(await response.json(), {fresh: true})
+})
+
+void test('a thrown error with no status counts as a 500', async (t) => {
+	let {get, clock, route} = await serveStaleIfError(t)
+	await get()
+	clock.now += 2 * MINUTE
+	route.answer = fail()
+
+	let response = await get()
+	t.assert.equal(response.status, 200)
+	t.assert.match(response.headers.get('Cache-Status') ?? '', /fwd-status=500/u)
+})
+
+void test('a stale copy is fresh for a minute, and says it is stale on every hit', async (t) => {
+	let {get, clock, route, calls} = await serveStaleIfError(t)
+	await get()
+	clock.now += 2 * MINUTE
+	route.answer = fail(502)
+	await get()
+
+	clock.now += 30_000
+	let hit = await get()
+	t.assert.equal(calls.count, 2)
+	t.assert.equal(hit.headers.get('Cache-Status'), 'test-cache; hit; ttl=30; detail=stale')
+	t.assert.equal(hit.headers.get('Cache-Control'), 'public, max-age=30')
+
+	clock.now += 31_000
+	route.answer = () => ({fresh: 'again'})
+	let recovered = await get()
+	t.assert.equal(calls.count, 3)
+	t.assert.deepEqual(await recovered.json(), {fresh: 'again'})
+	t.assert.doesNotMatch(recovered.headers.get('Cache-Status') ?? '', /stale/u)
+})
+
+void test('a 4xx is not answered with the stale copy', async (t) => {
+	let {get, clock, route, failures} = await serveStaleIfError(t)
+	await get()
+	clock.now += 2 * MINUTE
+	route.answer = fail(404)
+
+	let response = await get()
+	t.assert.equal(response.status, 404)
+	t.assert.deepEqual(failures, [])
+})
+
+void test('a failure past the copy’s stale-if-error is a failure', async (t) => {
+	let {get, clock, route, failures} = await serveStaleIfError(t)
+	await get()
+	clock.now += MINUTE + 60 * MINUTE + 1
+	route.answer = fail(502)
+
+	let response = await get()
+	t.assert.equal(response.status, 502)
+	t.assert.equal(failures.length, 1)
+	t.assert.equal(failures[0]?.[0], false)
+})
+
+void test('a stale copy answers a conditional request with a 304', async (t) => {
+	let {get, clock, route} = await serveStaleIfError(t)
+	await get()
+	clock.now += 2 * MINUTE
+	route.answer = fail(502)
+
+	let response = await get({headers: {'If-None-Match': '"v1"'}, cache: 'no-cache'})
+	t.assert.equal(response.status, 304)
+	t.assert.match(response.headers.get('Cache-Status') ?? '', /detail=stale/u)
+})
+
+void test('requests waiting on a fill that fails get the stale copy too', async (t) => {
+	let {get, clock, route, calls} = await serveStaleIfError(t)
+	await get()
+	clock.now += 2 * MINUTE
+	let gate = Promise.withResolvers<undefined>()
+	route.answer = async () => {
+		await gate.promise
+		return fail(502)()
+	}
+
+	let first = get()
+	await tick()
+	let waiter = get()
+	await tick()
+	gate.resolve(undefined)
+
+	let responses = await Promise.all([first, waiter])
+	t.assert.deepEqual(
+		responses.map((r) => r.status),
+		[200, 200],
+	)
+	t.assert.equal(calls.count, 2)
+	t.assert.match(responses[1].headers.get('Cache-Status') ?? '', /collapsed; stored; detail=stale/u)
+})
