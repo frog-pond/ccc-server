@@ -2,7 +2,10 @@ import {expect, test} from 'vitest'
 import wranglerConfig from '../../wrangler.jsonc?raw'
 
 type Bindings = {
-	observability?: {logs?: {enabled?: boolean; invocation_logs?: boolean; persist?: boolean}}
+	observability?: {
+		logs?: {enabled?: boolean; invocation_logs?: boolean; persist?: boolean}
+		traces?: {enabled?: boolean; head_sampling_rate?: number; persist?: boolean}
+	}
 	durable_objects?: {bindings?: {name: string; class_name: string}[]}
 }
 
@@ -33,4 +36,11 @@ test('production and Previews both persist logs, including invocation logs', () 
 	expect(config.observability?.logs).toEqual(logs)
 	expect(config.previews.observability?.logs).toEqual(logs)
 	expect(config.previews.observability).toEqual(config.observability)
+})
+
+// Every request is traced, here and on Previews.
+test('production and Previews trace every request', () => {
+	const traces = {enabled: true, head_sampling_rate: 1, persist: true}
+	expect(config.observability?.traces).toEqual(traces)
+	expect(config.previews.observability?.traces).toEqual(traces)
 })
