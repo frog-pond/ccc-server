@@ -2,7 +2,7 @@ import moment from 'moment-timezone'
 import {eventsFromGoogle} from '../../../source/calendar/google-shape.ts'
 import {eventsFromIcal} from '../../../source/calendar/ical-shape.ts'
 import type {EventType} from '../../../source/calendar/types.ts'
-import {registerArchive} from '../archive.ts'
+import {fromJson, registerArchive, toJson} from '../archive.ts'
 import {clock} from '../clock.ts'
 import {eventsFromPresence} from '../sources/presence-shape.ts'
 import {TecPageSchema, eventsFromTec} from '../sources/tec-shape.ts'
@@ -38,6 +38,49 @@ export const calendarArchive = registerArchive({
 		return `${typeof uid === 'string' ? uid : event.title} ${event.startTime}`
 	},
 	at: (event: EventType) => Date.parse(event.startTime),
+	columns: {
+		data_source: 'TEXT NOT NULL',
+		start_time: 'TEXT NOT NULL',
+		end_time: 'TEXT NOT NULL',
+		title: 'TEXT NOT NULL',
+		description: 'TEXT NOT NULL',
+		location: 'TEXT NOT NULL',
+		is_ongoing: 'INTEGER NOT NULL',
+		image: 'TEXT',
+		links: 'TEXT NOT NULL',
+		config: 'TEXT NOT NULL',
+		metadata: 'TEXT',
+	},
+	toRow: (event: EventType) => ({
+		data_source: event.dataSource,
+		start_time: event.startTime,
+		end_time: event.endTime,
+		title: event.title,
+		description: event.description,
+		location: event.location,
+		is_ongoing: event.isOngoing ? 1 : 0,
+		image: event.image ?? null,
+		links: toJson(event.links),
+		config: toJson(event.config),
+		metadata: toJson(event.metadata),
+	}),
+	fromRow: (row): EventType => {
+		let image = row['image']
+		let metadata = fromJson(row['metadata']!)
+		return {
+			dataSource: row['data_source'] as string,
+			startTime: row['start_time'] as string,
+			endTime: row['end_time'] as string,
+			title: row['title'] as string,
+			description: row['description'] as string,
+			location: row['location'] as string,
+			isOngoing: row['is_ongoing'] === 1,
+			links: fromJson(row['links']!) as unknown[],
+			config: fromJson(row['config']!) as EventType['config'],
+			...(typeof image === 'string' ? {image} : {}),
+			...(metadata === undefined ? {} : {metadata}),
+		}
+	},
 	async backfill(params, env, cursor) {
 		switch (params.kind) {
 			case 'ical': {

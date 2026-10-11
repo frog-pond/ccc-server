@@ -18,6 +18,35 @@ export const convosArchive = registerArchive({
 	key: () => 'carleton',
 	id: (convo: Convo) => convo.enclosure?.url || `${convo.title} ${convo.pubDate}`,
 	at: (convo: Convo) => Date.parse(convo.pubDate),
+	columns: {
+		title: 'TEXT NOT NULL',
+		description: 'TEXT NOT NULL',
+		pub_date: 'TEXT NOT NULL',
+		enclosure_type: 'TEXT',
+		enclosure_url: 'TEXT',
+		enclosure_length: 'TEXT',
+	},
+	toRow: (convo: Convo) => ({
+		title: convo.title,
+		description: convo.description,
+		pub_date: convo.pubDate,
+		enclosure_type: convo.enclosure?.type ?? null,
+		enclosure_url: convo.enclosure?.url ?? null,
+		enclosure_length: convo.enclosure?.length ?? null,
+	}),
+	fromRow: (row): Convo => ({
+		title: row['title'] as string,
+		description: row['description'] as string,
+		pubDate: row['pub_date'] as string,
+		enclosure:
+			row['enclosure_url'] === null
+				? null
+				: {
+						type: row['enclosure_type'] as string,
+						url: row['enclosure_url'] as string,
+						length: row['enclosure_length'] as string,
+					},
+	}),
 	async backfill() {
 		let convos = JSON.parse(JSON.stringify(allConvosFrom(await readPodcast()))) as Convo[]
 		return {items: convos, next: null}

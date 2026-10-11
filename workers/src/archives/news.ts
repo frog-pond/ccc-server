@@ -1,6 +1,6 @@
 import {feedItemsFrom} from '../../../source/feeds/wp-json-shape.ts'
 import type {FeedItemType} from '../../../source/feeds/types.ts'
-import {registerArchive} from '../archive.ts'
+import {fromJson, registerArchive, toJson} from '../archive.ts'
 import {upstream} from '../upstream.ts'
 
 /// Posts a backfill step reads. Small, so one step stays one modest request.
@@ -35,6 +35,36 @@ export const newsArchive = registerArchive({
 	key: ({posts}: NewsArchiveParams) => posts,
 	id: (item: FeedItemType) => item.link ?? `${item.title} ${item.datePublished ?? ''}`,
 	at: (item: FeedItemType) => (item.datePublished ? Date.parse(item.datePublished) : 0),
+	columns: {
+		link: 'TEXT',
+		title: 'TEXT NOT NULL',
+		date_published: 'TEXT',
+		excerpt: 'TEXT',
+		content: 'TEXT NOT NULL',
+		featured_image: 'TEXT',
+		authors: 'TEXT NOT NULL',
+		categories: 'TEXT NOT NULL',
+	},
+	toRow: (item: FeedItemType) => ({
+		link: item.link,
+		title: item.title,
+		date_published: item.datePublished,
+		excerpt: item.excerpt,
+		content: item.content,
+		featured_image: item.featuredImage,
+		authors: toJson(item.authors),
+		categories: toJson(item.categories),
+	}),
+	fromRow: (row): FeedItemType => ({
+		authors: fromJson(row['authors']!) as string[],
+		categories: fromJson(row['categories']!) as string[],
+		content: row['content'] as string,
+		datePublished: row['date_published'] as string | null,
+		excerpt: row['excerpt'] as string | null,
+		featuredImage: row['featured_image'] as string | null,
+		link: row['link'] as string | null,
+		title: row['title'] as string,
+	}),
 	async backfill({posts}, _env, cursor) {
 		let endpoint = new URL(posts)
 		if (endpoint.protocol !== 'https:' || !NEWS_HOSTS.has(endpoint.hostname)) {

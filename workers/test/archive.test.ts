@@ -202,6 +202,7 @@ describe('?before=', () => {
 	test('pages back through a calendar, soonest first, as of now', async () => {
 		let event = (title: string, days: number): EventType =>
 			({
+				dataSource: 'ical',
 				title,
 				startTime: new Date(NOW + days * DAY).toISOString(),
 				endTime: new Date(NOW + days * DAY + 3600_000).toISOString(),
@@ -240,5 +241,39 @@ describe('?before=', () => {
 		let response = await get('/edu.carleton/convos/archived?before=2030-01-14')
 		let page = (await response.json()) as Convo[]
 		expect(page.map((c) => c.title)).toEqual(['c', 'b'])
+	})
+})
+
+describe('an archive item', () => {
+	test('comes back as it went in, from its own columns', async () => {
+		let event: EventType = {
+			dataSource: 'ical',
+			title: 'Concert',
+			startTime: new Date(NOW - DAY).toISOString(),
+			endTime: new Date(NOW - DAY + 3600_000).toISOString(),
+			isOngoing: false,
+			location: 'Boe Chapel',
+			description: 'Music',
+			links: [{href: 'https://example.com'}],
+			config: {startTime: true, endTime: true, subtitle: 'location'},
+			image: 'https://example.com/a.jpg',
+			metadata: {uid: 'c1'},
+		}
+		let bare: EventType = {...event, title: 'Bare', metadata: undefined, image: undefined}
+		delete bare.metadata
+		delete bare.image
+		let params = {kind: 'ical', url: NORTHFIELD} as const
+		await recordItems(env, calendarArchive, params, [event, bare])
+		expect(await itemsBefore(env, calendarArchive, params, NOW, 10)).toEqual(
+			expect.arrayContaining([event, bare]),
+		)
+		await runInDurableObject(calendarStub(), (_do, state) => {
+			let columns = state.storage.sql
+				.exec<{name: string}>("SELECT name FROM pragma_table_info('entries')")
+				.toArray()
+				.map(({name}) => name)
+			expect(columns).toEqual(expect.arrayContaining(['title', 'start_time', 'location']))
+			expect(columns).not.toContain('item')
+		})
 	})
 })
