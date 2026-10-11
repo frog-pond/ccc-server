@@ -1,5 +1,5 @@
 import {DurableObject} from 'cloudflare:workers'
-import {archives, type Span} from './archive.ts'
+import {archives, type Archive, type Row, type Span} from './archive.ts'
 import {clock} from './clock.ts'
 import {notingRetryAfter} from './conditional.ts'
 
@@ -30,13 +30,7 @@ export class ArchiveDO extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env)
 		ctx.storage.sql.exec(`
-			CREATE TABLE IF NOT EXISTS items (
-				id TEXT PRIMARY KEY,
-				-- when it happens or was published, in milliseconds
-				at INTEGER NOT NULL,
-				item TEXT NOT NULL
-			);
-			CREATE INDEX IF NOT EXISTS items_at ON items (at, id);
+			DROP TABLE IF EXISTS items;
 			CREATE TABLE IF NOT EXISTS state (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				name TEXT,
@@ -49,6 +43,45 @@ export class ArchiveDO extends DurableObject<Env> {
 				last_error TEXT
 			);
 			INSERT OR IGNORE INTO state (id) VALUES (1);`)
+	}
+
+	/// The table for this feed's items, with a column for each of the archive's
+	/// fields. Its shape is the archive's, so it is made once the feed is known.
+	#table(archive: Archive<never, unknown>) {
+		let columns = Object.entries(archive.columns)
+			.map(([name, type]) => `${name} ${type}`)
+			.join(',\n\t\t\t\t')
+		this.ctx.storage.sql.exec(`
+			CREATE TABLE IF NOT EXISTS entries (
+				id TEXT PRIMARY KEY,
+				-- when it happens or was published, in milliseconds
+				at INTEGER NOT NULL,
+				${columns}
+			);
+			CREATE INDEX IF NOT EXISTS entries_at ON entries (at, id);`)
+	}
+
+	/// Stores an item. `replace` is for a live read's copy, which is fresher
+	/// than one already stored; a step back through the history leaves the
+	/// stored one as it is.
+	#put(archive: Archive<never, unknown>, item: unknown, replace: boolean) {
+		let row = archive.toRow(item as never)
+		let names = ['id', 'at', ...Object.keys(archive.columns)]
+		let values = [
+			archive.id(item as never),
+			archive.at(item as never),
+			...Object.keys(archive.columns).map((name) => row[name] ?? null),
+		]
+		let conflict = replace
+			? `ON CONFLICT (id) DO UPDATE SET ${names
+					.slice(1)
+					.map((name) => `${name} = excluded.${name}`)
+					.join(', ')}`
+			: 'ON CONFLICT (id) DO NOTHING'
+		this.ctx.storage.sql.exec(
+			`INSERT INTO entries (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')}) ${conflict}`,
+			...values,
+		)
 	}
 
 	#state(): State {
@@ -79,21 +112,14 @@ export class ArchiveDO extends DurableObject<Env> {
 		let archive = archives[name]
 		if (!archive) throw new Error(`unknown archive: ${name}`)
 		await this.#begin(name, params)
+		this.#table(archive)
 		let sql = this.ctx.storage.sql
-		for (let item of items) {
-			sql.exec(
-				`INSERT INTO items (id, at, item) VALUES (?, ?, ?)
-					ON CONFLICT (id) DO UPDATE SET at = excluded.at, item = excluded.item`,
-				archive.id(item as never),
-				archive.at(item as never),
-				JSON.stringify(item),
-			)
-		}
+		for (let item of items) this.#put(archive, item, true)
 		if (span) {
 			let from = Math.max(span.from, clock.now())
 			let listed = JSON.stringify(items.map((item) => archive.id(item as never)))
 			sql.exec(
-				`DELETE FROM items WHERE at > ? AND at <= ?
+				`DELETE FROM entries WHERE at > ? AND at <= ?
 					AND id NOT IN (SELECT value FROM json_each(?))`,
 				from,
 				Number.isFinite(span.to) ? span.to : Number.MAX_SAFE_INTEGER,
@@ -109,16 +135,18 @@ export class ArchiveDO extends DurableObject<Env> {
 		before: number,
 		limit: number,
 	): Promise<{state: 'ok'; items: unknown[]} | {state: 'error'; error: string}> {
-		if (!archives[name]) return {state: 'error', error: `unknown archive: ${name}`}
+		let archive = archives[name]
+		if (!archive) return {state: 'error', error: `unknown archive: ${name}`}
 		await this.#begin(name, params)
+		this.#table(archive)
 		let items = this.ctx.storage.sql
-			.exec<{item: string}>(
-				'SELECT item FROM items WHERE at < ? ORDER BY at DESC, id DESC LIMIT ?',
+			.exec<Row>(
+				'SELECT * FROM entries WHERE at < ? ORDER BY at DESC, id DESC LIMIT ?',
 				before,
 				limit,
 			)
 			.toArray()
-			.map(({item}) => JSON.parse(item) as unknown)
+			.map((row) => archive.fromRow(row))
 		return {state: 'ok', items}
 	}
 
@@ -133,6 +161,7 @@ export class ArchiveDO extends DurableObject<Env> {
 			await this.#wake(state.backoff_until)
 			return
 		}
+		this.#table(archive)
 		let sql = this.ctx.storage.sql
 		let cursor = state.cursor
 		let retryAfter = 0
@@ -144,14 +173,7 @@ export class ArchiveDO extends DurableObject<Env> {
 				retryAfter = noted.retryAfter
 				if (noted.result.status === 'rejected') throw noted.result.reason
 				let found = noted.result.value
-				for (let item of found.items) {
-					sql.exec(
-						'INSERT OR IGNORE INTO items (id, at, item) VALUES (?, ?, ?)',
-						archive.id(item as never),
-						archive.at(item as never),
-						JSON.stringify(item),
-					)
-				}
+				for (let item of found.items) this.#put(archive, item, false)
 				cursor = found.next
 				sql.exec(
 					'UPDATE state SET cursor = ?, done = ?, failures = 0, backoff_until = 0, last_error = NULL WHERE id = 1',
@@ -176,13 +198,18 @@ export class ArchiveDO extends DurableObject<Env> {
 
 	/// How far the walk back has got, for a look at the archive.
 	async status() {
-		let {cursor, done, failures, last_error} = this.#state()
-		let {n} = this.ctx.storage.sql.exec<{n: number}>('SELECT count(*) AS n FROM items').one()
+		let state = this.#state()
+		let {cursor, done, failures, last_error} = state
+		let archive = state.name ? archives[state.name] : undefined
+		if (archive) this.#table(archive)
+		let n = archive
+			? this.ctx.storage.sql.exec<{n: number}>('SELECT count(*) AS n FROM entries').one().n
+			: 0
 		return {items: n, cursor, done: done === 1, failures, lastError: last_error}
 	}
 
 	async purge() {
-		this.ctx.storage.sql.exec('DELETE FROM items')
+		this.ctx.storage.sql.exec('DROP TABLE IF EXISTS entries')
 		this.ctx.storage.sql.exec(
 			`UPDATE state SET name = NULL, params = NULL, cursor = NULL, done = 0, failures = 0,
 				backoff_until = 0, last_error = NULL WHERE id = 1`,
