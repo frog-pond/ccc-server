@@ -10,6 +10,7 @@ import {
 } from './conditional.ts'
 import type {Served, SourceResult} from './define-source.ts'
 import {registry} from './registry.ts'
+import {note} from './trace.ts'
 
 const MIN_BACKOFF = 30_000
 const MAX_BACKOFF = 3_600_000
@@ -217,14 +218,18 @@ export class SourceDO extends DurableObject<Env> {
 			return this.#row()!
 		} catch (err) {
 			let failures = row.failures + 1
+			// at least as long as the site asked, when it said
+			let wait = Math.max(
+				Math.min(MIN_BACKOFF * 2 ** (failures - 1), MAX_BACKOFF),
+				context.retryAfter,
+			)
 			this.ctx.storage.sql.exec(
 				'UPDATE entry SET failures = ?, backoff_until = ?, last_error = ? WHERE id = 1',
 				failures,
-				// at least as long as the site asked, when it said
-				now +
-					Math.max(Math.min(MIN_BACKOFF * 2 ** (failures - 1), MAX_BACKOFF), context.retryAfter),
+				now + wait,
 				String(err),
 			)
+			note({'ccc.source.failures': failures, 'ccc.source.backoff_ms': wait})
 			throw err
 		} finally {
 			await this.#schedule()
@@ -246,6 +251,7 @@ export class SourceDO extends DurableObject<Env> {
 	override async alarm() {
 		let row = this.#row()
 		if (!row || clock.now() - row.last_read > IDLE_AFTER) return
+		note({'ccc.source': row.name})
 		try {
 			await this.#refresh()
 		} catch {

@@ -355,6 +355,19 @@ in `workers/package.json` too. The `workers-standalone-build` CI job installs an
 builds that way, because the `workers` job installs from the root and cannot see
 a missing one.
 
+## Tracing
+
+One request in ten is traced (`observability.traces` in `wrangler.jsonc`). The
+runtime traces each upstream fetch with its status, each Durable Object call,
+each SQL query and each alarm on its own; `src/trace.ts` adds what it cannot
+see: the request's `ccc.campus`, whether it came to a Node host
+(`ccc.legacy_host`) and its `http.response.status_code` (a 304 is an ETag
+match), a `source <name>` span for each source read with `ccc.source.state`
+(`fresh`, `stale`, `stale-error` or `error`), and on the objects
+`ccc.upstream.retry_after_ms`, `ccc.source.failures` and `ccc.source.backoff_ms`.
+A secret never goes in an upstream address, since traces record it: the Google
+key is the `X-Goog-Api-Key` header.
+
 ## Data files, by college
 
 The small JSON files each college publishes on GitHub Pages (faqs, contacts,

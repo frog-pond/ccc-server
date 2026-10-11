@@ -27,6 +27,7 @@ import {
 	searchParams,
 } from '../../source/ccci-stolaf-college/v1/streams-shape.ts'
 import {CONVO_ID, archivedConvos, convoDetail} from './sources/convos.ts'
+import {note} from './trace.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -315,6 +316,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let campus = prefix ? CAMPUSES.get(prefix) : undefined
 	let path = mounted?.[2]
 	if (!prefix || !campus || !path) return json({error: 'not found'}, 404)
+	note({'ccc.campus': prefix})
 
 	let feed = /^\/news\/([^/]+)$/.exec(path)?.[1]
 	if (feed !== undefined && Object.hasOwn(campus.news, feed) && campus.news[feed]) {

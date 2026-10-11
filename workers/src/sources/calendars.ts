@@ -117,7 +117,8 @@ export type GoogleCalendarParams = {calendarId: string}
 const GOOGLE_PAGE = 50
 
 /// A Google calendar's next fifty events, the way `googleCalendar` does for the
-/// Node server. The key is a secret of this worker, not part of what is stored.
+/// Node server. The key is a secret of this worker, not part of what is stored,
+/// and goes in a header, not the address, which traces of the fetch record.
 export const googleCalendar = defineSource({
 	name: 'calendar-google',
 	key: ({calendarId}: GoogleCalendarParams) => calendarId,
@@ -135,10 +136,11 @@ export const googleCalendar = defineSource({
 			showDeleted: 'false',
 			singleEvents: 'true',
 			timeMin: at.toISOString(),
-			key,
 		}).toString()
 
-		let response = await fetchFrom(new Set(['www.googleapis.com']), url.href)
+		let response = await fetchFrom(new Set(['www.googleapis.com']), url.href, {
+			headers: {'X-Goog-Api-Key': key},
+		})
 		return eventsFromGoogle(await response.json(), at)
 	},
 	// a full read stops at its fiftieth event, so only events before that one

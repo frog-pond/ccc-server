@@ -204,10 +204,12 @@ describe.each(['edu.stolaf', 'edu.carleton'])('%s calendars', (campus) => {
 		let response = await get(`/${campus}/calendar/krlx-schedule`)
 		expect(response.status).toBe(200)
 		expect(await response.text()).not.toContain('test-calendar-key')
-		let [url] = callsTo(GOOGLE)[0] ?? []
+		let [url, init] = callsTo(GOOGLE)[0] ?? []
 		let asked = new URL(String(url))
 		expect(asked.pathname).toBe('/calendar/v3/calendars/krlxradio88.1%40gmail.com/events')
-		expect(asked.searchParams.get('key')).toBe('test-calendar-key')
+		// the key is a header, so the address a trace records does not carry it
+		expect(asked.searchParams.has('key')).toBe(false)
+		expect(new Headers(init?.headers).get('X-Goog-Api-Key')).toBe('test-calendar-key')
 		expect(asked.searchParams.get('timeMin')).toBe('2030-10-09T12:00:00.000Z')
 	})
 

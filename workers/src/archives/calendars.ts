@@ -69,9 +69,12 @@ export const calendarArchive = registerArchive({
 					timeMin: new Date(now - GOOGLE_HISTORY).toISOString(),
 					timeMax: new Date(now).toISOString(),
 					...(cursor ? {pageToken: cursor} : {}),
-					key,
 				}).toString()
-				let body = (await (await fetchFrom(new Set(['www.googleapis.com']), url.href)).json()) as {
+				let body = (await (
+					await fetchFrom(new Set(['www.googleapis.com']), url.href, {
+						headers: {'X-Goog-Api-Key': key},
+					})
+				).json()) as {
 					nextPageToken?: unknown
 				}
 				let next = typeof body.nextPageToken === 'string' ? body.nextPageToken : null

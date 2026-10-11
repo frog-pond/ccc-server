@@ -1,4 +1,5 @@
 import {AsyncLocalStorage} from 'node:async_hooks'
+import {note} from './trace.ts'
 
 /// Conditional requests for the sources (https://rachelbythebay.com/w/2022/03/07/get/):
 /// while a source loads, every GET it makes through `upstream` sends the
@@ -101,6 +102,7 @@ export async function conditionalFetch(
 	if (response.status === 429 || response.status === 503) {
 		let wait = retryAfterMs(response.headers.get('Retry-After'), now)
 		context.retryAfter = Math.max(context.retryAfter, wait)
+		note({'ccc.upstream.retry_after_ms': context.retryAfter})
 	}
 	if (response.status === 304 && kept) {
 		context.used.set(key, kept)
