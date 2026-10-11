@@ -6,7 +6,8 @@ import {campusPaths, type ListedRoute} from './routes.ts'
 /// campus (`stolaf.api.frogpond.tech`, `carleton.api.frogpond.tech`, or their
 /// emoji names), with routes under `/v1`. On such a host a `/v1` path is
 /// answered by the campus route it names, so the same Worker serves old builds
-/// and new ones.
+/// and new ones. The Node server also answers its `/v1` routes under the campus
+/// prefixes (`/edu.stolaf/v1/...`), and so does the Worker, on any host.
 
 /// A host's first label, and the campus it stands for. Emoji labels arrive in
 /// their punycode form.
@@ -21,6 +22,19 @@ const HOST_CAMPUSES: Record<string, string> = {
 export function legacyCampus(url: URL): string | undefined {
 	let label = url.hostname.split('.')[0] ?? ''
 	return Object.hasOwn(HOST_CAMPUSES, label) ? HOST_CAMPUSES[label] : undefined
+}
+
+/// Where a request's Node routes are: the campus, the mount its `/v1` paths
+/// sit under (`/edu.stolaf`, or nothing on a Node host), and the path below
+/// that mount. Undefined for a request to neither form.
+export function legacyMount(url: URL): {campus: string; mount: string; path: string} | undefined {
+	let prefixed = /^\/([^/]+)(\/v1(?:\/.*)?)$/u.exec(url.pathname)
+	let prefix = prefixed?.[1]
+	if (prefix && CAMPUSES.has(prefix)) {
+		return {campus: prefix, mount: `/${prefix}`, path: prefixed?.[2] ?? ''}
+	}
+	let campus = legacyCampus(url)
+	return campus ? {campus, mount: '', path: url.pathname} : undefined
 }
 
 /// A Node path as the campus route it names: `/v1` dropped, and the named
@@ -39,14 +53,14 @@ export function toLegacyPath(path: string): string {
 }
 
 /// The campus's routes in the Node server's `/v1/routes` shape, at their Node
-/// addresses, with its greeting and ping.
-export function legacyRouteListing(campus: string): ListedRoute[] {
+/// addresses under `mount`, with its greeting and ping.
+export function legacyRouteListing(campus: string, mount = ''): ListedRoute[] {
 	let table = CAMPUSES.get(campus)
 	if (!table) return []
 	let paths = ['/', '/ping', ...campusPaths(table).map(toLegacyPath)]
 	return paths
 		.map((path) => ({
-			path,
+			path: `${mount}${path}`,
 			displayName: path.replace(/^\/v[0-9]+(?:\.[0-9]+)*\//u, ''),
 			methods: ['GET'],
 			params: [...path.matchAll(/:([a-zA-Z]+)/gu)].map(([, name]) => name ?? ''),
@@ -62,26 +76,27 @@ const text = (body: string) =>
 		},
 	})
 
-/// Answers a request to one of the Node server's hosts: its greeting, ping and
-/// route listing directly, and a `/v1` route by asking `route` for the campus
-/// route it names. A `Link` the answer carries points back at Node addresses.
-/// Undefined when the request is not to a Node host, or not to one of its
-/// paths, so the campus routes answer as usual.
+/// Answers a request at one of the Node server's addresses: on a Node host its
+/// greeting and ping directly, its route listing directly, and a `/v1` route by
+/// asking `route` for the campus route it names. A `Link` the answer carries
+/// points back at Node addresses under the same mount. Undefined when the
+/// request is not at a Node address, so the campus routes answer as usual.
 export async function legacy(
 	request: Request,
 	route: (request: Request) => Promise<Response>,
 ): Promise<Response | undefined> {
 	let url = new URL(request.url)
-	let campus = legacyCampus(url)
-	if (!campus || request.method !== 'GET') return undefined
-	if (url.pathname === '/') return text('Hello world!')
-	if (url.pathname === '/ping') return text('pong')
-	if (url.pathname === '/v1/routes') {
-		return Response.json(legacyRouteListing(campus), {
+	let found = legacyMount(url)
+	if (!found || request.method !== 'GET') return undefined
+	let {campus, mount} = found
+	if (!mount && found.path === '/') return text('Hello world!')
+	if (!mount && found.path === '/ping') return text('pong')
+	if (found.path === '/v1/routes') {
+		return Response.json(legacyRouteListing(campus, mount), {
 			headers: {'Cache-Control': `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`},
 		})
 	}
-	let path = fromLegacyPath(url.pathname)
+	let path = fromLegacyPath(found.path)
 	if (path === undefined) return undefined
 
 	let inner = new URL(url)
@@ -94,7 +109,7 @@ export async function legacy(
 	let rewritten = link.replace(/<([^>]*)>/gu, (whole, target: string) => {
 		if (!target.startsWith(prefix)) return whole
 		let [pathname = '', query] = target.slice(prefix.length - 1).split(/\?(.*)/su)
-		return `<${toLegacyPath(pathname)}${query === undefined ? '' : `?${query}`}>`
+		return `<${mount}${toLegacyPath(pathname)}${query === undefined ? '' : `?${query}`}>`
 	})
 	let headers = new Headers(response.headers)
 	headers.set('Link', rewritten)

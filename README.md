@@ -67,6 +67,17 @@ including institution prefixes and query strings.
 The existing `INSTITUTION=stolaf-college` and
 `INSTITUTION=carleton-college` modes continue to serve `/v1/`.
 
+### Campus prefixes
+
+Every mode also serves each institution it runs under the campus prefix the
+Cloudflare Worker uses: `/edu.stolaf/v1/...` for St. Olaf and
+`/edu.carleton/v1/...` for Carleton, including `/edu.stolaf/ping`,
+`/edu.stolaf/_cache` and a `/edu.stolaf/v1/routes` listing at the prefixed
+addresses. A single-institution server answers only its own prefix. The Worker
+answers the same `/edu.<campus>/v1/...` addresses, so an app using that base
+works against either server. Cache keys include the prefix, so `/v1/x` and
+`/edu.stolaf/v1/x` are cached separately.
+
 ### Local Network Discovery (mDNS)
 
 When developing alongside a React Native client on the same network, you can advertise the server via mDNS/Bonjour so the client can discover it automatically without typing the IP address.

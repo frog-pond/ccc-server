@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {beforeEach, test} from 'node:test'
-import {createApp, InstitutionSchema} from './app.ts'
+import {CAMPUS_PREFIXES, createApp, InstitutionSchema} from './app.ts'
 import {api as stolafApi, cache as stolafCache} from '../ccci-stolaf-college/index.ts'
 import {api as carletonApi, cache as carletonCache} from '../ccci-carleton-college/index.ts'
 import {http} from '../ccc-lib/http.ts'
@@ -412,6 +412,38 @@ void test('mixed-case route listings return usable paths in single and combined 
 					assert.equal((await fetch(`${base}${prefix}/v1/routes/v1/routes`)).status, 404)
 				}),
 			)
+		}),
+	)
+})
+
+void test('each institution also answers under its campus prefix, in single and combined modes', async (t) => {
+	await Promise.all(
+		(['all', 'stolaf-college', 'carleton-college'] as const).map(async (mode) => {
+			const base = await serve(t, mode)
+			const served = mode === 'all' ? (['stolaf-college', 'carleton-college'] as const) : [mode]
+			await Promise.all(
+				served.map(async (institution) => {
+					const prefix = CAMPUS_PREFIXES[institution]
+					assert.equal(await (await fetch(`${base}${prefix}/ping`)).text(), 'pong')
+					const response = await fetch(`${base}${prefix}/v1/routes`)
+					assert.equal(response.status, 200)
+					const routes = (await response.json()) as {path: string; displayName: string}[]
+					assert.ok(routes.every((route) => route.path.startsWith(`${prefix}/`)))
+					assert.ok(routes.some((route) => route.path === `${prefix}/v1/routes`))
+					const converted = await fetch(`${base}${prefix}/v1/util/html-to-md`, {
+						method: 'QUERY',
+						headers: {'content-type': 'application/json'},
+						body: JSON.stringify({text: '<b>hi</b>'}),
+					})
+					assert.equal(await converted.text(), '**hi**')
+				}),
+			)
+			if (mode !== 'all') {
+				const other = mode === 'stolaf-college' ? 'carleton-college' : 'stolaf-college'
+				assert.equal((await fetch(`${base}${CAMPUS_PREFIXES[other]}/v1/routes`)).status, 404)
+				const routes = (await (await fetch(`${base}/v1/routes`)).json()) as {path: string}[]
+				assert.ok(routes.every((route) => !route.path.startsWith('/edu.')))
+			}
 		}),
 	)
 })
