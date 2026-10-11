@@ -10,12 +10,7 @@ import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
 import {jobs, org, orgCategories, orgs} from './student-orgs.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
 import {schedules, type ScheduleParams} from './sources/schedules.ts'
-import {
-	hoursAt,
-	hoursOn,
-	isCalendarDate,
-	secondsUntilMidnight,
-} from '../../source/schedules/active.ts'
+import {hoursAt, secondsUntilMidnight} from '../../source/schedules/active.ts'
 import {imageUrl, isPublishedImage} from '../../source/ccc-lib/images-shape.ts'
 import {routeListing} from './routes.ts'
 import {historyPage, parseBefore} from './history.ts'
@@ -169,22 +164,22 @@ const redirect = (location: string) =>
 /// The building hours or the break calendar, resolved together, as the Node
 /// server's `/spaces/hours` and `/breaks` answer them. The hours are today's,
 /// with a break's schedule in place of the usual one while it lasts, so they
-/// are not kept past campus midnight; `?date=YYYY-MM-DD` asks for another
-/// campus date's instead. A failure with nothing stored is a 502, kept briefly.
+/// are not kept past campus midnight; `?breaks=none` leaves the usual
+/// schedules in place. A failure with nothing stored is a 502, kept briefly.
 async function schedule(
 	env: Env,
 	params: ScheduleParams,
 	which: 'hours' | 'calendar',
 	url: URL,
 ): Promise<Response> {
-	let date = which === 'hours' ? (url.searchParams.get('date') ?? undefined) : undefined
-	if (date !== undefined && !isCalendarDate(date)) {
-		return json({message: 'date must be YYYY-MM-DD'}, 400, ONE_MINUTE)
+	let breaks = which === 'hours' ? url.searchParams.get('breaks') : null
+	if (breaks !== null && breaks !== 'none') {
+		return json({message: 'breaks must be none'}, 400, ONE_MINUTE)
 	}
 	try {
 		let {value} = await fetchSource(env, schedules, params)
 		if (which === 'calendar') return json(value.calendar, 200, CLIENT_MAX_AGE)
-		if (date !== undefined) return json(hoursOn(value, date), 200, CLIENT_MAX_AGE)
+		if (breaks === 'none') return json(value.hours, 200, CLIENT_MAX_AGE)
 		// read after the fetch, which can run across campus midnight
 		let now = clock.now()
 		let keep = Math.min(CLIENT_MAX_AGE, secondsUntilMidnight(now, value.calendar.data.timezone))

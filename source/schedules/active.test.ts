@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {describe, it} from 'node:test'
-import {
-	activeBreaks,
-	campusDate,
-	hoursAt,
-	hoursOn,
-	isCalendarDate,
-	secondsUntilMidnight,
-} from './active.ts'
+import {activeBreaks, campusDate, hoursAt, secondsUntilMidnight} from './active.ts'
 import {resolveScheduleResponses} from './resolve.ts'
 
 function fixture(name: string): unknown {
@@ -82,23 +75,5 @@ void describe('hours at a moment', () => {
 			space(hours, 'Example office').schedule,
 			office.breakSchedule?.['easter']?.schedule,
 		)
-	})
-})
-
-void describe('hours on a named date', () => {
-	void it('accepts only real dates', () => {
-		assert.equal(isCalendarDate('2026-10-11'), true)
-		assert.equal(isCalendarDate('2026-02-30'), false)
-		assert.equal(isCalendarDate('2026-10-11T00:00'), false)
-		assert.equal(isCalendarDate('tomorrow'), false)
-	})
-
-	void it('is what hoursAt gives at a moment on that date', () => {
-		let input = responses()
-		assert.deepEqual(
-			hoursOn(input, '2026-10-11'),
-			hoursAt(input, Date.parse('2026-10-11T18:00:00Z')),
-		)
-		assert.equal(hoursOn(input, '2026-11-01'), input.hours)
 	})
 })

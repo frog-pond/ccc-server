@@ -71,24 +71,17 @@ export function activeBreaks(calendar: CalendarResponse, date: string): string[]
 	return active.sort((a, b) => a.days - b.days).map(({key}) => key)
 }
 
-/** Whether `value` is a real calendar date written YYYY-MM-DD. */
-export function isCalendarDate(value: string): boolean {
-	if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false
-	let parsed = new Date(`${value}T00:00:00Z`)
-	return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value)
-}
-
 /**
- * The hours as they stand on the campus date `date`: during a break, each
- * space with a schedule for it serves that schedule and its exceptions as its
- * own, so a client that only reads `schedule` shows the break hours.
- * `breakSchedule` is kept whole, and spaces without an entry for the break
- * keep their usual hours.
+ * The hours as they stand at `now`: during a break, each space with a schedule
+ * for it serves that schedule and its exceptions as its own, so a client that
+ * only reads `schedule` shows the break hours. `breakSchedule` is kept whole,
+ * and spaces without an entry for the break keep their usual hours.
  */
-export function hoursOn<T>(
+export function hoursAt<T>(
 	responses: {hours: {data: ResolvedSpace<T>[]}; calendar: CalendarResponse},
-	date: string,
+	now: number,
 ): {data: ResolvedSpace<T>[]} {
+	let date = campusDate(now, responses.calendar.data.timezone)
 	let active = activeBreaks(responses.calendar, date)
 	if (active.length === 0) return responses.hours
 	return {
@@ -101,12 +94,4 @@ export function hoursOn<T>(
 			return {...space, schedule: policy.schedule, exceptions: policy.exceptions}
 		}),
 	}
-}
-
-/** The hours as they stand at `now`, on that moment's campus date (`hoursOn`). */
-export function hoursAt<T>(
-	responses: {hours: {data: ResolvedSpace<T>[]}; calendar: CalendarResponse},
-	now: number,
-): {data: ResolvedSpace<T>[]} {
-	return hoursOn(responses, campusDate(now, responses.calendar.data.timezone))
 }

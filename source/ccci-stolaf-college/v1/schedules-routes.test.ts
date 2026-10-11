@@ -109,17 +109,17 @@ void test('/spaces/hours serves the break schedule as the schedule during a brea
 	)
 })
 
-void test('/spaces/hours?date= serves that campus date, not today', async (t) => {
+void test('/spaces/hours?breaks=none keeps the usual schedules during a break', async (t) => {
 	let {base, advance} = await serve(t)
 	let {send} = upstream(t)
-	// during fall break, asking for a day after it
+	// 11:30 PM in Northfield on the second day of fall break
 	advance(Date.parse('2026-10-12T04:30:00Z'))
-	let after = await send(`${base}/v1/spaces/hours?date=2026-11-01`)
-	assert.equal(after.status, 200)
-	assert.equal(after.headers.get('cache-control'), 'public, max-age=3600')
-	assert.deepEqual(await after.json(), fixture('spaces-resolved'))
+	let usual = await send(`${base}/v1/spaces/hours?breaks=none`)
+	assert.equal(usual.status, 200)
+	assert.equal(usual.headers.get('cache-control'), 'public, max-age=3600')
+	assert.deepEqual(await usual.json(), fixture('spaces-resolved'))
 
-	let bad = await send(`${base}/v1/spaces/hours?date=next-week`)
+	let bad = await send(`${base}/v1/spaces/hours?breaks=all`)
 	assert.equal(bad.status, 400)
 })
 
