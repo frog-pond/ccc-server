@@ -90,6 +90,25 @@ void test('/spaces/hours resolves both published inputs against the matched cont
 	)
 })
 
+void test('/spaces/hours serves the break schedule as the schedule during a break', async (t) => {
+	let {base, advance} = await serve(t)
+	let {send} = upstream(t)
+	// 11:30 PM in Northfield on the second day of fall break
+	advance(Date.parse('2026-10-12T04:30:00Z'))
+	let response = await send(`${base}/v1/spaces/hours`)
+	assert.equal(response.status, 200)
+	// kept only until campus midnight
+	assert.equal(response.headers.get('cache-control'), 'public, max-age=1800')
+	let body = (await response.json()) as {
+		data: {schedule: unknown; exceptions: unknown; breakSchedule: Record<string, unknown>}[]
+	}
+	let resolved = fixture('spaces-resolved') as typeof body
+	assert.deepEqual(
+		body.data,
+		resolved.data.map((space) => ({...space, ...(space.breakSchedule['fall'] as object)})),
+	)
+})
+
 void test('/breaks serves only timezone, names and dates from the retained calendar', async (t) => {
 	let {base} = await serve(t)
 	let {send, requests} = upstream(t)

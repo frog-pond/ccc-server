@@ -118,6 +118,31 @@ describe('GET /edu.stolaf/spaces/hours', () => {
 		expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({redirect: 'manual'})
 	})
 
+	test("during a break, a building's break schedule is its schedule", async () => {
+		clock.now = () => Date.parse('2026-10-11T18:00:00Z')
+		let body = await (
+			await get('/edu.stolaf/spaces/hours')
+		).json<{
+			data: {
+				name: string
+				schedule: unknown
+				exceptions: unknown
+				breakSchedule: Record<string, {schedule: unknown; exceptions: unknown}>
+			}[]
+		}>()
+		for (let space of body.data) {
+			expect(space.schedule).toEqual(space.breakSchedule['fall']?.schedule)
+			expect(space.exceptions).toEqual(space.breakSchedule['fall']?.exceptions)
+		}
+	})
+
+	test('is not kept past campus midnight', async () => {
+		// 11:55 PM in Northfield
+		clock.now = () => Date.parse('2026-10-11T04:55:00Z')
+		let response = await get('/edu.stolaf/spaces/hours')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=300')
+	})
+
 	test('only the published files are fetched', async () => {
 		let source = schedules as unknown as {
 			load: (p: {hoursUrl: string; breaksUrl: string}) => Promise<unknown>
