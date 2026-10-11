@@ -3,6 +3,9 @@
 	"main": "workers/src/worker.ts",
 	"compatibility_date": "2026-08-01",
 	"compatibility_flags": ["nodejs_compat"],
+	"cache": {
+		"enabled": true,
+	},
 	"durable_objects": {
 		"bindings": [
 			{"name": "SOURCE", "class_name": "SourceDO"},
