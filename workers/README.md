@@ -139,8 +139,9 @@ day if its host fails; student work keeps its own schedule, below.
   against the calendar they were read with. During a break, each building with
   a schedule for it has that schedule and its exceptions in place of the usual
   ones (`hoursAt` in `source/schedules/active.ts`, the shortest break first when
-  two overlap), and the hours are not kept past campus midnight. A 502 if
-  nothing was ever stored.
+  two overlap), and the hours are not kept past campus midnight.
+  `?date=YYYY-MM-DD` answers for that campus date instead (`hoursOn`), a 400
+  for anything else. A 502 if nothing was ever stored.
 - Published files answered with a `307` to where they are published, cacheable
   for ten minutes, with nothing fetched: `/transit/bus`, `/transit/modes` and
   `/food/named/menu/the-pause` on both campuses (each its own college's file),

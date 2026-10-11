@@ -143,6 +143,14 @@ describe('GET /edu.stolaf/spaces/hours', () => {
 		expect(response.headers.get('cache-control')).toBe('public, max-age=300')
 	})
 
+	test('?date= is that campus date, not today', async () => {
+		clock.now = () => Date.parse('2026-10-11T18:00:00Z')
+		let after = await get('/edu.stolaf/spaces/hours?date=2026-11-01')
+		expect(after.headers.get('cache-control')).toBe('public, max-age=600')
+		expect(await after.json()).toEqual(JSON.parse(spacesResolved))
+		expect((await get('/edu.stolaf/spaces/hours?date=2026-13-01')).status).toBe(400)
+	})
+
 	test('only the published files are fetched', async () => {
 		let source = schedules as unknown as {
 			load: (p: {hoursUrl: string; breaksUrl: string}) => Promise<unknown>

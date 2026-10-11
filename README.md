@@ -179,7 +179,9 @@ after one minute, including when no successful snapshot exists yet.
 `/v1/spaces/hours` answers for the current campus day: during a break, each
 space with a schedule for it serves that schedule and its exceptions in place of
 the usual ones, keeping `breakSchedule` whole, and the response is not kept past
-campus midnight. `/v1/breaks` lists the breaks for clients that look ahead.
+campus midnight. `?date=YYYY-MM-DD` answers for that campus date instead (a 400
+for anything else), kept like `/v1/breaks`. `/v1/breaks` lists the breaks for
+clients that look ahead.
 
 `/_cache` lists this snapshot under both route paths (with `/stolaf` in combined
 mode). Deleting either listed key invalidates the whole pair, including any
