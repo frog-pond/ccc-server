@@ -2,7 +2,7 @@ import {exports} from 'cloudflare:workers'
 import {beforeEach, describe, expect, test} from 'vitest'
 import {clock} from '../src/clock.ts'
 import {CAMPUSES} from '../src/campuses.ts'
-import {fromLegacyPath, legacyCampus, toLegacyPath} from '../src/legacy.ts'
+import {fromLegacyPath, legacy, legacyCampus, legacyMount, toLegacyPath} from '../src/legacy.ts'
 import {campusPaths} from '../src/routes.ts'
 import stolafNode from '../../source/ccci-stolaf-college/index.ts?raw'
 import carletonNode from '../../source/ccci-carleton-college/index.ts?raw'
@@ -124,5 +124,80 @@ describe('a request to a Node host', () => {
 			headers: {'If-None-Match': etag ?? ''},
 		})
 		expect(again.status).toBe(304)
+	})
+})
+
+describe('the Node routes under a campus prefix', () => {
+	beforeEach(() => {
+		clock.now = () => Date.parse('2030-01-15T18:00:00Z')
+	})
+
+	test.each([
+		[
+			'https://worker.test/edu.stolaf/v1/faqs',
+			{campus: 'edu.stolaf', mount: '/edu.stolaf', path: '/v1/faqs'},
+		],
+		[
+			'https://stolaf.api.frogpond.tech/edu.carleton/v1/menu',
+			{campus: 'edu.carleton', mount: '/edu.carleton', path: '/v1/menu'},
+		],
+		[
+			'https://stolaf.api.frogpond.tech/v1/faqs',
+			{campus: 'edu.stolaf', mount: '', path: '/v1/faqs'},
+		],
+		['https://worker.test/edu.unknown/v1/faqs', undefined],
+		['https://worker.test/edu.stolaf/faqs', undefined],
+	])('%s is mounted at %o', (url, mount) => {
+		expect(legacyMount(new URL(url))).toEqual(mount)
+	})
+
+	test.each([
+		['https://worker.test/edu.stolaf/v1/faqs', '/edu.stolaf/faqs'],
+		['https://worker.test/edu.carleton/v1/spaces/hours', '/edu.carleton/spaces/hours'],
+		['https://stolaf.api.frogpond.tech/edu.stolaf/v1/a-to-z', '/edu.stolaf/a-to-z'],
+		['https://worker.test/edu.stolaf/v1/calendar/named/oleville', '/edu.stolaf/calendar/oleville'],
+		['https://worker.test/edu.carleton/v1/news/named/covid', '/edu.carleton/news/covid'],
+	])('%s is answered as %s', async (legacyUrl, path) => {
+		let [old, current] = await Promise.all([
+			fetchAt(legacyUrl),
+			fetchAt(`https://worker.test${path}`),
+		])
+		expect(old.status).toBe(current.status)
+		expect(old.headers.get('location')).toBe(current.headers.get('location'))
+		expect(await old.text()).toBe(await current.text())
+	})
+
+	test('lists the routes at their prefixed Node addresses', async () => {
+		let response = await fetchAt('https://worker.test/edu.carleton/v1/routes')
+		let routes = (await response.json()) as {path: string; displayName: string}[]
+		expect(routes.every(({path}) => path.startsWith('/edu.carleton/'))).toBe(true)
+		expect(routes).toContainEqual(
+			expect.objectContaining({
+				path: '/edu.carleton/v1/news/named/carleton-now',
+				displayName: 'news/named/carleton-now',
+			}),
+		)
+		expect(routes).toContainEqual(expect.objectContaining({path: '/edu.carleton/ping'}))
+	})
+
+	test('points a Link back at the prefixed Node address', async () => {
+		let response = await legacy(
+			new Request('https://worker.test/edu.stolaf/v1/news/named/stolaf'),
+			(inner) => {
+				expect(new URL(inner.url).pathname).toBe('/edu.stolaf/news/stolaf')
+				return Promise.resolve(
+					new Response('[]', {
+						headers: {Link: '</edu.stolaf/news/stolaf?before=2030-01-01>; rel="next"'},
+					}),
+				)
+			},
+		)
+		expect(response?.headers.get('Link')).toBe(
+			'</edu.stolaf/v1/news/named/stolaf?before=2030-01-01>; rel="next"',
+		)
+	})
+
+	test('a route that is not migrated is a 404', async () => {
+		expect((await fetchAt('https://worker.test/edu.stolaf/v1/news/rss?url=x')).status).toBe(404)
 	})
 })

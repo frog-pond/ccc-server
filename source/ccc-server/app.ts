@@ -13,6 +13,14 @@ import {ctxCacheControl} from '../ccc-koa/ctx-cache-control.ts'
 
 export const InstitutionSchema = z.enum(['stolaf-college', 'carleton-college', 'all'])
 
+/// Each institution's routes are also served under the campus prefix the
+/// Worker uses (`/edu.stolaf/v1/...`), so one app build can talk to either
+/// server.
+export const CAMPUS_PREFIXES = {
+	'stolaf-college': '/edu.stolaf',
+	'carleton-college': '/edu.carleton',
+} as const
+
 export async function createApp(institution: z.infer<typeof InstitutionSchema>) {
 	const app = new Koa(BEHIND_NGINX)
 	ignoreClientHangUps(app)
@@ -31,11 +39,14 @@ export async function createApp(institution: z.infer<typeof InstitutionSchema>) 
 		])
 		router.use('/stolaf', stolaf.api.routes())
 		router.use('/carleton', carleton.api.routes())
+		router.use(CAMPUS_PREFIXES['stolaf-college'], stolaf.api.routes())
+		router.use(CAMPUS_PREFIXES['carleton-college'], carleton.api.routes())
 	} else {
 		const {api} = await (institution === 'stolaf-college'
 			? import('../ccci-stolaf-college/index.ts')
 			: import('../ccci-carleton-college/index.ts'))
 		router.use(api.routes())
+		router.use(CAMPUS_PREFIXES[institution], api.routes())
 	}
 
 	//
