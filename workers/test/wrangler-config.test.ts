@@ -38,10 +38,9 @@ test('production and Previews both persist logs, including invocation logs', () 
 	expect(config.previews.observability).toEqual(config.observability)
 })
 
-// One request in ten is traced, here and on Previews: every span counts against
-// the account's daily observability allowance, which logs share.
-test('production and Previews trace a sample of requests', () => {
-	const traces = {enabled: true, head_sampling_rate: 0.1, persist: true}
+// Every request is traced, here and on Previews.
+test('production and Previews trace every request', () => {
+	const traces = {enabled: true, head_sampling_rate: 1, persist: true}
 	expect(config.observability?.traces).toEqual(traces)
 	expect(config.previews.observability?.traces).toEqual(traces)
 })

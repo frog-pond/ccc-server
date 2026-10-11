@@ -209,6 +209,13 @@ route as usual. Node's arbitrary-address routes (`/v1/news/rss`,
 in the Node routers against the campus tables. The hosts still have to be
 added to the Worker as custom domains.
 
+The Node server also serves each campus's routes under its campus prefix
+(`/edu.stolaf/v1/...`, `/edu.carleton/v1/...`), and the Worker answers those
+on any host the same way, with `/<campus>/v1/routes` listing the prefixed Node
+addresses and a `Link` pointing back under the prefix. So an app that uses
+`/edu.<campus>/v1` as its base works against either server, and can move route
+by route to `/edu.<campus>/...` without `/v1`.
+
 ## Sources
 
 - `wp-news` (`src/sources/wp-news.ts`): a WordPress posts feed as feed items,
@@ -357,7 +364,7 @@ a missing one.
 
 ## Tracing
 
-One request in ten is traced (`observability.traces` in `wrangler.jsonc`). The
+Every request is traced (`observability.traces` in `wrangler.jsonc`). The
 runtime traces each upstream fetch with its status, each Durable Object call,
 each SQL query and each alarm on its own; `src/trace.ts` adds what it cannot
 see: the request's `ccc.campus`, whether it came to a Node host
