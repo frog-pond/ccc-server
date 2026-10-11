@@ -29,6 +29,11 @@ type State = {
 export class ArchiveDO extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env)
+		// objects made when items were one JSON column each
+		let legacy =
+			ctx.storage.sql
+				.exec("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'items'")
+				.toArray().length > 0
 		ctx.storage.sql.exec(`
 			DROP TABLE IF EXISTS items;
 			CREATE TABLE IF NOT EXISTS state (
@@ -43,6 +48,16 @@ export class ArchiveDO extends DurableObject<Env> {
 				last_error TEXT
 			);
 			INSERT OR IGNORE INTO state (id) VALUES (1);`)
+		if (legacy) {
+			// the dropped history is read again, from the start
+			ctx.storage.sql.exec(
+				`UPDATE state SET cursor = NULL, done = 0, failures = 0, backoff_until = 0,
+					last_error = NULL WHERE id = 1`,
+			)
+			if (env.ARCHIVE_BACKFILL !== 'off' && this.#state().name !== null) {
+				void ctx.blockConcurrencyWhile(() => ctx.storage.setAlarm(clock.now() + FOLLOW_UP))
+			}
+		}
 	}
 
 	/// The table for this feed's items, with a column for each of the archive's
