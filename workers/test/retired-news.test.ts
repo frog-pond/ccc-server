@@ -1,6 +1,6 @@
 import {exports} from 'cloudflare:workers'
 import {afterEach, beforeEach, describe, expect, test, type MockInstance} from 'vitest'
-import {deprecatedWpJson, retiredNnb, newsDown} from '../../source/feeds/deprecated.ts'
+import {deprecatedWpJson, retiredNnb} from '../../source/feeds/deprecated.ts'
 import {clock} from '../src/clock.ts'
 import {spyOnFetch} from './spy.ts'
 
