@@ -1,4 +1,4 @@
-import {DISCUSSION_URL, RETIRED_TITLE} from '../ccc-lib/deprecated.ts'
+import {DISCUSSION_URL, RETIRED_TITLE, UNAVAILABLE_TITLE} from '../ccc-lib/deprecated.ts'
 import {FeedItemSchema} from './types.ts'
 
 /// Notices in place of news feeds that are no longer published, shaped as
@@ -34,6 +34,23 @@ export function retiredNnb(now: Date | null = new Date()) {
 				'The Noon News Bulletin is no longer published. For campus announcements, see Carleton Now.',
 			link: DISCUSSION_URL,
 			title: RETIRED_TITLE,
+			featuredImage: null,
+		},
+	])
+}
+
+/// For a paper whose site is down and expected back, so this promises a
+/// return rather than ending the feed.
+export function newsDown(paper: string, now: Date | null = new Date()) {
+	return FeedItemSchema.array().parse([
+		{
+			authors: [],
+			categories: [],
+			datePublished: now?.toISOString() ?? null,
+			content: '',
+			excerpt: `${paper} is down right now. Its news will be back when it is.`,
+			link: DISCUSSION_URL,
+			title: UNAVAILABLE_TITLE,
 			featuredImage: null,
 		},
 	])

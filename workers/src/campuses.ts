@@ -1,5 +1,5 @@
 import {CARLETON_CALENDARS, CONVOS, STOLAF_CALENDARS, type Calendar} from './calendars.ts'
-import {deprecatedWpJson, retiredNnb} from '../../source/feeds/deprecated.ts'
+import {deprecatedWpJson, newsDown, retiredNnb} from '../../source/feeds/deprecated.ts'
 import type {FeedItemType} from '../../source/feeds/types.ts'
 import {CAFES, NAMED_CAFES} from './cafes.ts'
 import {fetchSource} from './client.ts'
@@ -28,9 +28,9 @@ import {
 	type WordPressSite,
 } from './sources/wordpress-api.ts'
 import {
-	CARLETONIAN_URL,
+	// CARLETONIAN_URL,
 	CARLETON_NOW_URL,
-	MESSENGER_URL,
+	// MESSENGER_URL,
 	STOLAF_NEWS_URL,
 	wpNews,
 } from './sources/wp-news.ts'
@@ -109,9 +109,13 @@ const notice = (items: FeedItemType[]): NewsFeed => ({read: () => Promise.resolv
 
 const STOLAF_NEWS = fromWordPress(STOLAF_NEWS_URL)
 const CARLETON_NOW = fromWordPress(CARLETON_NOW_URL)
-const CARLETONIAN = fromWordPress(CARLETONIAN_URL)
+// The Carletonian and the Olaf Messenger are down: their feeds answer with a
+// notice until the sites are back, when these lines replace the notices.
+// const CARLETONIAN = fromWordPress(CARLETONIAN_URL)
+const CARLETONIAN = notice(newsDown('The Carletonian', null))
 const KRLX = fromRss(KRLX_URL)
-const MESSENGER = fromWordPress(MESSENGER_URL)
+// const MESSENGER = fromWordPress(MESSENGER_URL)
+const MESSENGER = notice(newsDown('The Olaf Messenger', null))
 const NO_LONGER_UPDATED = notice(deprecatedWpJson(null))
 const NNB = notice(retiredNnb(null))
 
