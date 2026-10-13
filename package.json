@@ -73,7 +73,7 @@
     "@types/turndown": "5.0.6",
     "eslint": "10.12.0",
     "globals": "17.13.0",
-    "prettier": "3.9.9",
+    "prettier": "3.9.10",
     "typed-query-selector": "2.12.3",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.1"
