@@ -48,7 +48,7 @@ export function newsDown(paper: string, now: Date | null = new Date()) {
 			categories: [],
 			datePublished: now?.toISOString() ?? null,
 			content: '',
-			excerpt: `${paper} is down right now. Its news will be back when it is.`,
+			excerpt: `We can't connect to ${paper} right now. We're working on it.`,
 			link: DISCUSSION_URL,
 			title: UNAVAILABLE_TITLE,
 			featuredImage: null,

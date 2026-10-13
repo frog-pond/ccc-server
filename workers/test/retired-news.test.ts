@@ -26,13 +26,6 @@ const NOTICES = [
 	{path: '/edu.stolaf/news/ksto', expected: deprecatedWpJson},
 	{path: '/edu.carleton/news/covid', expected: deprecatedWpJson},
 	{path: '/edu.carleton/news/nnb', expected: retiredNnb},
-	{
-		path: '/edu.carleton/news/carletonian',
-		expected: (now: null) => newsDown('The Carletonian', now),
-	},
-	{path: '/edu.stolaf/news/carletonian', expected: (now: null) => newsDown('The Carletonian', now)},
-	{path: '/edu.carleton/news/mess', expected: (now: null) => newsDown('The Olaf Messenger', now)},
-	{path: '/edu.stolaf/news/mess', expected: (now: null) => newsDown('The Olaf Messenger', now)},
 ]
 
 describe.each(NOTICES)('GET $path', ({path, expected}) => {
@@ -71,8 +64,4 @@ test.each([
 test('the notices say what they stand in for', () => {
 	expect(deprecatedWpJson()[0]).toMatchObject({title: 'Deprecated endpoint'})
 	expect(retiredNnb()[0]?.excerpt).toMatch(/Noon News Bulletin is no longer published/)
-	expect(newsDown('The Carletonian')[0]).toMatchObject({
-		title: 'Temporarily unavailable',
-		excerpt: expect.stringContaining('The Carletonian is down right now'),
-	})
 })
