@@ -50,7 +50,8 @@ names its source.
 - `GET /`: the campuses.
 - `GET /previews`: the repo's open pull requests (`number`, `title`, `branch`,
   `prUrl`) with the URL of the Preview each branch is deployed to
-  (`previewUrl`, null for a fork), from GitHub's API and kept for a minute
+  (`previewUrl`, null for a fork or for a name over 52 characters, which
+  Cloudflare shortens with a hash), from GitHub's API and kept for a minute
   (`src/previews.ts`). The URL follows from the branch name; it is answered
   whether or not the branch's build has finished.
 

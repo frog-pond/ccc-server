@@ -1,6 +1,6 @@
 import {exports} from 'cloudflare:workers'
 import {afterEach, beforeEach, describe, expect, test, type MockInstance} from 'vitest'
-import {previewName} from '../src/previews.ts'
+import {previewName, previewUrl} from '../src/previews.ts'
 import {spyOnFetch} from './spy.ts'
 
 const PULLS = 'https://api.github.com/repos/frog-pond/ccc-server/pulls?state=open&per_page=100'
@@ -32,6 +32,17 @@ describe('previewName', () => {
 		['wip/news-outage-notice', 'wip-news-outage-notice'],
 	])('%s is %s', (branch, name) => {
 		expect(previewName(branch)).toBe(name)
+	})
+})
+
+describe('previewUrl', () => {
+	test('a name of 52 characters is kept whole', () => {
+		let branch = 'a'.repeat(52)
+		expect(previewUrl(branch)).toBe(`https://${branch}-ccc-server.frog-pond-d8f.workers.dev`)
+	})
+
+	test('a longer name is shortened by Cloudflare, so has no URL here', () => {
+		expect(previewUrl('a'.repeat(53))).toBeNull()
 	})
 })
 

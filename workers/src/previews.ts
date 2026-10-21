@@ -20,7 +20,17 @@ export const previewName = (branch: string) =>
 		.replace(/[^a-z0-9]+/gu, '-')
 		.replace(/^-|-$/gu, '')
 
-export const previewUrl = (branch: string) => `https://${previewName(branch)}-${PREVIEW_HOST}`
+/// The longest name a Preview keeps whole: `<name>-ccc-server` is one DNS
+/// label, at most 63 characters. Cloudflare cuts a longer one and adds a hash
+/// of the branch, which cannot be worked out here.
+const LONGEST_NAME = 63 - '-ccc-server'.length
+
+/// The URL a branch's Preview is served at, or null when Cloudflare shortens
+/// its name.
+export function previewUrl(branch: string): string | null {
+	let name = previewName(branch)
+	return name.length > LONGEST_NAME ? null : `https://${name}-${PREVIEW_HOST}`
+}
 
 type Pull = {
 	number: number
@@ -36,7 +46,8 @@ export type Preview = {
 	title: string
 	branch: string
 	prUrl: string
-	/// null for a pull request from a fork, whose branch Workers Builds does not build
+	/// null for a pull request from a fork, whose branch Workers Builds does not
+	/// build, and for a branch whose Preview name Cloudflare shortens
 	previewUrl: string | null
 }
 
