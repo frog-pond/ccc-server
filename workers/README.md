@@ -48,6 +48,13 @@ without the prefix. The Node server's arbitrary-URL endpoints (`/news/rss`,
 names its source.
 
 - `GET /`: the campuses.
+- `GET /previews`: the repo's open pull requests (`number`, `title`, `branch`,
+  `prUrl`) with the URL of the Preview each branch is deployed to
+  (`previewUrl`, null for a fork or for a name over 52 characters, which
+  Cloudflare shortens with a hash), from GitHub's API. Cloudflare keeps
+  GitHub's answer for 15 minutes and a client keeps the list for one
+  (`src/previews.ts`). The URL follows from the branch name; it is answered
+  whether or not the branch's build has finished.
 
 Every successful response carries an `ETag`, a digest of its body, and a
 request whose `If-None-Match` names it is answered with a `304` and no body

@@ -28,6 +28,7 @@ import {
 } from '../../source/ccci-stolaf-college/v1/streams-shape.ts'
 import {CONVO_ID, archivedConvos, convoDetail} from './sources/convos.ts'
 import {note} from './trace.ts'
+import {previews} from './previews.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -315,6 +316,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
 	if (url.pathname === '/') return json({campuses: [...CAMPUSES.keys()]})
+	if (url.pathname === '/previews') return previews()
 
 	// every other route is under a campus: /edu.stolaf/..., /edu.carleton/...
 	let mounted = /^\/([^/]+)(\/.*)$/.exec(url.pathname)
