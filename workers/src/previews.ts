@@ -7,8 +7,13 @@ const PULLS = 'https://api.github.com/repos/frog-pond/ccc-server/pulls?state=ope
 /// Where each Preview is served: `<preview name>-ccc-server.<subdomain>.workers.dev`.
 const PREVIEW_HOST = 'ccc-server.frog-pond-d8f.workers.dev'
 
-/// How long the list of pull requests is kept, here and by clients. GitHub
-/// answers an unauthenticated client 60 times an hour.
+/// How long Cloudflare keeps GitHub's list of pull requests. Branches to test
+/// open rarely, and the Worker has no purge, so a new one can take this long
+/// to appear. GitHub answers an unauthenticated client 60 times an hour.
+const PULLS_CACHE_TTL = 15 * 60
+
+/// How long a client keeps the list. Short, so an app's refresh reaches the
+/// Worker rather than its own HTTP cache.
 const PREVIEWS_MAX_AGE = 60
 
 /// The Preview name Workers Builds gives a branch: lowercased, with each run
@@ -66,7 +71,7 @@ export async function previews(): Promise<Response> {
 	try {
 		let response = await upstream(PULLS, {
 			headers: {Accept: 'application/vnd.github+json'},
-			cf: {cacheTtl: PREVIEWS_MAX_AGE, cacheEverything: true},
+			cf: {cacheTtl: PULLS_CACHE_TTL, cacheEverything: true},
 		})
 		if (!response.ok) throw new Error(`GitHub answered ${response.status.toFixed(0)}`)
 		let pulls = await response.json<Pull[]>()
