@@ -65,7 +65,7 @@ names its source.
   `TELEGRAM_TOPIC_ID` (the topic's `message_thread_id`; without it, the General
   topic), and is a 503 until the first three are set. Telegram takes the bot
   token in its address, so unlike the Google key it is in the trace of the
-  fetch to Telegram.
+  fetch to Telegram. Setup and debugging: `docs/sentry-telegram.md`.
 
 Every successful response carries an `ETag`, a digest of its body, and a
 request whose `If-None-Match` names it is answered with a `304` and no body
