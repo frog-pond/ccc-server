@@ -161,6 +161,50 @@ describe('POST /sentry/telegram', () => {
 		expect(response.status).toBe(502)
 	})
 
+	test('is a 502 when Telegram cannot be reached', async () => {
+		fetchSpy.mockImplementation(() => Promise.reject(new Error('network down')))
+		let response = await post('issue', issue)
+		expect(response.status).toBe(502)
+		expect(await response.json()).toEqual({error: 'Telegram could not be reached'})
+	})
+
+	test('keeps a message of characters that grow when escaped within the limit, whole', async () => {
+		let grows = '<&'.repeat(1000)
+		await post('issue', {
+			action: 'created',
+			data: {issue: {...issue.data.issue, title: grows, culprit: grows, shortId: grows}},
+		})
+		let text = String(sentMessage().body['text'])
+		expect(text.length).toBeLessThanOrEqual(4096)
+		expect(text).not.toMatch(/&(?!(?:amp|lt|gt|quot);)/u)
+		expect(text).toMatch(/<a href="[^"]*">Open in Sentry<\/a>$/u)
+	})
+
+	test('keeps a quote in a link inside its attribute', async () => {
+		await post('issue', {
+			action: 'created',
+			data: {issue: {...issue.data.issue, web_url: 'https://frog-pond.sentry.io/"onclick="x'}},
+		})
+		expect(sentMessage().body['text']).toContain(
+			'<a href="https://frog-pond.sentry.io/&quot;onclick=&quot;x">Open in Sentry</a>',
+		)
+	})
+
+	test('is a 503 when the topic is not a number', async () => {
+		let response = await sentryTelegram(
+			new Request('https://worker.test/sentry/telegram', {method: 'POST', body: '{}'}),
+			{
+				SENTRY_CLIENT_SECRET: SECRET,
+				TELEGRAM_BOT_TOKEN: 'token',
+				TELEGRAM_CHAT_ID: '-100123',
+				TELEGRAM_TOPIC_ID: 'abc',
+			} as Env,
+		)
+		expect(response.status).toBe(503)
+		expect(await response.json()).toEqual({error: 'TELEGRAM_TOPIC_ID is not a number'})
+		expect(fetchSpy).not.toHaveBeenCalled()
+	})
+
 	test('names the secrets that are missing, and not their values', async () => {
 		let response = await sentryTelegram(
 			new Request('https://worker.test/sentry/telegram', {method: 'POST', body: '{}'}),
@@ -189,6 +233,12 @@ describe('messageFor', () => {
 	test('marks a resolved issue', () => {
 		expect(messageFor('issue', {...issue, action: 'resolved'})).toMatch(
 			/^✅ <b>Issue resolved<\/b>/u,
+		)
+	})
+
+	test('has a plain headline for an issue without an action', () => {
+		expect(messageFor('issue', {...issue, action: undefined})?.split('\n')[0]).toBe(
+			'🔴 <b>Issue</b> · all-about-olaf · AAO-1F',
 		)
 	})
 

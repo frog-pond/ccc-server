@@ -62,12 +62,13 @@ curl -i -X POST -d '{}' https://<host>/sentry/telegram
 ```
 
 - **503**: the body's `missing` lists the secrets (names only) that
-  environment lacks.
+  environment lacks, or its `error` says `TELEGRAM_TOPIC_ID` is not a number.
 - **401**: the secrets are set, but `SENTRY_CLIENT_SECRET` is not the
   integration's current Client Secret.
 - **405**: the host does not have this route (not deployed there yet).
 - **502**: Telegram refused the message, such as the bot not being in the group
-  or a wrong chat or topic id. The Worker's logs have Telegram's reason.
+  or a wrong chat or topic id, or could not be reached. The Worker's logs have
+  Telegram's reason.
 - **204**: posted.
 
 Call Telegram on its own to rule out the bot:
