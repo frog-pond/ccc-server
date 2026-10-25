@@ -12,6 +12,11 @@ export default defineConfig({
 					GOOGLE_CALENDAR_API_KEY: 'test-calendar-key',
 					// an archive's walk back would fetch in the middle of other tests
 					ARCHIVE_BACKFILL: 'off',
+					// the Sentry relay's secrets; its tests sign with this one
+					SENTRY_CLIENT_SECRET: 'test-sentry-secret',
+					TELEGRAM_BOT_TOKEN: 'test-bot-token',
+					TELEGRAM_CHAT_ID: '-100123',
+					TELEGRAM_TOPIC_ID: '42',
 				},
 			},
 		}),

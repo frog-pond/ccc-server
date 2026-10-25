@@ -29,6 +29,7 @@ import {
 import {CONVO_ID, archivedConvos, convoDetail} from './sources/convos.ts'
 import {note} from './trace.ts'
 import {previews} from './previews.ts'
+import {sentryTelegram} from './sentry-telegram.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
 	Response.json(body, {
@@ -313,6 +314,8 @@ async function streaming(env: Env, url: URL, which: string): Promise<Response> {
 
 export async function route(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
+	// the one route that is posted to: Sentry's webhooks
+	if (url.pathname === '/sentry/telegram') return sentryTelegram(request, env)
 	if (request.method !== 'GET') return json({error: 'method not allowed'}, 405)
 
 	if (url.pathname === '/') return json({campuses: [...CAMPUSES.keys()]})
