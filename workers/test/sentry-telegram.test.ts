@@ -1,6 +1,6 @@
 import {exports} from 'cloudflare:workers'
 import {afterEach, beforeEach, describe, expect, test, type MockInstance} from 'vitest'
-import {messageFor, signedBySentry} from '../src/sentry-telegram.ts'
+import {messageFor, sentryTelegram, signedBySentry} from '../src/sentry-telegram.ts'
 import {spyOnFetch} from './spy.ts'
 
 // the secrets vitest.config.ts gives the worker
@@ -159,6 +159,18 @@ describe('POST /sentry/telegram', () => {
 		)
 		let response = await post('issue', issue)
 		expect(response.status).toBe(502)
+	})
+
+	test('names the secrets that are missing, and not their values', async () => {
+		let response = await sentryTelegram(
+			new Request('https://worker.test/sentry/telegram', {method: 'POST', body: '{}'}),
+			{SENTRY_CLIENT_SECRET: SECRET} as Env,
+		)
+		expect(response.status).toBe(503)
+		expect(await response.json()).toEqual({
+			error: 'the Sentry relay is not set up',
+			missing: ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'],
+		})
 	})
 
 	test('is only posted to', async () => {

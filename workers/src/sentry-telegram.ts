@@ -181,14 +181,18 @@ async function sendToTelegram(env: Env, message: string): Promise<Response> {
 
 /// `POST /sentry/telegram`: a Sentry webhook, checked against its signature and
 /// posted to the Telegram topic. A 401 for a body Sentry did not sign, a 503
-/// while the worker's secrets are not set, a 502 when Telegram refuses the
+/// naming the worker's secrets that are not set, a 502 when Telegram refuses the
 /// message (which Sentry may send again), and otherwise a 204, also for a
 /// webhook that is not posted.
 export async function sentryTelegram(request: Request, env: Env): Promise<Response> {
 	if (request.method !== 'POST') return json({error: 'method not allowed'}, 405)
+	// the names of the secrets that are missing, never their values
+	let missing = (
+		['SENTRY_CLIENT_SECRET', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'] as const
+	).filter((name) => !env[name])
 	let secret = env.SENTRY_CLIENT_SECRET
-	if (!secret || !env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
-		return json({error: 'the Sentry relay is not set up'}, 503)
+	if (!secret || missing.length > 0) {
+		return json({error: 'the Sentry relay is not set up', missing}, 503)
 	}
 
 	let body = await request.arrayBuffer()
