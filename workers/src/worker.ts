@@ -9,10 +9,8 @@ export {SourceDO} from './source-do.ts'
 export {StudentOrgsDO} from './student-orgs-do.ts'
 export {StudentWorkDO} from './student-work-do.ts'
 
-/// The campus routes, behind Workers Cache. The cache keys a response by its
-/// path and query and never its host, so this answers by those alone: a Node
-/// host's `/v1` request reaches it as the campus route it names
-/// (`/edu.carleton/...`), never as the host-dependent `/v1` path.
+/// The campus routes, behind Workers Cache, which keys them by path and never
+/// by host (workers/README.md).
 export class CachedRoutes extends WorkerEntrypoint<Env> {
 	override fetch(request: Request): Promise<Response> {
 		return route(request, this.env)
