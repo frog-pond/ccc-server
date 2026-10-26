@@ -3,8 +3,10 @@
 	"main": "workers/src/worker.ts",
 	"compatibility_date": "2026-08-01",
 	"compatibility_flags": ["nodejs_compat"],
-	"cache": {
-		"enabled": true,
+	// only CachedRoutes is cached: workers/README.md says why
+	"exports": {
+		"default": {"type": "worker", "cache": {"enabled": false}},
+		"CachedRoutes": {"type": "worker", "cache": {"enabled": true}},
 	},
 	"durable_objects": {
 		"bindings": [

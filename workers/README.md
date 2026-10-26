@@ -76,6 +76,15 @@ Successes are cacheable for ten minutes and errors for a minute
 (`src/lifetimes.ts`). Behind them, each source is fresh for an hour and kept a
 day if its host fails; student work keeps its own schedule, below.
 
+Workers Cache holds those responses at the edge, but only the `CachedRoutes`
+entrypoint's (`src/worker.ts`). The cache keys a response by its path and
+query and never its host, and a Node host's `/v1` path (below) answers for
+that host's campus, so the uncached default entrypoint turns each such request
+into the campus route it names (`/edu.carleton/...`) before handing it on.
+The `ETag`, the `304` and the Node addresses' greeting, ping and listing are
+answered there too, outside the cache. Each deployed version starts with an
+empty cache.
+
 - `GET /food/menu/:cafeId` and `GET /food/cafe/:cafeId`: the apps' menu and
   café info, in the contract the Node server's routes keep (an unknown id is a
   400; BonApp failing with nothing stored is a 200 with a stand-in). They share
