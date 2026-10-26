@@ -2,9 +2,14 @@
 	"name": "ccc-server",
 	"main": "workers/src/worker.ts",
 	"compatibility_date": "2026-08-01",
-	"compatibility_flags": ["nodejs_compat"],
-	"cache": {
-		"enabled": true,
+	"compatibility_flags": ["nodejs_compat", "enable_ctx_exports"],
+	// Workers Cache keys a response by its path and query, not its host, and the
+	// Node hosts answer one `/v1` path for different campuses. So only
+	// CachedRoutes, which the default entrypoint hands each request with its
+	// campus in the path, is cached (workers/src/worker.ts).
+	"exports": {
+		"default": {"type": "worker", "cache": {"enabled": false}},
+		"CachedRoutes": {"type": "worker", "cache": {"enabled": true}},
 	},
 	"durable_objects": {
 		"bindings": [
