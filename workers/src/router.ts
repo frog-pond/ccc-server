@@ -54,17 +54,51 @@ function cafeUrl(campus: Campus, cafeId: string): string | Response {
 /// The apps' menu and café info for a BonApp café, in the contract the Node
 /// server's /v1/food routes keep. A failure with nothing stored is still a
 /// 200 with a stand-in, which is what the apps already know how to show.
-async function food(kind: 'menu' | 'cafe', url: string, env: Env): Promise<Response> {
+function menuDates(today: string): string[] {
+	return Array.from({length: 5}, (_, offset) => {
+		let date = new Date(`${today}T00:00:00Z`)
+		date.setUTCDate(date.getUTCDate() + offset)
+		return date.toISOString().slice(0, 10)
+	})
+}
+
+function cafeUrlForDate(url: string, date: string): string {
+	let parsed = new URL(url)
+	parsed.pathname = `${parsed.pathname.replace(/\/\d{4}-\d{2}-\d{2}\/?$/, '').replace(/\/$/, '')}/${date}/`
+	return parsed.toString()
+}
+
+async function food(kind: 'menu' | 'cafe', url: string, env: Env, days?: 5): Promise<Response> {
 	try {
-		let {value} = await fetchSource(env, bonappPage, {url})
+		let requestedDates = days === 5 ? menuDates(campusToday(new Date(clock.now()))) : undefined
+		let pages = requestedDates
+			? await Promise.all(
+					requestedDates.map(async (date) => ({
+						date,
+						value: (await fetchSource(env, bonappPage, {url: cafeUrlForDate(url, date)})).value,
+					})),
+				)
+			: [{date: undefined, value: (await fetchSource(env, bonappPage, {url})).value}]
 		// read after the fetch, which can run across campus midnight: the response
 		// is dated by the day it is made on, and not kept past that day's end
 		let now = new Date(clock.now())
 		let date = campusToday(now)
 		let keep = Math.min(CLIENT_MAX_AGE, secondsUntilCampusMidnight(now))
-		return kind === 'menu'
-			? json(menuFrom(value, date), 200, keep)
-			: json(cafeFrom(value, date), 200, keep)
+		if (kind === 'cafe') return json(cafeFrom(pages[0]?.value ?? null, date), 200, keep)
+
+		let menus = pages.map((page) => menuFrom(page.value, page.date ?? date))
+		let firstMenu = menus[0]
+		if (!firstMenu) throw new Error('BonApp menu date range is empty')
+		if (requestedDates === undefined) return json(firstMenu, 200, keep)
+		return json(
+			{
+				...firstMenu,
+				items: Object.assign({}, ...menus.map((menu) => menu.items)),
+				days: menus.flatMap((menu) => menu.days),
+			},
+			200,
+			keep,
+		)
 	} catch (err) {
 		console.error(err, {url})
 		let date = campusToday(new Date(clock.now()))
@@ -419,9 +453,16 @@ export async function route(request: Request, env: Env): Promise<Response> {
 
 	let eating = /^\/food\/(menu|cafe)\/([^/]+)$/.exec(path)
 	if (eating?.[1] && eating[2]) {
+		let requestedDays = url.searchParams.getAll('days')
+		if (
+			requestedDays.length > 0 &&
+			(eating[1] !== 'menu' || requestedDays.length !== 1 || requestedDays[0] !== '5')
+		) {
+			return json({error: 'days must be 5 and only supported for menus'}, 400)
+		}
 		let cafe = cafeUrl(campus, eating[2])
 		if (cafe instanceof Response) return cafe
-		return food(eating[1] as 'menu' | 'cafe', cafe, env)
+		return food(eating[1] as 'menu' | 'cafe', cafe, env, requestedDays.length ? 5 : undefined)
 	}
 
 	let namedFood = /^\/food\/named\/(menu|cafe)\/([^/]+)$/.exec(path)
@@ -429,7 +470,21 @@ export async function route(request: Request, env: Env): Promise<Response> {
 		namedFood?.[2] && Object.hasOwn(campus.namedCafes, namedFood[2])
 			? campus.namedCafes[namedFood[2]]
 			: undefined
-	if (namedFood?.[1] && namedCafe) return food(namedFood[1] as 'menu' | 'cafe', namedCafe, env)
+	if (namedFood?.[1] && namedCafe) {
+		let requestedDays = url.searchParams.getAll('days')
+		if (
+			requestedDays.length > 0 &&
+			(namedFood[1] !== 'menu' || requestedDays.length !== 1 || requestedDays[0] !== '5')
+		) {
+			return json({error: 'days must be 5 and only supported for menus'}, 400)
+		}
+		return food(
+			namedFood[1] as 'menu' | 'cafe',
+			namedCafe,
+			env,
+			requestedDays.length ? 5 : undefined,
+		)
+	}
 
 	let match = /^\/bonapp\/([^/]+)$/.exec(path)
 	if (match?.[1]) return bonapp(campus, match[1], url.searchParams.get('full') === '1', env)

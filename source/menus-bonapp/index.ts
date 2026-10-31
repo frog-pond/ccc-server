@@ -12,6 +12,25 @@ import {feedName, recordFeedFailure, recordFeedItems} from '../ccc-lib/feed-metr
 /// request's trace shows which one took the time.
 const stage = <T>(name: string, fn: () => T): T => Sentry.startSpan({name, op: 'function'}, fn)
 
+interface MenuOptions {
+	days?: 5
+}
+
+function menuDates(today: string, count: number): string[] {
+	return Array.from({length: count}, (_, offset) => {
+		let date = new Date(`${today}T00:00:00Z`)
+		date.setUTCDate(date.getUTCDate() + offset)
+		return date.toISOString().slice(0, 10)
+	})
+}
+
+function cafeUrlForDate(cafeUrl: string | URL, date: string): string {
+	let url = new URL(cafeUrl)
+	if (url.protocol === 'data:') return url.toString()
+	url.pathname = `${url.pathname.replace(/\/\d{4}-\d{2}-\d{2}\/?$/, '').replace(/\/$/, '')}/${date}/`
+	return url.toString()
+}
+
 async function getBamco(url: string | URL) {
 	let html = await getText(url.toString())
 	let raw = stage('bonapp.extract', () => extractBamco(html))
@@ -36,19 +55,49 @@ export function nutrition(itemId: string) {
 	return getJson('https://legacy.cafebonappetit.com/api/2/items', {searchParams: {item: itemId}})
 }
 
-export async function _menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
-	let bamco = (await getBamco(cafeUrl)) ?? null
-	// a closed café is also what a page BonApp has reshaped past reading looks like
-	recordFeedItems('bonapp', feedName(cafeUrl), bamco ? Object.keys(bamco.menu_items).length : 0, {
-		closed: bamco === null,
-	})
+export async function _menu(
+	cafeUrl: string | URL,
+	options: MenuOptions = {},
+): Promise<CafeMenuResponseType> {
+	let days = options.days ?? 1
+	let dates = menuDates(campusToday(), days)
+	let pages = await Promise.all(
+		dates.map(async (date) => ({
+			date,
+			bamco: (await getBamco(days === 1 ? cafeUrl : cafeUrlForDate(cafeUrl, date))) ?? null,
+		})),
+	)
+	recordFeedItems(
+		'bonapp',
+		feedName(cafeUrl),
+		pages.reduce((count, {bamco}) => count + (bamco ? Object.keys(bamco.menu_items).length : 0), 0),
+		{closed: pages.every(({bamco}) => bamco === null)},
+	)
 
-	return stage('bonapp.clean', () => menuFrom(bamco, campusToday()))
+	return stage('bonapp.clean', () => {
+		let menus = pages.map(({date, bamco}) => menuFrom(bamco, date))
+		let firstMenu = menus[0]
+		if (!firstMenu) throw new Error('BonApp menu date range is empty')
+		let items = menus.reduce<CafeMenuResponseType['items']>((combined, menu) => {
+			for (let [id, item] of Object.entries(menu.items)) {
+				combined[id] = item
+			}
+			return combined
+		}, {})
+		return {
+			...firstMenu,
+			items,
+			days: menus.flatMap((menu) => menu.days),
+		}
+	})
 }
 
-export async function menu(cafeUrl: string | URL): Promise<CafeMenuResponseType> {
+export async function menu(
+	cafeUrl: string | URL,
+	options: MenuOptions = {},
+): Promise<CafeMenuResponseType> {
 	try {
-		return await _menu(cafeUrl)
+		return await _menu(cafeUrl, options)
 	} catch (err) {
 		console.error(err, {cafeUrl: String(cafeUrl)})
 		Sentry.captureException(err)
