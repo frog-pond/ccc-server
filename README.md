@@ -28,7 +28,7 @@ mise run dev
 ```
 
 It serves both campuses on port 8787, at `/edu.stolaf/v1/...` and
-`/edu.carleton/v1/...`, from every address the machine has, so a phone on the
+`/edu.carleton/v1/...`, on every IPv4 address the machine has, so a phone on the
 same network can reach it. It advertises one `_ccc-server._tcp` service per
 campus over mDNS (`ccc-server edu.stolaf (Gecko)`, TXT
 `path=/edu.stolaf/v1/`), which a debug build of the app lists under Developer →

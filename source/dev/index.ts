@@ -32,6 +32,14 @@ const wrangler = spawn(
 	['dev', '-c', 'wrangler.jsonc', '--ip', '0.0.0.0', '--port', String(PORT)],
 	{cwd: repoRoot, stdio: ['ignore', 'inherit', 'inherit']},
 )
+wrangler.once('error', (error: NodeJS.ErrnoException) => {
+	console.error(
+		error.code === 'ENOENT'
+			? 'wrangler is not installed here: run `npm ci` at the repo root'
+			: `could not start wrangler: ${error.message}`,
+	)
+	process.exit(1)
+})
 const wranglerExit = new Promise<number>((resolve) => {
 	wrangler.once('exit', (code) => {
 		resolve(code ?? 1)
