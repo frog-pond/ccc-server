@@ -24,11 +24,13 @@ if (!(await portIsFree(PORT))) {
 }
 
 // The binary itself, not `npx wrangler`: a signal sent to npx is not a signal
-// sent to wrangler.
+// sent to wrangler. No stdin: given a terminal, wrangler puts it in raw mode for
+// its hotkeys, which stops it (SIGTTOU) when this runs as a background job, as
+// the app's start:with-server runs it, and turns Ctrl-C into a hotkey.
 const wrangler = spawn(
 	'node_modules/.bin/wrangler',
 	['dev', '-c', 'wrangler.jsonc', '--ip', '0.0.0.0', '--port', String(PORT)],
-	{cwd: repoRoot, stdio: 'inherit'},
+	{cwd: repoRoot, stdio: ['ignore', 'inherit', 'inherit']},
 )
 const wranglerExit = new Promise<number>((resolve) => {
 	wrangler.once('exit', (code) => {
@@ -68,29 +70,36 @@ async function waitForWorker(): Promise<unknown> {
 	const deadline = Date.now() + READY_TIMEOUT_MS
 	while (Date.now() < deadline) {
 		// Polls one request at a time, on purpose.
+		let response: Response | undefined
 		try {
 			// eslint-disable-next-line no-await-in-loop
-			const response = await fetch(`http://localhost:${String(PORT)}/`)
-			// eslint-disable-next-line no-await-in-loop
-			if (response.ok) return await response.json()
+			response = await fetch(`http://localhost:${String(PORT)}/`)
 		} catch {
 			// not listening yet
 		}
+		// An answer that is not JSON is the Worker's fault, not a Worker still starting.
+		if (response?.ok) return response.json()
 		// eslint-disable-next-line no-await-in-loop
 		await sleep(500)
 	}
 	return undefined
 }
 
-const root = await waitForWorker()
-if (root === undefined) {
-	console.error(
-		`wrangler dev did not answer on port ${String(PORT)} within ${String(READY_TIMEOUT_MS / 1000)}s`,
-	)
+// Any failure from here stops wrangler too, rather than leaving it on the port.
+try {
+	const root = await waitForWorker()
+	if (root === undefined) {
+		console.error(
+			`wrangler dev did not answer on port ${String(PORT)} within ${String(READY_TIMEOUT_MS / 1000)}s`,
+		)
+		await stop(1)
+	} else {
+		const adverts = advertsFor(campusesFrom(root), hostname(), PORT)
+		withdrawals.push(...(await Promise.all(adverts.map((advert) => advertise(advert)))))
+		// A Ctrl-C while they were being published found nothing to withdraw yet.
+		if (isStopping()) await withdrawAll()
+	}
+} catch (error) {
+	console.error(error instanceof Error ? error.message : String(error))
 	await stop(1)
-} else {
-	const adverts = advertsFor(campusesFrom(root), hostname(), PORT)
-	withdrawals.push(...(await Promise.all(adverts.map((advert) => advertise(advert)))))
-	// A Ctrl-C while they were being published found nothing to withdraw yet.
-	if (isStopping()) await withdrawAll()
 }
