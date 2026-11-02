@@ -26,10 +26,11 @@ if (!(await portIsFree(PORT))) {
 // The binary itself, not `npx wrangler`: a signal sent to npx is not a signal
 // sent to wrangler. No stdin: given a terminal, wrangler puts it in raw mode for
 // its hotkeys, which stops it (SIGTTOU) when this runs as a background job, as
-// the app's start:with-server runs it, and turns Ctrl-C into a hotkey.
+// the app's start:with-server runs it, and turns Ctrl-C into a hotkey. `::`
+// listens on IPv4 and IPv6 both: the app may be handed either address.
 const wrangler = spawn(
 	'node_modules/.bin/wrangler',
-	['dev', '-c', 'wrangler.jsonc', '--ip', '0.0.0.0', '--port', String(PORT)],
+	['dev', '-c', 'wrangler.jsonc', '--ip', '::', '--port', String(PORT)],
 	{cwd: repoRoot, stdio: ['ignore', 'inherit', 'inherit']},
 )
 wrangler.once('error', (error: NodeJS.ErrnoException) => {
@@ -47,16 +48,16 @@ const wranglerExit = new Promise<number>((resolve) => {
 })
 
 let stopping = false
-/// Read through a function: `stopping` changes in signal handlers, which
-/// TypeScript's narrowing cannot see.
-const isStopping = () => stopping
 const withdrawals: (() => Promise<void>)[] = []
-const withdrawAll = () => Promise.all(withdrawals.map((withdraw) => withdraw()))
+/// The adverts being published, so a stop that lands meanwhile still withdraws them.
+let publishing: Promise<void> = Promise.resolve()
 
+/// The one way out: withdraws every advert, stops wrangler, and exits.
 async function stop(exitCode: number) {
 	if (stopping) return
 	stopping = true
-	await withdrawAll()
+	await publishing
+	await Promise.all(withdrawals.map((withdraw) => withdraw()))
 	wrangler.kill('SIGTERM')
 	await wranglerExit
 	process.exit(exitCode)
@@ -66,12 +67,7 @@ process.once('SIGINT', () => void stop(0))
 process.once('SIGTERM', () => void stop(0))
 
 // wrangler stopping on its own (a port in use, a crash) ends the run with its code.
-void wranglerExit.then(async (code) => {
-	if (stopping) return
-	stopping = true
-	await withdrawAll()
-	process.exit(code)
-})
+void wranglerExit.then((code) => stop(code))
 
 /// The Worker's `GET /` answer, once it gives one; undefined if it never does.
 async function waitForWorker(): Promise<unknown> {
@@ -103,9 +99,10 @@ try {
 		await stop(1)
 	} else {
 		const adverts = advertsFor(campusesFrom(root), hostname(), PORT)
-		withdrawals.push(...(await Promise.all(adverts.map((advert) => advertise(advert)))))
-		// A Ctrl-C while they were being published found nothing to withdraw yet.
-		if (isStopping()) await withdrawAll()
+		publishing = Promise.all(adverts.map((advert) => advertise(advert))).then((published) => {
+			withdrawals.push(...published)
+		})
+		await publishing
 	}
 } catch (error) {
 	console.error(error instanceof Error ? error.message : String(error))
