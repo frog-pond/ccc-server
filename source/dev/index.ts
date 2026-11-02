@@ -76,8 +76,12 @@ async function waitForWorker(): Promise<unknown> {
 		// Polls one request at a time, on purpose.
 		let response: Response | undefined
 		try {
+			// Each poll is bounded too, so a Worker that takes the connection and never
+			// answers still meets the deadline; the signal covers reading the body.
 			// eslint-disable-next-line no-await-in-loop
-			response = await fetch(`http://localhost:${String(PORT)}/`)
+			response = await fetch(`http://localhost:${String(PORT)}/`, {
+				signal: AbortSignal.timeout(5000),
+			})
 		} catch {
 			// not listening yet
 		}
