@@ -85,6 +85,17 @@ describe('the route table', () => {
 		}
 	})
 
+	test('both campuses’ apps get the one privacy policy, at the address the app asks', async () => {
+		for (let campus of ['edu.stolaf', 'edu.carleton']) {
+			let response = await exports.default.fetch(
+				new Request(`https://worker.test/${campus}/v1/privacy`, {redirect: 'manual'}),
+			)
+			expect(response.status).toBe(307)
+			expect(response.headers.get('location')).toBe(STOLAF_PAGES('privacy.json').href)
+		}
+		expect(fetched()).toEqual([])
+	})
+
 	test('only the colleges’ own hosts are fetched', async () => {
 		let source = pagesJson as unknown as {load: (p: {url: string}) => Promise<unknown>}
 		await expect(source.load({url: 'https://example.com/x.json'})).rejects.toThrow(

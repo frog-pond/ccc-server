@@ -15,6 +15,7 @@ export const STOLAF_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: STOLAF('contact-info.json')},
 	'/dictionary': {url: STOLAF('dictionary.json')},
 	'/faqs': {url: STOLAF('faqs.json')},
+	'/privacy': {url: STOLAF('privacy.json')},
 	'/tools/help': {url: STOLAF('help.json')},
 	'/webcams': {url: STOLAF('webcams.json')},
 	'/spaces/directory': {url: STOLAF('building-directory.json')},
@@ -54,6 +55,9 @@ export const CARLETON_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: CARLETON('contact-info.json')},
 	'/dictionary': {url: CARLETON('dictionary-carls.json')},
 	'/faqs': {url: CARLETON('faqs.json')},
+	// The privacy policy is the app's, not a college's, so Carleton's app reads
+	// the one All About Olaf publishes.
+	'/privacy': {url: STOLAF('privacy.json')},
 	'/tools/help': {url: CARLETON('help.json')},
 	'/webcams': {url: CARLETON('webcams.json')},
 	'/spaces/hours': {url: CARLETON('building-hours.json')},
