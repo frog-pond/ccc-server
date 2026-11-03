@@ -64,7 +64,7 @@ export async function _menu(
 	let pages = await Promise.all(
 		dates.map(async (date) => ({
 			date,
-			bamco: (await getBamco(days === 1 ? cafeUrl : cafeUrlForDate(cafeUrl, date))) ?? null,
+			bamco: (await getBamco(cafeUrlForDate(cafeUrl, date))) ?? null,
 		})),
 	)
 	recordFeedItems(
