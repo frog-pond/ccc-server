@@ -9,13 +9,23 @@ const STOLAF_MAP = (file: string) => `https://stolaf.dev/campus-map-data/${file}
 const CARLETON = (file: string) => `https://carls-app.github.io/carls/${file}`
 const CARLETON_MAP = (file: string) => `https://carls-app.github.io/map-data/${file}`
 
+/// Each app's privacy policy, by app (the app's `extra.app`). A policy belongs
+/// to the app, not to the campus it is showing, so every campus's server
+/// answers all of them. CARLS and All About Anything publish no policy of their
+/// own yet, so they read All About Olaf's.
+const PRIVACY_FILES: Record<string, PagesRoute> = {
+	'/privacy/aao': {url: STOLAF('privacy.json')},
+	'/privacy/carls': {url: STOLAF('privacy.json')},
+	'/privacy/aaa': {url: STOLAF('privacy.json')},
+}
+
 /// St. Olaf's published data files, by path, each answered with a temporary
 /// redirect to where it is published.
 export const STOLAF_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: STOLAF('contact-info.json')},
 	'/dictionary': {url: STOLAF('dictionary.json')},
 	'/faqs': {url: STOLAF('faqs.json')},
-	'/privacy': {url: STOLAF('privacy.json')},
+	...PRIVACY_FILES,
 	'/tools/help': {url: STOLAF('help.json')},
 	'/webcams': {url: STOLAF('webcams.json')},
 	'/spaces/directory': {url: STOLAF('building-directory.json')},
@@ -55,9 +65,7 @@ export const CARLETON_FILES: Record<string, PagesRoute> = {
 	'/contacts': {url: CARLETON('contact-info.json')},
 	'/dictionary': {url: CARLETON('dictionary-carls.json')},
 	'/faqs': {url: CARLETON('faqs.json')},
-	// The privacy policy is the app's, not a college's, so Carleton's app reads
-	// the one All About Olaf publishes.
-	'/privacy': {url: STOLAF('privacy.json')},
+	...PRIVACY_FILES,
 	'/tools/help': {url: CARLETON('help.json')},
 	'/webcams': {url: CARLETON('webcams.json')},
 	'/spaces/hours': {url: CARLETON('building-hours.json')},
