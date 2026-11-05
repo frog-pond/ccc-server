@@ -81,6 +81,24 @@ describe('GET /food/named/{menu,cafe}/:name', () => {
 		},
 	)
 
+	test('named menu routes also support days=5', async () => {
+		let dates = Array.from({length: 5}, (_, offset) => {
+			let date = new Date(`${CAMPUS_DAY}T00:00:00Z`)
+			date.setUTCDate(date.getUTCDate() + offset)
+			return date.toISOString().slice(0, 10)
+		})
+		let urls = dates.map((date) => `${CAFE_URLS.stav}${date}/`)
+		for (let url of urls) {
+			await env.SOURCE.getByName(`bonapp-page:${url}`).purge()
+		}
+
+		let body = await (
+			await get(`/edu.stolaf/food/named/menu/stav-hall?days=5&test=${crypto.randomUUID()}`)
+		).json<{days: {date: string}[]}>()
+		expect(body.days.map(({date}) => date)).toEqual(dates)
+		expect(fetched().filter((url) => urls.includes(url))).toEqual(urls)
+	})
+
 	test('the café info is the one the id route sends', async () => {
 		let response = await get('/edu.stolaf/food/named/cafe/stav-hall')
 		expect(response.status).toBe(200)

@@ -19,6 +19,7 @@ export const EventSchema = z.object({
 	/// The event's picture, where its source has one. Absent, never empty.
 	image: z.optional(z.url()),
 	metadata: z.optional(z.unknown()),
+	organization: z.array(z.string()).optional(),
 })
 
 export type EventType = z.infer<typeof EventSchema>

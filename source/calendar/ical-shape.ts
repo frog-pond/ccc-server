@@ -37,6 +37,9 @@ function convertEvent(event: InternetCalendar.Event, calendarZone?: string, now 
 	const startTime = instant(event.startDate, calendarZone)
 	const endTime = instant(event.endDate, calendarZone)
 	let description = textFromHtml(event.description ?? '')
+	const organizer = event.component.getFirstProperty('organizer')
+	const rawName = organizer?.getParameter('cn')
+	const name = typeof rawName === 'string' ? textFromHtml(rawName) : undefined
 
 	return EventSchema.parse({
 		dataSource: 'ical',
@@ -55,6 +58,7 @@ function convertEvent(event: InternetCalendar.Event, calendarZone?: string, now 
 			endTime: true,
 			subtitle: 'location',
 		},
+		organization: name ? [name] : undefined,
 	})
 }
 

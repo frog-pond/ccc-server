@@ -5,6 +5,7 @@ import {textFromHtml} from '../ccc-lib/dom.ts'
 import getUrls from 'get-urls'
 import {EventSchema} from './types.ts'
 import {ical} from './ical.ts'
+import {eventsFromIcal} from './ical-shape.ts'
 
 /**
  * Tests for the ical.js event parser
@@ -371,3 +372,70 @@ END:VCALENDAR`
 
 	t.assert.equal(events[0]?.startTime, '2026-10-09T23:00:00.000Z')
 })
+
+for (const {name, organizer, organization} of [
+	{
+		name: 'reads the organizer CN as a top-level organization',
+		organizer: 'ORGANIZER;CN="Spanish":mailto:calendar@example.com',
+		organization: ['Spanish'],
+	},
+	{
+		name: 'decodes HTML entities in the organizer name',
+		organizer: 'ORGANIZER;CN="Arts &amp; Humanities":mailto:calendar@example.com',
+		organization: ['Arts & Humanities'],
+	},
+	{
+		name: 'trims whitespace around the organizer name',
+		organizer: 'ORGANIZER;CN="  Spanish  ":mailto:calendar@example.com',
+		organization: ['Spanish'],
+	},
+	{
+		name: 'keeps an event without an organizer',
+		organizer: '',
+		organization: undefined,
+	},
+	{
+		name: 'does not use the organizer email when CN is missing',
+		organizer: 'ORGANIZER:mailto:calendar@example.com',
+		organization: undefined,
+	},
+	{
+		name: 'omits an empty organizer name',
+		organizer: 'ORGANIZER;CN="":mailto:calendar@example.com',
+		organization: undefined,
+	},
+	{
+		name: 'omits an organizer name containing only whitespace and entities',
+		organizer: 'ORGANIZER;CN="  &nbsp;  ":mailto:calendar@example.com',
+		organization: undefined,
+	},
+]) {
+	void test(`eventsFromIcal ${name}`, (t) => {
+		const sampleIcal = [
+			'BEGIN:VCALENDAR',
+			'VERSION:2.0',
+			'PRODID:-//Example//EN',
+			'BEGIN:VEVENT',
+			'UID:organizer@example.com',
+			'SUMMARY:Campus Event',
+			'DTSTART:20261106T180000Z',
+			'DTEND:20261106T190000Z',
+			...(organizer ? [organizer] : []),
+			'END:VEVENT',
+			'END:VCALENDAR',
+		].join('\r\n')
+		const events = eventsFromIcal(
+			sampleIcal,
+			'https://example.com/calendar.ics',
+			{},
+			moment.utc('2026-11-05T12:00:00Z'),
+		)
+
+		t.assert.equal(events.length, 1, 'The event survives even without an organizer name')
+		t.assert.equal(events[0]?.title, 'Campus Event')
+		t.assert.deepEqual(events[0]?.organization, organization)
+		if (organization === undefined) {
+			t.assert.equal(JSON.stringify(events[0]).includes('"organization"'), false)
+		}
+	})
+}
