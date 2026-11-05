@@ -21,7 +21,7 @@ declare module 'ical.js' {
 
 		public getFirstPropertyValue(name?: string): unknown
 
-		public getFirstProperty(name?: string): Property
+		public getFirstProperty(name?: string): Property | null
 
 		public getAllProperties(name?: string): Property[]
 
@@ -71,6 +71,8 @@ declare module 'ical.js' {
 		public type: string
 
 		constructor(jCal: unknown[] | string, parent?: Component)
+
+		public getParameter(name: string): string | string[] | undefined
 
 		public getFirstValue(): unknown
 
