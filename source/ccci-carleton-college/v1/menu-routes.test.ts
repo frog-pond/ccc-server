@@ -30,6 +30,21 @@ void test('/food/menu/:cafeId reads the cafe from the path', {timeout: 15_000}, 
 	t.assert.doesNotThrow(() => CafeMenuResponseSchema.parse(body))
 })
 
+void test('/food/menu/:cafeId opts into five days with days=5', {timeout: 15_000}, async (t) => {
+	let base = await serve(t)
+	let response = await fetch(`${base}/v1/food/menu/261?days=5`)
+	t.assert.equal(response.status, 200)
+	let body = CafeMenuResponseSchema.parse(await response.json())
+	t.assert.equal(body.days.length, 5)
+})
+
+void test('/food/menu/:cafeId rejects unsupported days values', async (t) => {
+	let base = await serve(t)
+	let response = await fetch(`${base}/v1/food/menu/261?days=4`)
+	t.assert.equal(response.status, 400)
+	t.assert.match(await response.text(), /days must be 5/)
+})
+
 void test('/food/menu/:cafeId refuses an unknown cafe, listing the known ids', async (t) => {
 	let base = await serve(t)
 	let response = await fetch(`${base}/v1/food/menu/999`)

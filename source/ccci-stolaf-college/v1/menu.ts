@@ -12,6 +12,12 @@ const getMenu = bonapp.menu
 const getInfo = bonapp.cafe
 const getNutrition = bonapp.nutrition
 
+function menuOptions(ctx: Context) {
+	let days = ctx.query['days']
+	if (days !== undefined && days !== '5') ctx.throw(400, 'days must be 5 when provided')
+	return days === '5' ? {days: 5 as const} : {}
+}
+
 export const CAFE_URLS = {
 	stav: 'https://stolaf.cafebonappetit.com/cafe/stav-hall/',
 	cage: 'https://stolaf.cafebonappetit.com/cafe/the-cage/',
@@ -55,7 +61,7 @@ export async function bonAppMenu(ctx: Context) {
 		400,
 		`cafeId must be one of ${Object.keys(CAFE_ID_TO_URL).join(', ')}`,
 	)
-	ctx.body = await getMenu(CAFE_URLS[CAFE_ID_TO_URL[cafeId]])
+	ctx.body = await getMenu(CAFE_URLS[CAFE_ID_TO_URL[cafeId]], menuOptions(ctx))
 }
 
 export async function bonAppCafe(ctx: Context) {
@@ -91,7 +97,7 @@ export async function stavMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.stav)
+	ctx.body = await getMenu(CAFE_URLS.stav, menuOptions(ctx))
 }
 
 export async function cageCafe(ctx: Context) {
@@ -105,7 +111,7 @@ export async function cageMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.cage)
+	ctx.body = await getMenu(CAFE_URLS.cage, menuOptions(ctx))
 }
 
 export async function kingsRoomCafe(ctx: Context) {
@@ -119,7 +125,7 @@ export async function kingsRoomMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.kingsRoom)
+	ctx.body = await getMenu(CAFE_URLS.kingsRoom, menuOptions(ctx))
 }
 
 export async function caveCafe(ctx: Context) {
@@ -133,7 +139,7 @@ export async function caveMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.cave)
+	ctx.body = await getMenu(CAFE_URLS.cave, menuOptions(ctx))
 }
 
 export async function burtonCafe(ctx: Context) {
@@ -147,7 +153,7 @@ export async function burtonMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.burton)
+	ctx.body = await getMenu(CAFE_URLS.burton, menuOptions(ctx))
 }
 
 export async function ldcCafe(ctx: Context) {
@@ -161,7 +167,7 @@ export async function ldcMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.ldc)
+	ctx.body = await getMenu(CAFE_URLS.ldc, menuOptions(ctx))
 }
 
 export async function saylesCafe(ctx: Context) {
@@ -175,7 +181,7 @@ export async function saylesMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.sayles)
+	ctx.body = await getMenu(CAFE_URLS.sayles, menuOptions(ctx))
 }
 
 export async function weitzCafe(ctx: Context) {
@@ -189,7 +195,7 @@ export async function weitzMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.weitz)
+	ctx.body = await getMenu(CAFE_URLS.weitz, menuOptions(ctx))
 }
 
 export async function schulzeCafe(ctx: Context) {
@@ -203,5 +209,5 @@ export async function schulzeMenu(ctx: Context) {
 	ctx.cacheControl(ONE_HOUR)
 	if (ctx.cached(ONE_HOUR)) return
 
-	ctx.body = await getMenu(CAFE_URLS.schulze)
+	ctx.body = await getMenu(CAFE_URLS.schulze, menuOptions(ctx))
 }
