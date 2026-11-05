@@ -16,6 +16,10 @@ run = { task = "pretty" }
 run = "eslint --cache --max-warnings=0 ."
 env = { _.path = ['{{config_root}}/node_modules/.bin'] }
 
+[tasks.dev]
+description = "Run the Worker locally and advertise it to the app over mDNS"
+run = "node source/dev/index.ts"
+
 [tasks.start]
 run = "node source/ccc-server/index.ts"
 

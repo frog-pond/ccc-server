@@ -24,3 +24,6 @@ npm-debug.log*
 
 # wrangler scratch
 .wrangler/
+
+# wrangler dev secrets; .dev.vars.example says what goes in it
+.dev.vars

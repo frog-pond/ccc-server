@@ -18,7 +18,31 @@ npm ci
 
 ## Running the Server
 
-### Development
+### The Worker, locally
+
+Production runs on the Cloudflare Worker in `workers/`. Run it on your machine
+with:
+
+```sh
+mise run dev
+```
+
+It serves both campuses on port 8787, at `/edu.stolaf/v1/...` and
+`/edu.carleton/v1/...`, on every address the machine has, IPv4 and IPv6, so a
+phone on the same network can reach it. It advertises one `_ccc-server._tcp` service per
+campus over mDNS (`ccc-server edu.stolaf (Gecko)`, TXT
+`path=/edu.stolaf/v1/`), which a debug build of the app lists under Developer →
+Server URL. Ctrl-C withdraws the adverts and stops the Worker. It refuses to
+start if something already answers on port 8787.
+
+Secrets go in `.dev.vars` (see `.dev.vars.example`). Only Carleton's KRLX
+schedule needs one; without it that calendar answers 502 and everything else
+works.
+
+### The Node server
+
+The Node server is the Worker's backup until its planned shutoff: production
+moves to it by pointing DNS at it in Cloudflare.
 
 Watch mode (recommended): auto-recompile & restart on changes
 
@@ -39,7 +63,7 @@ mise run stolaf-college
 mise run carleton-college
 ```
 
-### Combined server
+#### Combined server
 
 Set `INSTITUTION=all` to serve both institutions from one process or container:
 
@@ -67,7 +91,7 @@ including institution prefixes and query strings.
 The existing `INSTITUTION=stolaf-college` and
 `INSTITUTION=carleton-college` modes continue to serve `/v1/`.
 
-### Campus prefixes
+#### Campus prefixes
 
 Every mode also serves each institution it runs under the campus prefix the
 Cloudflare Worker uses: `/edu.stolaf/v1/...` for St. Olaf and
@@ -78,7 +102,7 @@ answers the same `/edu.<campus>/v1/...` addresses, so an app using that base
 works against either server. Cache keys include the prefix, so `/v1/x` and
 `/edu.stolaf/v1/x` are cached separately.
 
-### Local Network Discovery (mDNS)
+#### Local Network Discovery (mDNS)
 
 When developing alongside a React Native client on the same network, you can advertise the server via mDNS/Bonjour so the client can discover it automatically without typing the IP address.
 
@@ -101,7 +125,7 @@ To verify the advertisement is visible on the network:
 dns-sd -B _ccc-server._tcp local
 ```
 
-### Production
+#### Production
 
 ```sh
 mise run build
