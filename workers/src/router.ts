@@ -10,7 +10,7 @@ import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
 import {jobs, org, orgCategories, orgs} from './student-orgs.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
-import {schedules, type ScheduleParams} from './sources/schedules.ts'
+import {loadSchedules, schedules, type ScheduleParams} from './sources/schedules.ts'
 import {hoursAt, secondsUntilMidnight} from '../../source/schedules/active.ts'
 import {imageUrl, isPublishedImage} from '../../source/ccc-lib/images-shape.ts'
 import {routeListing} from './routes.ts'
@@ -185,7 +185,19 @@ async function schedule(
 		return json({message: 'breaks must be none'}, 400, ONE_MINUTE)
 	}
 	try {
-		let {value} = await fetchSource(env, schedules, params)
+		// A dev origin's files change with every save in the data editor, so they
+		// are read for each request rather than kept.
+		let origin = devPagesOrigin(env)
+		let value =
+			origin === undefined
+				? (await fetchSource(env, schedules, params)).value
+				: await loadSchedules(
+						{
+							hoursUrl: rebased(params.hoursUrl, origin),
+							breaksUrl: rebased(params.breaksUrl, origin),
+						},
+						origin,
+					)
 		if (which === 'calendar') return json(value.calendar, 200, CLIENT_MAX_AGE)
 		if (breaks === 'none') return json(value.hours, 200, CLIENT_MAX_AGE)
 		// read after the fetch, which can run across campus midnight

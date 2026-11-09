@@ -1,9 +1,13 @@
 import {env} from 'cloudflare:workers'
-import {describe, expect, test} from 'vitest'
+import {afterEach, beforeEach, describe, expect, test, type MockInstance} from 'vitest'
 import wranglerConfig from '../../wrangler.jsonc?raw'
 import {STOLAF_PUBLISHED, devPagesOrigin, rebased} from '../src/pages-origin.ts'
 import {STOLAF_SCHEDULES} from '../src/pages-routes.ts'
 import {route} from '../src/router.ts'
+import {schedules} from '../src/sources/schedules.ts'
+import {spyOnFetch} from './spy.ts'
+import calendar from '../../source/schedules/fixtures/calendar.json?raw'
+import spaces from '../../source/schedules/fixtures/spaces.json?raw'
 
 const ORIGIN = 'http://editor-mac.local:8790/'
 
@@ -64,5 +68,46 @@ describe('redirects with a dev origin', () => {
 	})
 	test('wrangler.jsonc never sets the override', () => {
 		expect(wranglerConfig).not.toContain('PAGES_ORIGIN_OVERRIDE')
+	})
+})
+
+const json = (body: string, status = 200) =>
+	new Response(body, {status, headers: {'content-type': 'application/json'}})
+
+describe('GET /edu.stolaf/spaces/hours with a dev origin', () => {
+	let fetchSpy: MockInstance<typeof fetch>
+	const fromOrigin = () =>
+		fetchSpy.mock.calls.map(([input]) => String(input)).filter((url) => url.startsWith(ORIGIN))
+
+	beforeEach(async () => {
+		await env.SOURCE.getByName(`${schedules.name}:${schedules.key(STOLAF_SCHEDULES)}`).purge()
+		fetchSpy = spyOnFetch()
+		fetchSpy.mockImplementation((input) => {
+			let url = String(input)
+			if (url.endsWith('/building-hours.json')) return Promise.resolve(json(`{"data": ${spaces}}`))
+			if (url.endsWith('/breaks.json')) return Promise.resolve(json(`{"data": ${calendar}}`))
+			return Promise.resolve(json('{}', 404))
+		})
+	})
+	afterEach(() => {
+		fetchSpy.mockRestore()
+	})
+
+	test('reads both files from the origin', async () => {
+		let response = await get('/edu.stolaf/spaces/hours?breaks=none')
+		expect(response.status).toBe(200)
+		expect(fromOrigin().sort()).toEqual([`${ORIGIN}breaks.json`, `${ORIGIN}building-hours.json`])
+	})
+
+	test('answers as the published files would', async () => {
+		let local: unknown = await (await get('/edu.stolaf/spaces/hours?breaks=none')).json()
+		let published: unknown = await (await get('/edu.stolaf/spaces/hours?breaks=none', env)).json()
+		expect(local).toEqual(published)
+	})
+
+	test('reads them again for every request', async () => {
+		await get('/edu.stolaf/spaces/hours?breaks=none')
+		await get('/edu.stolaf/breaks')
+		expect(fromOrigin()).toHaveLength(4)
 	})
 })
