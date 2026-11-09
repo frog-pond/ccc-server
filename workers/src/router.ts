@@ -4,6 +4,7 @@ import type {Calendar} from './calendars.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
+import {devPagesOrigin, rebased} from './pages-origin.ts'
 import {wordpress as wordpressApi} from './sources/wordpress-api.ts'
 import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
@@ -156,12 +157,16 @@ async function calendar(env: Env, {read, history}: Calendar, url: URL): Promise<
 	}
 }
 
-/// A temporary redirect to where a file is published. Temporary, so a client
-/// asks here again and the file can be served from here later.
-const redirect = (location: string) =>
+/// A temporary redirect to where a file is published, or to the dev origin
+/// serving it instead. Temporary, so a client asks here again and the file can
+/// be served from here later.
+const redirect = (env: Env, location: string) =>
 	new Response(null, {
 		status: 307,
-		headers: {Location: location, 'Cache-Control': `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`},
+		headers: {
+			Location: rebased(location, devPagesOrigin(env)),
+			'Cache-Control': `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`,
+		},
 	})
 
 /// The building hours or the break calendar, resolved together, as the Node
@@ -353,7 +358,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (Object.hasOwn(campus.notices, path)) return json(campus.notices[path], 200, CLIENT_MAX_AGE)
 
 	let location = Object.hasOwn(campus.redirects, path) ? campus.redirects[path] : undefined
-	if (location) return redirect(location)
+	if (location) return redirect(env, location)
 
 	if (campus.schedules) {
 		if (path === '/spaces/hours') return schedule(env, campus.schedules, 'hours', url)
@@ -387,11 +392,11 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let image = /^\/images\/([^/]+)\/([^/]+)$/.exec(path)
 	if (image?.[1] && image[2] && campus.images) {
 		if (url.search || !isPublishedImage(image[1], image[2])) return json({error: 'not found'}, 404)
-		return redirect(imageUrl(image[1], image[2]).href)
+		return redirect(env, imageUrl(image[1], image[2]).href)
 	}
 
 	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
-	if (file) return redirect(file.url)
+	if (file) return redirect(env, file.url)
 
 	let work = campus.studentWork
 	if (work?.board === 'oracle') {

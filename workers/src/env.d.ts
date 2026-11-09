@@ -13,4 +13,6 @@ interface Env {
 	TELEGRAM_CHAT_ID?: string
 	/** the topic in that group (its message_thread_id); without it, the group's General topic */
 	TELEGRAM_TOPIC_ID?: string
+	/** where `wrangler dev` reads St. Olaf's data files from instead of stolaf.dev, for the Mac data editor; never set on a deploy */
+	PAGES_ORIGIN_OVERRIDE?: string
 }
