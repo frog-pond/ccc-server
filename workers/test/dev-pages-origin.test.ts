@@ -62,6 +62,10 @@ describe('redirects with a dev origin', () => {
 		expect(response.status).toBe(307)
 		expect(response.headers.get('Location')).toBe(location)
 	})
+	test('is never kept, so a rebuilt file is fetched again', async () => {
+		let response = await get('/edu.stolaf/transit/bus')
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
+	})
 	test('without one, the published file', async () => {
 		let response = await get('/edu.stolaf/transit/bus', env)
 		expect(response.headers.get('Location')).toBe(`${STOLAF_PUBLISHED}bus-times.json`)
@@ -103,6 +107,25 @@ describe('GET /edu.stolaf/spaces/hours with a dev origin', () => {
 		let local: unknown = await (await get('/edu.stolaf/spaces/hours?breaks=none')).json()
 		let published: unknown = await (await get('/edu.stolaf/spaces/hours?breaks=none', env)).json()
 		expect(local).toEqual(published)
+	})
+
+	test('answers with responses nothing keeps', async () => {
+		for (let path of [
+			'/edu.stolaf/spaces/hours',
+			'/edu.stolaf/spaces/hours?breaks=none',
+			'/edu.stolaf/breaks',
+		]) {
+			let response = await get(path)
+			expect(response.status, path).toBe(200)
+			expect(response.headers.get('Cache-Control'), path).toBe('no-store')
+		}
+	})
+
+	test('does not keep a failure either', async () => {
+		fetchSpy.mockImplementation(() => Promise.resolve(json('{}', 404)))
+		let response = await get('/edu.stolaf/spaces/hours')
+		expect(response.status).toBe(502)
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
 	})
 
 	test('reads them again for every request', async () => {

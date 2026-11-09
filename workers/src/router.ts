@@ -160,14 +160,18 @@ async function calendar(env: Env, {read, history}: Calendar, url: URL): Promise<
 /// A temporary redirect to where a file is published, or to the dev origin
 /// serving it instead. Temporary, so a client asks here again and the file can
 /// be served from here later.
-const redirect = (env: Env, location: string) =>
-	new Response(null, {
+const redirect = (env: Env, location: string) => {
+	let origin = devPagesOrigin(env)
+	return new Response(null, {
 		status: 307,
 		headers: {
-			Location: rebased(location, devPagesOrigin(env)),
-			'Cache-Control': `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`,
+			Location: rebased(location, origin),
+			// a dev origin's files change with every save, so nothing keeps the way to them
+			'Cache-Control':
+				origin === undefined ? `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}` : 'no-store',
 		},
 	})
+}
 
 /// The building hours or the break calendar, resolved together, as the Node
 /// server's `/spaces/hours` and `/breaks` answer them. The hours are today's,
@@ -175,6 +179,19 @@ const redirect = (env: Env, location: string) =>
 /// are not kept past campus midnight; `?breaks=none` leaves the usual
 /// schedules in place. A failure with nothing stored is a 502, kept briefly.
 async function schedule(
+	env: Env,
+	params: ScheduleParams,
+	which: 'hours' | 'calendar',
+	url: URL,
+): Promise<Response> {
+	let response = await scheduleResponse(env, params, which, url)
+	// A dev origin's files change with every save in the data editor, so its
+	// answers, failures included, are kept by no cache and no phone.
+	if (devPagesOrigin(env) !== undefined) response.headers.set('Cache-Control', 'no-store')
+	return response
+}
+
+async function scheduleResponse(
 	env: Env,
 	params: ScheduleParams,
 	which: 'hours' | 'calendar',
