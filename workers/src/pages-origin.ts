@@ -17,7 +17,9 @@ export function devPagesOrigin(env: {
 		return undefined
 	}
 	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
-	return parsed.href.endsWith('/') ? parsed.href : `${parsed.href}/`
+	// only where the files are: a query or fragment would swallow every path put after it
+	let path = parsed.pathname.endsWith('/') ? parsed.pathname : `${parsed.pathname}/`
+	return `${parsed.origin}${path}`
 }
 
 /// `url` on `origin` when it is one of St. Olaf's published files; otherwise `url`.

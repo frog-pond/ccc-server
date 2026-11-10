@@ -15,14 +15,26 @@ export type ScheduleParams = {hoursUrl: string; breaksUrl: string}
 
 export type ScheduleResponses = ReturnType<typeof resolveScheduleResponses>
 
+/// Whether `url` is under the dev origin, compared as parsed URLs so that a
+/// path like `/out/../secret` is judged by where it really leads.
+function underDevOrigin(url: URL, origin: string | undefined): boolean {
+	if (origin === undefined) return false
+	let base = new URL(origin)
+	return url.origin === base.origin && url.pathname.startsWith(base.pathname)
+}
+
+/// One published schedule file, unwrapped from its envelope. Only stolaf.dev,
+/// or the dev origin when one is set, is read from.
 async function published(url: string, origin?: string): Promise<unknown> {
 	let parsed = new URL(url)
-	let fromDevOrigin = origin !== undefined && url.startsWith(origin)
-	if (!fromDevOrigin && (parsed.protocol !== 'https:' || !SCHEDULE_HOSTS.has(parsed.hostname))) {
+	if (
+		!underDevOrigin(parsed, origin) &&
+		(parsed.protocol !== 'https:' || !SCHEDULE_HOSTS.has(parsed.hostname))
+	) {
 		throw new Error(`${url} is not a schedule file this reads`)
 	}
-	// the host was checked above, so a redirect to another is not followed
-	let response = await upstream(url)
+	// the host was checked above, and upstream never follows a redirect away from it
+	let response = await upstream(parsed.href)
 	if (!response.ok) {
 		throw new Error(`The schedule file responded ${String(response.status)} for ${url}`)
 	}

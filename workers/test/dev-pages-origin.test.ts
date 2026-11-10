@@ -4,7 +4,7 @@ import wranglerConfig from '../../wrangler.jsonc?raw'
 import {STOLAF_PUBLISHED, devPagesOrigin, rebased} from '../src/pages-origin.ts'
 import {STOLAF_SCHEDULES} from '../src/pages-routes.ts'
 import {route} from '../src/router.ts'
-import {schedules} from '../src/sources/schedules.ts'
+import {loadSchedules, schedules} from '../src/sources/schedules.ts'
 import {spyOnFetch} from './spy.ts'
 import calendar from '../../source/schedules/fixtures/calendar.json?raw'
 import spaces from '../../source/schedules/fixtures/spaces.json?raw'
@@ -12,9 +12,8 @@ import spaces from '../../source/schedules/fixtures/spaces.json?raw'
 const ORIGIN = 'http://editor-mac.local:8790/'
 
 /// The test worker's bindings with the dev origin added, everything else
-/// unchanged. Defined rather than assigned: assigning through the bindings'
-/// prototype would set the var on the shared `env` itself.
-const withOrigin = Object.create(env, {PAGES_ORIGIN_OVERRIDE: {value: ORIGIN}}) as Env
+/// unchanged. A copy, so the shared `env` never gets the var.
+const withOrigin: Env = {...env, PAGES_ORIGIN_OVERRIDE: ORIGIN}
 
 const get = (path: string, bindings: Env = withOrigin) =>
 	route(new Request(`https://worker.test${path}`), bindings)
@@ -26,6 +25,13 @@ describe('devPagesOrigin', () => {
 			expect(devPagesOrigin({PAGES_ORIGIN_OVERRIDE: value})).toBeUndefined()
 		},
 	)
+	test.each([
+		['http://editor-mac.local:8790/?x=1', ORIGIN],
+		['http://editor-mac.local:8790/#top', ORIGIN],
+		['http://editor-mac.local:8790/out?x=1#top', 'http://editor-mac.local:8790/out/'],
+	])('keeps only the origin and path of %s', (value, origin) => {
+		expect(devPagesOrigin({PAGES_ORIGIN_OVERRIDE: value})).toBe(origin)
+	})
 	test('ends the origin with a slash', () => {
 		expect(devPagesOrigin({PAGES_ORIGIN_OVERRIDE: 'http://editor-mac.local:8790'})).toBe(ORIGIN)
 	})
@@ -65,6 +71,13 @@ describe('redirects with a dev origin', () => {
 	test('is never kept, so a rebuilt file is fetched again', async () => {
 		let response = await get('/edu.stolaf/transit/bus')
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
+	})
+	test('no route is kept, so a dev session never sees an old answer', async () => {
+		let response = await get('/edu.stolaf/routes')
+		expect(response.status).toBe(200)
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
+		let published = await get('/edu.stolaf/routes', env)
+		expect(published.headers.get('Cache-Control')).toMatch(/^public, max-age=/)
 	})
 	test('without one, the published file', async () => {
 		let response = await get('/edu.stolaf/transit/bus', env)
@@ -119,6 +132,31 @@ describe('GET /edu.stolaf/spaces/hours with a dev origin', () => {
 			expect(response.status, path).toBe(200)
 			expect(response.headers.get('Cache-Control'), path).toBe('no-store')
 		}
+	})
+
+	test('answers a file that is not JSON with a 502 nothing keeps', async () => {
+		fetchSpy.mockImplementation(() => Promise.resolve(json('{"data": [ half a fil')))
+		let response = await get('/edu.stolaf/spaces/hours')
+		expect(response.status).toBe(502)
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
+	})
+
+	test('refuses a file outside the origin, however its path is written', async () => {
+		let origin = 'http://editor-mac.local:8790/out/'
+		let params = {
+			hoursUrl: 'http://editor-mac.local:8790/out/../secret/building-hours.json',
+			breaksUrl: `${origin}breaks.json`,
+		}
+		await expect(loadSchedules(params, origin)).rejects.toThrow(/not a schedule file/)
+		expect(fetchSpy).not.toHaveBeenCalledWith(params.hoursUrl, expect.anything())
+	})
+
+	test('refuses a file on another host', async () => {
+		let params = {
+			hoursUrl: 'http://elsewhere.local/building-hours.json',
+			breaksUrl: `${ORIGIN}breaks.json`,
+		}
+		await expect(loadSchedules(params, ORIGIN)).rejects.toThrow(/not a schedule file/)
 	})
 
 	test('does not keep a failure either', async () => {
