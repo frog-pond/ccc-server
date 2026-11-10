@@ -74,7 +74,7 @@ void test('menu includes today and the next four campus dates', async (t) => {
 	t.assert.equal(menu.days.length, 5)
 })
 
-void test('menu stays on its original URL by default', async (t) => {
+void test("menu by default fetches today's dated URL", async (t) => {
 	let requests: string[] = []
 	let html = decodeURIComponent(BAMCO_PAGE.slice(BAMCO_PAGE.indexOf(',') + 1))
 	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL) => {
@@ -84,7 +84,7 @@ void test('menu stays on its original URL by default', async (t) => {
 
 	let menu = await bonApp._menu(STAV)
 
-	t.assert.deepEqual(requests, [STAV])
+	t.assert.deepEqual(requests, [`${STAV}${campusToday()}/`])
 	t.assert.equal(menu.days.length, 1)
 	t.assert.equal(menu.days[0]?.date, campusToday())
 })
