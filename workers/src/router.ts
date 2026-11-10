@@ -4,12 +4,13 @@ import type {Calendar} from './calendars.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
 import {CLIENT_MAX_AGE, ERROR_MAX_AGE} from './lifetimes.ts'
+import {devPagesOrigin, rebased} from './pages-origin.ts'
 import {wordpress as wordpressApi} from './sources/wordpress-api.ts'
 import {posting, postings, units} from './student-work.ts'
 import {carletonPosting, carletonPostings} from './carleton-student-work.ts'
 import {jobs, org, orgCategories, orgs} from './student-orgs.ts'
 import {bonappPage, campusToday, secondsUntilCampusMidnight} from './sources/bonapp.ts'
-import {schedules, type ScheduleParams} from './sources/schedules.ts'
+import {loadSchedules, schedules, type ScheduleParams} from './sources/schedules.ts'
 import {hoursAt, secondsUntilMidnight} from '../../source/schedules/active.ts'
 import {imageUrl, isPublishedImage} from '../../source/ccc-lib/images-shape.ts'
 import {routeListing} from './routes.ts'
@@ -156,12 +157,16 @@ async function calendar(env: Env, {read, history}: Calendar, url: URL): Promise<
 	}
 }
 
-/// A temporary redirect to where a file is published. Temporary, so a client
-/// asks here again and the file can be served from here later.
-const redirect = (location: string) =>
+/// A temporary redirect to where a file is published, or to the dev origin
+/// serving it instead. Temporary, so a client asks here again and the file can
+/// be served from here later.
+const redirect = (env: Env, location: string) =>
 	new Response(null, {
 		status: 307,
-		headers: {Location: location, 'Cache-Control': `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`},
+		headers: {
+			Location: rebased(location, devPagesOrigin(env)),
+			'Cache-Control': `public, max-age=${CLIENT_MAX_AGE.toFixed(0)}`,
+		},
 	})
 
 /// The building hours or the break calendar, resolved together, as the Node
@@ -180,7 +185,19 @@ async function schedule(
 		return json({message: 'breaks must be none'}, 400, ONE_MINUTE)
 	}
 	try {
-		let {value} = await fetchSource(env, schedules, params)
+		// A dev origin's files change with every save in the data editor, so they
+		// are read for each request rather than kept.
+		let origin = devPagesOrigin(env)
+		let value =
+			origin === undefined
+				? (await fetchSource(env, schedules, params)).value
+				: await loadSchedules(
+						{
+							hoursUrl: rebased(params.hoursUrl, origin),
+							breaksUrl: rebased(params.breaksUrl, origin),
+						},
+						origin,
+					)
 		if (which === 'calendar') return json(value.calendar, 200, CLIENT_MAX_AGE)
 		if (breaks === 'none') return json(value.hours, 200, CLIENT_MAX_AGE)
 		// read after the fetch, which can run across campus midnight
@@ -312,7 +329,19 @@ async function streaming(env: Env, url: URL, which: string): Promise<Response> {
 	return served(async () => (await fetchSource(env, streams, params)).value.streams)
 }
 
+/// A request's answer. With a dev origin, nothing may keep any answer, failures
+/// included: the data editor rebuilds the data on every save, and a phone or
+/// Workers Cache holding an older answer would hide the edit.
 export async function route(request: Request, env: Env): Promise<Response> {
+	let response = await routed(request, env)
+	if (devPagesOrigin(env) === undefined) return response
+	let unkept = new Response(response.body, response)
+	unkept.headers.set('Cache-Control', 'no-store')
+	return unkept
+}
+
+/// A request's answer as the campus routes give it, before the dev-origin cache rule.
+async function routed(request: Request, env: Env): Promise<Response> {
 	let url = new URL(request.url)
 	// the one route that is posted to: Sentry's webhooks
 	if (url.pathname === '/sentry/telegram') return sentryTelegram(request, env)
@@ -353,7 +382,7 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	if (Object.hasOwn(campus.notices, path)) return json(campus.notices[path], 200, CLIENT_MAX_AGE)
 
 	let location = Object.hasOwn(campus.redirects, path) ? campus.redirects[path] : undefined
-	if (location) return redirect(location)
+	if (location) return redirect(env, location)
 
 	if (campus.schedules) {
 		if (path === '/spaces/hours') return schedule(env, campus.schedules, 'hours', url)
@@ -387,11 +416,11 @@ export async function route(request: Request, env: Env): Promise<Response> {
 	let image = /^\/images\/([^/]+)\/([^/]+)$/.exec(path)
 	if (image?.[1] && image[2] && campus.images) {
 		if (url.search || !isPublishedImage(image[1], image[2])) return json({error: 'not found'}, 404)
-		return redirect(imageUrl(image[1], image[2]).href)
+		return redirect(env, imageUrl(image[1], image[2]).href)
 	}
 
 	let file = Object.hasOwn(campus.files, path) ? campus.files[path] : undefined
-	if (file) return redirect(file.url)
+	if (file) return redirect(env, file.url)
 
 	let work = campus.studentWork
 	if (work?.board === 'oracle') {

@@ -5,6 +5,7 @@ import {itemsBefore} from './archive.ts'
 import {calendarArchive, type CalendarArchiveParams} from './archives/calendars.ts'
 import {fetchSource} from './client.ts'
 import {clock} from './clock.ts'
+import {devPagesOrigin, rebased} from './pages-origin.ts'
 import {
 	carletonCalendar,
 	googleCalendar,
@@ -40,7 +41,12 @@ const fromGoogle = (calendarId: string) =>
 	})
 
 const fromWeeklySchedule = (url: string) =>
-	live(async (env) => (await fetchSource(env, weeklySchedule, {url})).value)
+	live(async (env) => {
+		// a dev origin's files change with every save in the data editor
+		let origin = devPagesOrigin(env)
+		if (origin !== undefined) return weeklySchedule.load({url: rebased(url, origin)}, env)
+		return (await fetchSource(env, weeklySchedule, {url})).value
+	})
 
 const fromTec = (url: string) =>
 	kept(async (env) => (await fetchSource(env, tec, {url})).value, {kind: 'tec', url})

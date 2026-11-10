@@ -4,6 +4,7 @@ import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {SOURCE_TTL} from '../lifetimes.ts'
 import {upstream} from '../upstream.ts'
+import {underDevOrigin} from '../pages-origin.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -15,17 +16,35 @@ export type ScheduleParams = {hoursUrl: string; breaksUrl: string}
 
 export type ScheduleResponses = ReturnType<typeof resolveScheduleResponses>
 
-async function published(url: string): Promise<unknown> {
+/// One published schedule file, unwrapped from its envelope. Only stolaf.dev,
+/// or the dev origin when one is set, is read from.
+async function published(url: string, origin?: string): Promise<unknown> {
 	let parsed = new URL(url)
-	if (parsed.protocol !== 'https:' || !SCHEDULE_HOSTS.has(parsed.hostname)) {
+	if (
+		!underDevOrigin(parsed, origin) &&
+		(parsed.protocol !== 'https:' || !SCHEDULE_HOSTS.has(parsed.hostname))
+	) {
 		throw new Error(`${url} is not a schedule file this reads`)
 	}
-	// the host was checked above, so a redirect to another is not followed
-	let response = await upstream(url)
+	// the host was checked above, and upstream never follows a redirect away from it
+	let response = await upstream(parsed.href)
 	if (!response.ok) {
 		throw new Error(`The schedule file responded ${String(response.status)} for ${url}`)
 	}
 	return publicationData(await response.json())
+}
+
+/// Both files read and resolved together. `origin` is the dev origin the
+/// urls were rebased onto, which is read from despite the host check.
+export async function loadSchedules(
+	{hoursUrl, breaksUrl}: ScheduleParams,
+	origin?: string,
+): Promise<ScheduleResponses> {
+	let [hours, calendar] = await Promise.all([
+		published(hoursUrl, origin),
+		published(breaksUrl, origin),
+	])
+	return resolveScheduleResponses(calendar, hours)
 }
 
 /// The building hours with each building's break schedules expanded against
@@ -37,10 +56,7 @@ async function published(url: string): Promise<unknown> {
 export const schedules = defineSource({
 	name: 'schedules',
 	key: ({hoursUrl, breaksUrl}: ScheduleParams) => `${hoursUrl} ${breaksUrl}`,
-	async load({hoursUrl, breaksUrl}): Promise<ScheduleResponses> {
-		let [hours, calendar] = await Promise.all([published(hoursUrl), published(breaksUrl)])
-		return resolveScheduleResponses(calendar, hours)
-	},
+	load: (params) => loadSchedules(params),
 	ttl: SOURCE_TTL,
 	staleIfError: DAY,
 })
