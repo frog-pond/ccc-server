@@ -84,7 +84,7 @@ void test("menu by default fetches today's dated URL", async (t) => {
 
 	let menu = await bonApp._menu(STAV)
 
-	t.assert.deepEqual(requests, [STAV])
+	t.assert.deepEqual(requests, [`${STAV}${campusToday()}/`])
 	t.assert.equal(menu.days.length, 1)
 	t.assert.equal(menu.days[0]?.date, campusToday())
 })
