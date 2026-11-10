@@ -27,3 +27,11 @@ export function rebased(url: string, origin: string | undefined): string {
 	if (origin === undefined || !url.startsWith(STOLAF_PUBLISHED)) return url
 	return origin + url.slice(STOLAF_PUBLISHED.length)
 }
+
+/// Whether `url` is under the dev origin, compared as parsed URLs so that a
+/// path like `/out/../secret` is judged by where it really leads.
+export function underDevOrigin(url: URL, origin: string | undefined): boolean {
+	if (origin === undefined) return false
+	let base = new URL(origin)
+	return url.origin === base.origin && url.pathname.startsWith(base.pathname)
+}

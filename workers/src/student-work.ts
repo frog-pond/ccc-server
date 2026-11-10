@@ -4,6 +4,7 @@ import {fetchSource} from './client.ts'
 import {defineSource} from './define-source.ts'
 import {registerSource} from './registry.ts'
 import {pagesJson} from './sources/pages-json.ts'
+import {devPagesOrigin, rebased} from './pages-origin.ts'
 import {parseFilters, type AreaUnits, type PostingWithDescription} from './student-work-shape.ts'
 
 const json = (body: unknown, status = 200, cacheSeconds?: number) =>
@@ -58,6 +59,9 @@ async function readAreas(
 	url: string,
 ): Promise<{areas: Area[]; listed: string[]} | undefined> {
 	try {
+		// a dev origin's files change with every save in the data editor
+		let origin = devPagesOrigin(env)
+		if (origin !== undefined) return await studentWorkAreas.load({url: rebased(url, origin)}, env)
 		return (await fetchSource(env, studentWorkAreas, {url})).value
 	} catch (err) {
 		console.warn('student-work: could not read the areas file', String(err))

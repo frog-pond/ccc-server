@@ -4,6 +4,7 @@ import {defineSource} from '../define-source.ts'
 import {registerSource} from '../registry.ts'
 import {SOURCE_TTL} from '../lifetimes.ts'
 import {upstream} from '../upstream.ts'
+import {underDevOrigin} from '../pages-origin.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -14,14 +15,6 @@ const SCHEDULE_HOSTS = new Set(['stolaf.dev'])
 export type ScheduleParams = {hoursUrl: string; breaksUrl: string}
 
 export type ScheduleResponses = ReturnType<typeof resolveScheduleResponses>
-
-/// Whether `url` is under the dev origin, compared as parsed URLs so that a
-/// path like `/out/../secret` is judged by where it really leads.
-function underDevOrigin(url: URL, origin: string | undefined): boolean {
-	if (origin === undefined) return false
-	let base = new URL(origin)
-	return url.origin === base.origin && url.pathname.startsWith(base.pathname)
-}
 
 /// One published schedule file, unwrapped from its envelope. Only stolaf.dev,
 /// or the dev origin when one is set, is read from.

@@ -172,3 +172,28 @@ describe('GET /edu.stolaf/spaces/hours with a dev origin', () => {
 		expect(fromOrigin()).toHaveLength(4)
 	})
 })
+
+describe('other files the Worker reads itself, with a dev origin', () => {
+	let fetchSpy: MockInstance<typeof fetch>
+	const fetched = () => fetchSpy.mock.calls.map(([input]) => String(input))
+
+	beforeEach(() => {
+		fetchSpy = spyOnFetch()
+		fetchSpy.mockImplementation(() => Promise.resolve(json('{}', 404)))
+	})
+	afterEach(() => {
+		fetchSpy.mockRestore()
+	})
+
+	test("KSTO's weekly schedule comes from the origin", async () => {
+		await get('/edu.stolaf/calendar/ksto-schedule')
+		expect(fetched()).toContain(`${ORIGIN}ksto-schedule.json`)
+		expect(fetched().filter((url) => url.startsWith(STOLAF_PUBLISHED))).toEqual([])
+	})
+
+	test('the Student Work areas come from the origin', async () => {
+		await get('/edu.stolaf/student-work/postings?area=dining')
+		expect(fetched()).toContain(`${ORIGIN}student-work-areas.json`)
+		expect(fetched().filter((url) => url.startsWith(STOLAF_PUBLISHED))).toEqual([])
+	})
+})

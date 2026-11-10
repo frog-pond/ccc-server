@@ -109,8 +109,7 @@ describe('the route table', () => {
 	})
 
 	test('only the colleges’ own hosts are fetched', async () => {
-		let source = pagesJson as unknown as {load: (p: {url: string}) => Promise<unknown>}
-		await expect(source.load({url: 'https://example.com/x.json'})).rejects.toThrow(
+		await expect(pagesJson.load({url: 'https://example.com/x.json'}, env)).rejects.toThrow(
 			'is not a data file this reads',
 		)
 		expect(fetched()).toEqual([])

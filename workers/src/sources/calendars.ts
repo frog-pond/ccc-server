@@ -19,6 +19,7 @@ import {registerSource} from '../registry.ts'
 import {eventsFromPresence} from './presence-shape.ts'
 import {TecPageSchema, eventsFromTec} from './tec-shape.ts'
 import {upstream} from '../upstream.ts'
+import {devPagesOrigin, underDevOrigin} from '../pages-origin.ts'
 import {recordItems} from '../archive.ts'
 import {calendarArchive} from '../archives/calendars.ts'
 
@@ -51,6 +52,14 @@ export async function fetchFrom(hosts: ReadonlySet<string>, url: string, init: R
 	if (!response.ok) {
 		throw new Error(`The calendar responded ${String(response.status)} for ${named}`)
 	}
+	return response
+}
+
+/// A file from the data editor's origin under `wrangler dev`, which the caller
+/// has checked is under it; a redirect is never followed away from it.
+async function fromDevOrigin(url: string): Promise<Response> {
+	let response = await upstream(url)
+	if (!response.ok) throw new Error(`The calendar responded ${String(response.status)} for ${url}`)
 	return response
 }
 
@@ -161,8 +170,10 @@ export type WeeklyScheduleParams = {url: string}
 export const weeklySchedule = defineSource({
 	name: 'calendar-weekly-schedule',
 	key: ({url}: WeeklyScheduleParams) => url,
-	async load({url}) {
-		let response = await fetchFrom(new Set(['stolaf.dev']), url)
+	async load({url}, env) {
+		let response = underDevOrigin(new URL(url), devPagesOrigin(env))
+			? await fromDevOrigin(url)
+			: await fetchFrom(new Set(['stolaf.dev']), url)
 		let body = z.object({data: WeeklyScheduleSchema}).parse(await response.json())
 		return weeklyScheduleEvents(body.data, now())
 	},
