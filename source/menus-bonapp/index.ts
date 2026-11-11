@@ -50,24 +50,26 @@ export async function _menu(
 			page: await settled(getBamco(cafeUrlForDate(cafeUrl, date))),
 		})),
 	)
-	let loaded = pages.flatMap(({page}) => (page.status === 'fulfilled' ? [page.value] : []))
-	// when nothing loaded, `menuFromPages` throws and `menu` reports the failure
-	if (loaded.length > 0) {
-		recordFeedItems(
-			'bonapp',
-			feedName(cafeUrl),
-			loaded.reduce(
-				(count, bamco) => count + (bamco ? Object.keys(bamco.menu_items).length : 0),
-				0,
-			),
-			{closed: loaded.every((bamco) => bamco === null)},
-		)
-		// a day that failed while others loaded is an error for that day alone,
-		// and never reaches `menu`'s catch, so it is reported here
-		for (let {date, page} of pages) {
-			if (page.status === 'fulfilled') continue
+	// Each page is its own reading, tagged by its offset from today, so a
+	// five-day request and a one-day request both report today's page as
+	// `day: 0`, and an alert on that series means what it always has. When
+	// nothing loaded, `menuFromPages` throws and `menu` reports the failure.
+	if (pages.some(({page}) => page.status === 'fulfilled')) {
+		for (let [offset, {date, page}] of pages.entries()) {
+			let attributes = {day: String(offset)}
+			if (page.status === 'fulfilled') {
+				let count = page.value ? Object.keys(page.value.menu_items).length : 0
+				recordFeedItems('bonapp', feedName(cafeUrl), count, {
+					...attributes,
+					closed: page.value === null,
+				})
+				continue
+			}
+			// a day that failed while others loaded is an error for that day
+			// alone, and never reaches `menu`'s catch
 			console.error(page.reason, {cafeUrl: String(cafeUrl), date})
 			Sentry.captureException(page.reason)
+			recordFeedFailure('bonapp', feedName(cafeUrl), attributes)
 		}
 	}
 
