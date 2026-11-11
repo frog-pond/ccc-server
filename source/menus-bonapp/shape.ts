@@ -30,11 +30,13 @@ export function CustomCafe(message: string, date: string) {
 }
 
 function CustomCafeMenuItem({
+	id,
 	station,
 	sub_station,
 	description,
 	label,
 }: {
+	id: string
 	station: string
 	sub_station: string
 	description: string
@@ -42,7 +44,7 @@ function CustomCafeMenuItem({
 }) {
 	return CafeMenuItemSchema.parse({
 		description,
-		id: '1',
+		id,
 		label,
 		rating: '5',
 		special: 1,
@@ -54,11 +56,14 @@ function CustomCafeMenuItem({
 	})
 }
 
-export function CafeMenuIsClosed(date: string) {
+/// A stand-in's one item is `1`, as the apps have always been sent, unless a
+/// menu of several days needs each day's stand-in to have an id of its own.
+export function CafeMenuIsClosed(date: string, itemId = '1') {
 	return CafeMenuResponseSchema.parse({
 		cor_icons: {},
 		items: {
-			1: CustomCafeMenuItem({
+			[itemId]: CustomCafeMenuItem({
+				id: itemId,
 				description: 'Closed',
 				label: 'Closed',
 				station: 'Closed',
@@ -74,6 +79,7 @@ export function CafeMenuIsClosed(date: string) {
 					dayparts: [
 						[
 							CustomCafeDayPart({
+								itemId,
 								abbreviation: 'CLSD',
 								label: 'Closed',
 								message: 'This café is currently closed.',
@@ -88,11 +94,13 @@ export function CafeMenuIsClosed(date: string) {
 }
 
 function CustomCafeDayPart({
+	itemId,
 	abbreviation,
 	label,
 	message,
 	note,
 }: {
+	itemId: string
 	abbreviation: string
 	label: string
 	message: string
@@ -115,18 +123,19 @@ function CustomCafeDayPart({
 				label: label,
 				price: '',
 				note,
-				items: ['1'],
+				items: [itemId],
 				soup: null,
 			},
 		],
 	})
 }
 
-export function CafeMenuWithError(error: unknown, label: string, date: string) {
+export function CafeMenuWithError(error: unknown, label: string, date: string, itemId = '1') {
 	return CafeMenuResponseSchema.parse({
 		cor_icons: {},
 		items: {
-			1: CustomCafeMenuItem({
+			[itemId]: CustomCafeMenuItem({
+				id: itemId,
 				description: `Please email allaboutolaf@frogpond.tech: ${String(error)}`,
 				label: label,
 				station: 'error!?‽',
@@ -142,6 +151,7 @@ export function CafeMenuWithError(error: unknown, label: string, date: string) {
 					dayparts: [
 						[
 							CustomCafeDayPart({
+								itemId,
 								abbreviation: 'ERR',
 								label: 'Errored',
 								message: 'Error loading the BonApp menu data',
@@ -254,15 +264,22 @@ export function menuFromPages(pages: DatedPage[]): CafeMenuResponseType {
 		throw failure.reason
 	}
 
-	let menus = pages.map(({date, page}) =>
-		page.status === 'fulfilled'
-			? menuFrom(page.value, date)
-			: CafeMenuWithError(
-					page.reason instanceof Error ? page.reason.message : String(page.reason),
-					'Could not load the BonApp menu data',
-					date,
-				),
-	)
+	// across several days, each day's stand-in item is named for its day, so a
+	// closed day and a failed day do not overwrite each other's item `1`
+	let standInId = (kind: string, date: string) => (pages.length > 1 ? `${kind}-${date}` : '1')
+	let menus = pages.map(({date, page}) => {
+		if (page.status === 'rejected') {
+			return CafeMenuWithError(
+				page.reason instanceof Error ? page.reason.message : String(page.reason),
+				'Could not load the BonApp menu data',
+				date,
+				standInId('error', date),
+			)
+		}
+		return page.value === null
+			? CafeMenuIsClosed(date, standInId('closed', date))
+			: menuFrom(page.value, date)
+	})
 	// each day's icons are kept, in case a day's page lists only those its items use
 	return menus.reduce<CafeMenuResponseType>(
 		(combined, menu) => ({

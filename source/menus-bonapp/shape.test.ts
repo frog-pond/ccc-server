@@ -114,3 +114,27 @@ void test("every day's items and icons are kept", (t) => {
 	t.assert.deepEqual(Object.keys(menu.items).sort(), ['101', '202'])
 	t.assert.deepEqual(Object.keys(menu.cor_icons).sort(), ['101', '202'])
 })
+
+void test("each day's stand-in keeps its own item across several days", (t) => {
+	let menu = menuFromPages([
+		{date: '2026-09-22', page: {status: 'fulfilled', value: null}},
+		{date: '2026-09-23', page: {status: 'rejected', reason: new Error('BonApp responded 503')}},
+		{date: '2026-09-24', page: {status: 'fulfilled', value: null}},
+	])
+	t.assert.doesNotThrow(() => CafeMenuResponseSchema.parse(menu))
+	// every station on every day names an item the menu has, and the right one
+	let labels = menu.days.map(({cafe}) =>
+		cafe.dayparts
+			.flat()
+			.flatMap(({stations}) => stations.flatMap(({items}) => items))
+			.map((id) => menu.items[id]?.label),
+	)
+	t.assert.deepEqual(labels, [['Closed'], ['Could not load the BonApp menu data'], ['Closed']])
+	t.assert.equal(Object.keys(menu.items).length, 3)
+})
+
+void test("a single day's stand-in keeps the item id the apps have always had", (t) => {
+	let menu = menuFromPages([{date: DATE, page: {status: 'fulfilled', value: null}}])
+	t.assert.deepEqual(menu, menuFrom(null, DATE))
+	t.assert.deepEqual(Object.keys(menu.items), ['1'])
+})
