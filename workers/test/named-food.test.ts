@@ -96,7 +96,9 @@ describe('GET /food/named/{menu,cafe}/:name', () => {
 			await get(`/edu.stolaf/food/named/menu/stav-hall?days=5&test=${crypto.randomUUID()}`)
 		).json<{days: {date: string}[]}>()
 		expect(body.days.map(({date}) => date)).toEqual(dates)
-		expect(fetched().filter((url) => urls.includes(url))).toEqual(urls)
+		// The five pages are fetched concurrently, so their order in the log is
+		// not fixed; each must be fetched exactly once, in any order.
+		expect(fetched().filter((url) => urls.includes(url)).sort()).toEqual([...urls].sort())
 	})
 
 	test('the café info is the one the id route sends', async () => {
