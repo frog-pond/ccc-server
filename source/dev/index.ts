@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url'
 import {advertise} from '../ccc-lib/mdns.ts'
 import {advertsFor, campusesFrom} from './discovery.ts'
 import {portIsFree} from './port.ts'
+import {wranglerArgs} from './wrangler-args.ts'
 
 const PORT = 8787
 const READY_TIMEOUT_MS = 60_000
@@ -28,11 +29,10 @@ if (!(await portIsFree(PORT))) {
 // its hotkeys, which stops it (SIGTTOU) when this runs as a background job, as
 // the app's start:with-server runs it, and turns Ctrl-C into a hotkey. `::`
 // listens on IPv4 and IPv6 both: the app may be handed either address.
-const wrangler = spawn(
-	'node_modules/.bin/wrangler',
-	['dev', '-c', 'wrangler.jsonc', '--ip', '::', '--port', String(PORT)],
-	{cwd: repoRoot, stdio: ['ignore', 'inherit', 'inherit']},
-)
+const wrangler = spawn('node_modules/.bin/wrangler', wranglerArgs(PORT, process.env), {
+	cwd: repoRoot,
+	stdio: ['ignore', 'inherit', 'inherit'],
+})
 wrangler.once('error', (error: NodeJS.ErrnoException) => {
 	console.error(
 		error.code === 'ENOENT'

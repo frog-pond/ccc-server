@@ -1,0 +1,37 @@
+/// Where All About Olaf's data files and images are published: the prefix a
+/// dev origin takes the place of.
+export const STOLAF_PUBLISHED = 'https://stolaf.dev/AAO-React-Native/'
+
+/// The origin `wrangler dev` was told to serve St. Olaf's data from in place
+/// of stolaf.dev, or undefined. The Mac data editor passes it through
+/// `source/dev/index.ts`; wrangler.jsonc never sets it, so a deploy has none.
+export function devPagesOrigin(env: {
+	PAGES_ORIGIN_OVERRIDE?: string | undefined
+}): string | undefined {
+	let value = env.PAGES_ORIGIN_OVERRIDE
+	if (!value) return undefined
+	let parsed: URL
+	try {
+		parsed = new URL(value)
+	} catch {
+		return undefined
+	}
+	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+	// only where the files are: a query or fragment would swallow every path put after it
+	let path = parsed.pathname.endsWith('/') ? parsed.pathname : `${parsed.pathname}/`
+	return `${parsed.origin}${path}`
+}
+
+/// `url` on `origin` when it is one of St. Olaf's published files; otherwise `url`.
+export function rebased(url: string, origin: string | undefined): string {
+	if (origin === undefined || !url.startsWith(STOLAF_PUBLISHED)) return url
+	return origin + url.slice(STOLAF_PUBLISHED.length)
+}
+
+/// Whether `url` is under the dev origin, compared as parsed URLs so that a
+/// path like `/out/../secret` is judged by where it really leads.
+export function underDevOrigin(url: URL, origin: string | undefined): boolean {
+	if (origin === undefined) return false
+	let base = new URL(origin)
+	return url.origin === base.origin && url.pathname.startsWith(base.pathname)
+}
