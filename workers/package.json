@@ -16,6 +16,7 @@
   "dependencies": {
     "@frogpond/titlecase": "2.0.4",
     "get-urls": "12.1.0",
+    "html-entities": "2.6.0",
     "ical.js": "^2.0.1",
     "linkedom": "^0.18.13",
     "lodash-es": "^4.17.21",
