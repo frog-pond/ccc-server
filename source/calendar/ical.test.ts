@@ -385,6 +385,16 @@ for (const {name, organizer, organization} of [
 		organization: ['Arts & Humanities'],
 	},
 	{
+		name: 'keeps literal angle brackets in the organizer name',
+		organizer: 'ORGANIZER;CN="Computing <ACM>":mailto:calendar@example.com',
+		organization: ['Computing <ACM>'],
+	},
+	{
+		name: 'decodes entity-encoded angle brackets in the organizer name',
+		organizer: 'ORGANIZER;CN="Computing &lt;ACM&gt;":mailto:calendar@example.com',
+		organization: ['Computing <ACM>'],
+	},
+	{
 		name: 'trims whitespace around the organizer name',
 		organizer: 'ORGANIZER;CN="  Spanish  ":mailto:calendar@example.com',
 		organization: ['Spanish'],

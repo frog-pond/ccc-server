@@ -4,6 +4,7 @@
 import moment from 'moment-timezone'
 import getUrls from 'get-urls'
 import {textFromHtml} from '../ccc-lib/dom.ts'
+import {decode} from 'html-entities'
 import InternetCalendar from 'ical.js'
 import {EventSchema} from './types.ts'
 import {sortBy} from 'lodash-es'
@@ -39,7 +40,9 @@ function convertEvent(event: InternetCalendar.Event, calendarZone?: string, now 
 	let description = textFromHtml(event.description ?? '')
 	const organizer = event.component.getFirstProperty('organizer')
 	const rawName = organizer?.getParameter('cn')
-	const name = typeof rawName === 'string' ? textFromHtml(rawName) : undefined
+	// CN is plain text, not HTML: decode entities without parsing tags, so a
+	// literal `<ACM>` in the name survives
+	const name = typeof rawName === 'string' ? decode(rawName).trim() : undefined
 
 	return EventSchema.parse({
 		dataSource: 'ical',
