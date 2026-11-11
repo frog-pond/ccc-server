@@ -79,6 +79,16 @@ describe('how long a food response may be kept', () => {
 		expect(response.headers.get('cache-control')).toBe('public, max-age=600')
 	})
 
+	test('five days asked for across campus midnight are dated and kept by the day they were asked on', async () => {
+		crossMidnight(() => new Response(stavHall, {headers: {'content-type': 'text/html'}}))
+		let response = await get(`/edu.stolaf/food/menu/261?days=5&test=${crypto.randomUUID()}`)
+		let body = await response.json<{days: {date: string}[]}>()
+		// the pages fetched were the 14th's five, so the response says so, and is
+		// not kept: the day it is for ended during the fetch
+		expect(body.days[0]?.date).toBe('2030-01-14')
+		expect(response.headers.get('cache-control')).toBe('public, max-age=1')
+	})
+
 	test('a stand-in made after campus midnight is dated by the day it was made', async () => {
 		crossMidnight(() => new Response('boom', {status: 503}))
 		let body = await (await get('/edu.stolaf/food/menu/36')).json<{days: {date: string}[]}>()

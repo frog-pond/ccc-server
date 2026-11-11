@@ -208,3 +208,68 @@ export function menuFrom(bamco: BamcoPageContents | null, date: string): CafeMen
 		],
 	})
 }
+
+/// The campus dates of `count` days, starting with `today` (`YYYY-MM-DD`).
+export function menuDates(today: string, count: number): string[] {
+	return Array.from({length: count}, (_, offset) => {
+		let date = new Date(`${today}T00:00:00Z`)
+		date.setUTCDate(date.getUTCDate() + offset)
+		return date.toISOString().slice(0, 10)
+	})
+}
+
+/// A café page's address for one date: BonApp serves a day's menu at the
+/// café's path with the date appended, replacing any date already there.
+export function cafeUrlForDate(cafeUrl: string | URL, date: string): string {
+	let url = new URL(cafeUrl)
+	if (url.protocol === 'data:') return url.toString()
+	url.pathname = `${url.pathname.replace(/\/\d{4}-\d{2}-\d{2}\/?$/, '').replace(/\/$/, '')}/${date}/`
+	return url.toString()
+}
+
+/// How a promise ended, in the shape `Promise.allSettled` reports.
+export type Settled<T> = {status: 'fulfilled'; value: T} | {status: 'rejected'; reason: unknown}
+
+/// A promise's outcome as `Promise.allSettled` reports it, for one promise.
+export function settled<T>(promise: Promise<T>): Promise<Settled<T>> {
+	return promise.then(
+		(value) => ({status: 'fulfilled' as const, value}),
+		(reason: unknown) => ({status: 'rejected' as const, reason}),
+	)
+}
+
+/// One café page's load for a date, as `Promise.allSettled` reports it.
+export interface DatedPage {
+	date: string
+	page: Settled<BamcoPageContents | null>
+}
+
+/// The menu for one or more days' pages, in the order given. A day whose page
+/// could not be loaded becomes an error stand-in for that day alone, so one bad
+/// page from BonApp does not cost the others; when no page loaded, the first
+/// failure is thrown, so the caller answers as it would for a single page.
+export function menuFromPages(pages: DatedPage[]): CafeMenuResponseType {
+	let failure = pages.find((p) => p.page.status === 'rejected')?.page
+	if (failure?.status === 'rejected' && pages.every((p) => p.page.status === 'rejected')) {
+		throw failure.reason
+	}
+
+	let menus = pages.map(({date, page}) =>
+		page.status === 'fulfilled'
+			? menuFrom(page.value, date)
+			: CafeMenuWithError(
+					page.reason instanceof Error ? page.reason.message : String(page.reason),
+					'Could not load the BonApp menu data',
+					date,
+				),
+	)
+	// each day's icons are kept, in case a day's page lists only those its items use
+	return menus.reduce<CafeMenuResponseType>(
+		(combined, menu) => ({
+			cor_icons: {...combined.cor_icons, ...menu.cor_icons},
+			items: {...combined.items, ...menu.items},
+			days: [...combined.days, ...menu.days],
+		}),
+		{cor_icons: {}, items: {}, days: []},
+	)
+}

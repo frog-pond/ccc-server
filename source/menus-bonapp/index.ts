@@ -1,7 +1,7 @@
 import {getJson, getText} from '../ccc-lib/http.ts'
 import * as Sentry from '@sentry/node'
 import {CafeMenuWithError, CustomCafe, campusToday} from './helpers.ts'
-import {cafeFrom, menuFrom} from './shape.ts'
+import {cafeFrom, cafeUrlForDate, menuDates, menuFromPages, settled} from './shape.ts'
 import type {CafeInfoResponseType, CafeMenuResponseType} from './types.ts'
 
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
@@ -16,29 +16,14 @@ interface MenuOptions {
 	days?: 5
 }
 
-function menuDates(today: string, count: number): string[] {
-	return Array.from({length: count}, (_, offset) => {
-		let date = new Date(`${today}T00:00:00Z`)
-		date.setUTCDate(date.getUTCDate() + offset)
-		return date.toISOString().slice(0, 10)
-	})
-}
-
-function cafeUrlForDate(cafeUrl: string | URL, date: string): string {
-	let url = new URL(cafeUrl)
-	if (url.protocol === 'data:') return url.toString()
-	url.pathname = `${url.pathname.replace(/\/\d{4}-\d{2}-\d{2}\/?$/, '').replace(/\/$/, '')}/${date}/`
-	return url.toString()
-}
-
 async function getBamco(url: string | URL) {
 	let html = await getText(url.toString())
 	let raw = stage('bonapp.extract', () => extractBamco(html))
-	return stage('bonapp.validate', () => BamcoPageContentsSchema.parse(raw))
+	return stage('bonapp.validate', () => BamcoPageContentsSchema.parse(raw)) ?? null
 }
 
 export async function _cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
-	return cafeFrom((await getBamco(cafeUrl)) ?? null, campusToday())
+	return cafeFrom(await getBamco(cafeUrl), campusToday())
 }
 
 export async function cafe(cafeUrl: string | URL): Promise<CafeInfoResponseType> {
@@ -59,37 +44,34 @@ export async function _menu(
 	cafeUrl: string | URL,
 	options: MenuOptions = {},
 ): Promise<CafeMenuResponseType> {
-	let days = options.days ?? 1
-	let dates = menuDates(campusToday(), days)
 	let pages = await Promise.all(
-		dates.map(async (date) => ({
+		menuDates(campusToday(), options.days ?? 1).map(async (date) => ({
 			date,
-			bamco: (await getBamco(cafeUrlForDate(cafeUrl, date))) ?? null,
+			page: await settled(getBamco(cafeUrlForDate(cafeUrl, date))),
 		})),
 	)
-	recordFeedItems(
-		'bonapp',
-		feedName(cafeUrl),
-		pages.reduce((count, {bamco}) => count + (bamco ? Object.keys(bamco.menu_items).length : 0), 0),
-		{closed: pages.every(({bamco}) => bamco === null)},
-	)
-
-	return stage('bonapp.clean', () => {
-		let menus = pages.map(({date, bamco}) => menuFrom(bamco, date))
-		let firstMenu = menus[0]
-		if (!firstMenu) throw new Error('BonApp menu date range is empty')
-		let items = menus.reduce<CafeMenuResponseType['items']>((combined, menu) => {
-			for (let [id, item] of Object.entries(menu.items)) {
-				combined[id] = item
-			}
-			return combined
-		}, {})
-		return {
-			...firstMenu,
-			items,
-			days: menus.flatMap((menu) => menu.days),
+	let loaded = pages.flatMap(({page}) => (page.status === 'fulfilled' ? [page.value] : []))
+	// when nothing loaded, `menuFromPages` throws and `menu` reports the failure
+	if (loaded.length > 0) {
+		recordFeedItems(
+			'bonapp',
+			feedName(cafeUrl),
+			loaded.reduce(
+				(count, bamco) => count + (bamco ? Object.keys(bamco.menu_items).length : 0),
+				0,
+			),
+			{closed: loaded.every((bamco) => bamco === null)},
+		)
+		// a day that failed while others loaded is an error for that day alone,
+		// and never reaches `menu`'s catch, so it is reported here
+		for (let {date, page} of pages) {
+			if (page.status === 'fulfilled') continue
+			console.error(page.reason, {cafeUrl: String(cafeUrl), date})
+			Sentry.captureException(page.reason)
 		}
-	})
+	}
+
+	return stage('bonapp.clean', () => menuFromPages(pages))
 }
 
 export async function menu(
