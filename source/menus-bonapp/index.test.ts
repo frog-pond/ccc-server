@@ -43,6 +43,50 @@ void test('cafe info is dated by the campus calendar', {timeout: 15_000}, async 
 void test('menu info is dated by the campus calendar', {timeout: 15_000}, async (t) => {
 	const data = await bonApp._menu(STAV)
 	t.assert.equal(data.days[0]?.date, campusToday())
+	t.assert.equal(data.days.length, 1)
+})
+
+void test('menu includes today and the next four campus dates', async (t) => {
+	let requests: string[] = []
+	let html = decodeURIComponent(BAMCO_PAGE.slice(BAMCO_PAGE.indexOf(',') + 1))
+	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL) => {
+		requests.push(input instanceof Request ? input.url : String(input))
+		return Promise.resolve(new Response(html))
+	})
+
+	let today = campusToday()
+	let start = new Date(`${today}T00:00:00Z`)
+	let dates = Array.from({length: 5}, (_, offset) => {
+		let date = new Date(start)
+		date.setUTCDate(date.getUTCDate() + offset)
+		return date.toISOString().slice(0, 10)
+	})
+	let menu = await bonApp._menu(STAV, {days: 5})
+
+	t.assert.deepEqual(
+		requests,
+		dates.map((date) => `https://stolaf.cafebonappetit.com/cafe/stav-hall/${date}/`),
+	)
+	t.assert.deepEqual(
+		menu.days.map(({date}) => date),
+		dates,
+	)
+	t.assert.equal(menu.days.length, 5)
+})
+
+void test("menu by default fetches today's dated URL", async (t) => {
+	let requests: string[] = []
+	let html = decodeURIComponent(BAMCO_PAGE.slice(BAMCO_PAGE.indexOf(',') + 1))
+	t.mock.method(globalThis, 'fetch', (input: RequestInfo | URL) => {
+		requests.push(input instanceof Request ? input.url : String(input))
+		return Promise.resolve(new Response(html))
+	})
+
+	let menu = await bonApp._menu(STAV)
+
+	t.assert.deepEqual(requests, [`${STAV}${campusToday()}/`])
+	t.assert.equal(menu.days.length, 1)
+	t.assert.equal(menu.days[0]?.date, campusToday())
 })
 
 /// A BonApp page, as data: URL, with its `Bamco` assignments written the way

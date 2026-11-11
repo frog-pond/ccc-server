@@ -63,6 +63,32 @@ describe('GET /edu.stolaf/food/menu/:cafeId', () => {
 		expect(dateOf(body)).toBe(CAMPUS_DAY)
 	})
 
+	test('opts into today and the next four days with days=5', async () => {
+		let dates = Array.from({length: 5}, (_, offset) => {
+			let date = new Date(`${CAMPUS_DAY}T00:00:00Z`)
+			date.setUTCDate(date.getUTCDate() + offset)
+			return date.toISOString().slice(0, 10)
+		})
+		let urls = dates.map((date) => `${CAFES['261']}${date}/`)
+		for (let url of urls) {
+			await env.SOURCE.getByName(`bonapp-page:${url}`).purge()
+		}
+
+		let body = await (
+			await get(`/edu.stolaf/food/menu/261?days=5&test=${crypto.randomUUID()}`)
+		).json<{days: {date: string}[]}>()
+		expect(body.days.map(({date}) => date)).toEqual(dates)
+		// The five pages are fetched concurrently, so their order in the log is
+		// not fixed; each must be fetched exactly once, in any order.
+		expect(bonappFetches().filter((url) => urls.includes(url)).sort()).toEqual([...urls].sort())
+	})
+
+	test('rejects unsupported menu day counts', async () => {
+		let response = await get('/edu.stolaf/food/menu/261?days=4')
+		expect(response.status).toBe(400)
+		expect(bonappFetches()).toEqual([])
+	})
+
 	test('is cacheable for ten minutes, and read from BonApp once', async () => {
 		let first = await get('/edu.stolaf/food/menu/263')
 		expect(first.headers.get('cache-control')).toBe('public, max-age=600')
