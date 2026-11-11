@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {test} from 'node:test'
 import {extractBamco} from './extract-bamco.ts'
-import {cafeFrom, menuFrom} from './shape.ts'
+import {cafeFrom, cafeUrlForDate, menuDates, menuFrom, menuFromPages} from './shape.ts'
 import {CafeInfoResponseSchema, CafeMenuResponseSchema} from './types.ts'
 import {BamcoPageContentsSchema} from './types-bonapp.ts'
 
@@ -49,4 +49,92 @@ void test('an empty list of icons, as BonApp sends when there are none, is no ic
 	if (page === null) throw new Error('the fixture is a closed café')
 	let menu = menuFrom({...page, cor_icons: []}, DATE)
 	t.assert.deepEqual(menu.cor_icons, {})
+})
+
+void test('menu dates run on from today, across a month end', (t) => {
+	t.assert.deepEqual(menuDates('2026-10-30', 5), [
+		'2026-10-30',
+		'2026-10-31',
+		'2026-11-01',
+		'2026-11-02',
+		'2026-11-03',
+	])
+})
+
+void test("a café page's address for a date replaces any date already in it", (t) => {
+	const STAV = 'https://stolaf.cafebonappetit.com/cafe/stav-hall/'
+	t.assert.equal(cafeUrlForDate(STAV, DATE), `${STAV}${DATE}/`)
+	t.assert.equal(cafeUrlForDate(`${STAV}2020-01-01/`, DATE), `${STAV}${DATE}/`)
+})
+
+void test('one day that could not be loaded does not cost the others', (t) => {
+	let menu = menuFromPages([
+		{date: '2026-09-22', page: {status: 'fulfilled', value: page}},
+		{date: '2026-09-23', page: {status: 'rejected', reason: new Error('BonApp responded 503')}},
+	])
+	t.assert.doesNotThrow(() => CafeMenuResponseSchema.parse(menu))
+	t.assert.deepEqual(
+		menu.days.map(({date}) => date),
+		['2026-09-22', '2026-09-23'],
+	)
+	t.assert.equal(menu.days[1]?.cafe.dayparts[0]?.[0]?.label, 'Errored')
+	t.assert.equal(
+		Object.keys(menuFrom(page, DATE).items).every((id) => id in menu.items),
+		true,
+	)
+})
+
+void test('when no day could be loaded, the failure is thrown', (t) => {
+	let failure = new Error('BonApp responded 503')
+	t.assert.throws(
+		() =>
+			menuFromPages([
+				{date: '2026-09-22', page: {status: 'rejected', reason: failure}},
+				{date: '2026-09-23', page: {status: 'rejected', reason: new Error('later')}},
+			]),
+		failure,
+	)
+})
+
+void test("every day's items and icons are kept", (t) => {
+	if (page === null || Array.isArray(page.cor_icons)) throw new Error('the fixture has no icons')
+	let [item] = Object.values(page.menu_items)
+	let [icon] = Object.values(page.cor_icons)
+	if (!item || !icon) throw new Error('the fixture has no items or icons')
+	// a page with one item and one icon, both under `id`
+	let only = (id: string) => ({
+		...page,
+		menu_items: {[id]: {...item, id}},
+		cor_icons: {[id]: {...icon, id}},
+	})
+	let menu = menuFromPages([
+		{date: '2026-09-22', page: {status: 'fulfilled', value: only('101')}},
+		{date: '2026-09-23', page: {status: 'fulfilled', value: only('202')}},
+	])
+	t.assert.deepEqual(Object.keys(menu.items).sort(), ['101', '202'])
+	t.assert.deepEqual(Object.keys(menu.cor_icons).sort(), ['101', '202'])
+})
+
+void test("each day's stand-in keeps its own item across several days", (t) => {
+	let menu = menuFromPages([
+		{date: '2026-09-22', page: {status: 'fulfilled', value: null}},
+		{date: '2026-09-23', page: {status: 'rejected', reason: new Error('BonApp responded 503')}},
+		{date: '2026-09-24', page: {status: 'fulfilled', value: null}},
+	])
+	t.assert.doesNotThrow(() => CafeMenuResponseSchema.parse(menu))
+	// every station on every day names an item the menu has, and the right one
+	let labels = menu.days.map(({cafe}) =>
+		cafe.dayparts
+			.flat()
+			.flatMap(({stations}) => stations.flatMap(({items}) => items))
+			.map((id) => menu.items[id]?.label),
+	)
+	t.assert.deepEqual(labels, [['Closed'], ['Could not load the BonApp menu data'], ['Closed']])
+	t.assert.equal(Object.keys(menu.items).length, 3)
+})
+
+void test("a single day's stand-in keeps the item id the apps have always had", (t) => {
+	let menu = menuFromPages([{date: DATE, page: {status: 'fulfilled', value: null}}])
+	t.assert.deepEqual(menu, menuFrom(null, DATE))
+	t.assert.deepEqual(Object.keys(menu.items), ['1'])
 })

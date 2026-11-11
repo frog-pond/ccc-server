@@ -13,8 +13,12 @@ export function recordFeedItems(
 }
 
 /// That one load of a feed failed, whether it threw or fell back to a stand-in.
-export function recordFeedFailure(source: string, feed: string): void {
-	Sentry.metrics.count('feed.failure', 1, {attributes: {source, feed}})
+export function recordFeedFailure(
+	source: string,
+	feed: string,
+	attributes: Record<string, string | boolean> = {},
+): void {
+	Sentry.metrics.count('feed.failure', 1, {attributes: {...attributes, source, feed}})
 }
 
 /// A feed's name for a metric: its URL's host and path. Never its query,
