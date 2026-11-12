@@ -58,7 +58,7 @@
     "normalize-url": "9.0.1",
     "p-map": "7.1.1",
     "quick-lru": "^7.3.0",
-    "safe-stable-stringify": "^2.5.0",
+    "safe-stable-stringify": "^3.0.0",
     "saxes": "^6.0.0",
     "turndown": "7.2.5",
     "zod": "^4.0.0"
