@@ -55,7 +55,7 @@
     "lodash-es": "^4.17.21",
     "moment": "2.31.0",
     "moment-timezone": "0.6.6",
-    "normalize-url": "9.0.1",
+    "normalize-url": "10.0.0",
     "p-map": "7.1.1",
     "quick-lru": "^7.3.0",
     "safe-stable-stringify": "^3.0.0",
