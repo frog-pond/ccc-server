@@ -76,6 +76,6 @@
     "prettier": "3.9.10",
     "typed-query-selector": "2.12.3",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.72.1"
+    "typescript-eslint": "8.72.2"
   }
 }
