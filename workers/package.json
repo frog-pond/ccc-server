@@ -24,7 +24,7 @@
     "moment-timezone": "0.6.6",
     "normalize-url": "9.0.1",
     "saxes": "^6.0.0",
-    "turndown": "7.2.4",
+    "turndown": "7.2.5",
     "zod": "^4.0.0"
   },
   "devDependencies": {
