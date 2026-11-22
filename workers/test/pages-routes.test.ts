@@ -80,6 +80,7 @@ describe('the route table', () => {
 			'/map/categories': 'map-categories.json',
 			'/student-work/areas': 'student-work-areas.json',
 			'/student-work/wages': 'student-wages.json',
+			'/features': 'features.json',
 		})) {
 			expect(stolaf?.[path]?.url).toBe(STOLAF_PAGES(file).href)
 		}
