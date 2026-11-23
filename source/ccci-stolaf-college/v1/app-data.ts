@@ -32,3 +32,6 @@ export const studentWorkAreas = pagesJson('student-work-areas.json')
 
 /// The Student Work pay rates.
 export const studentWorkWages = pagesJson('student-wages.json')
+
+/// Which features the app's App Store builds may show, such as each radio station.
+export const features = pagesJson('features.json')

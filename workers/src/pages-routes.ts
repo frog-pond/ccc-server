@@ -39,6 +39,7 @@ export const STOLAF_FILES: Record<string, PagesRoute> = {
 	'/map/style-dark': {url: STOLAF_MAP('style-dark.json')},
 	'/student-work/areas': {url: STOLAF('student-work-areas.json')},
 	'/student-work/wages': {url: STOLAF('student-wages.json')},
+	'/features': {url: STOLAF('features.json')},
 }
 
 /// St. Olaf's building hours and break calendar, which are read together.

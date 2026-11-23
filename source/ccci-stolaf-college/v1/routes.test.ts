@@ -19,6 +19,7 @@ const ROUTES = [
 	'/v1/map/categories',
 	'/v1/student-work/areas',
 	'/v1/student-work/wages',
+	'/v1/features',
 	'/v1/map/style',
 	'/v1/map/style-dark',
 	'/v1/courses/catalog.db',

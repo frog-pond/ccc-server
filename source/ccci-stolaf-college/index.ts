@@ -130,6 +130,7 @@ api.get('/v1/orgs/uri/:uri', orgs.org)
 api.get('/v1/student-work/units', studentWork.units)
 api.get('/v1/student-work/areas', appData.studentWorkAreas)
 api.get('/v1/student-work/wages', appData.studentWorkWages)
+api.get('/v1/features', appData.features)
 
 // courses
 api.get('/v1/courses/catalog.db', courses.catalog)
